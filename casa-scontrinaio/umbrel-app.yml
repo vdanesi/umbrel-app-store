@@ -1,0 +1,33 @@
+manifestVersion: 1
+id: casa-scontrinaio
+name: Scontrinaio
+tagline: Spese e scontrini di casa, letti in automatico
+icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-scontrinaio/app/public/icons/icon-512.png
+category: finance
+version: "1.0.0"
+port: 3958
+description: >-
+  Scontrinaio registra le spese di casa con la foto dello scontrino o della fattura.
+
+
+  Fotografi lo scontrino e l'app legge da sola importo, data, negozio e categoria,
+  con il riconoscimento del testo in italiano eseguito sul dispositivo: nessuna foto
+  viene inviata a servizi esterni.
+
+
+  Spese e foto sono salvate sul tuo Umbrel e le vedi da telefono, tablet e computer.
+  Riepilogo mensile per categoria, confronto con il mese precedente, totale delle spese
+  detraibili nel 730, ricerca, esportazione CSV e backup completo.
+developer: Casa
+website: https://github.com/vdanesi/umbrel-app-store
+submitter: Casa
+submission: https://github.com/vdanesi/umbrel-app-store
+repo: https://github.com/vdanesi/umbrel-app-store
+support: https://github.com/vdanesi/umbrel-app-store/issues
+gallery: []
+releaseNotes: >-
+  Prima versione.
+dependencies: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
