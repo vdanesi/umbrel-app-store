@@ -70,7 +70,7 @@ async function readJson(file, fallback) {
 
 // ---------- accounts ----------
 let users = [];                       // {id, nome, hash, salt, admin, creato}
-let settings = { registrazioniAperte: false };
+let settings = { registrazioniAperte: true };
 let sessions = new Map();             // sha256(token) -> {uid, scade, creata}
 
 const saveUsers = () => writeJson(USERS_FILE, { versione: 1, utenti: users, impostazioni: settings });
@@ -218,7 +218,18 @@ async function handle(req, res) {
   const method = req.method;
 
   if (!p.startsWith("/api/")) {
-    if (method === "GET" || method === "HEAD") return serveStatic(req, res, p);
+    if (method !== "GET" && method !== "HEAD") return send(res, 405, "Metodo non consentito");
+    // The app itself is only served to signed-in people; everyone else lands on the sign-in page.
+    const signedIn = !!currentUser(req);
+    if (p === "/" || p === "/index.html") {
+      if (!signedIn) return send(res, 302, "", { Location: "/accesso" });
+      return serveStatic(req, res, "/index.html");
+    }
+    if (p === "/accesso" || p === "/accesso.html") {
+      if (signedIn) return send(res, 302, "", { Location: "/" });
+      return serveStatic(req, res, "/accesso.html");
+    }
+    return serveStatic(req, res, p);
     return send(res, 405, "Metodo non consentito");
   }
   // Changes must come from the app itself: browsers can't add this header from another site without our consent.
@@ -379,7 +390,7 @@ async function main() {
   await fsp.mkdir(USERS_DIR, { recursive: true });
   const u = await readJson(USERS_FILE, { utenti: [], impostazioni: {} });
   users = Array.isArray(u.utenti) ? u.utenti : [];
-  settings = { registrazioniAperte: false, ...(u.impostazioni || {}) };
+  settings = { registrazioniAperte: true, ...(u.impostazioni || {}) };
   const s = await readJson(SESS_FILE, { sessioni: [] });
   for (const x of s.sessioni || []) if (x.h && x.scade > Date.now()) sessions.set(x.h, { uid: x.uid, scade: x.scade, creata: x.creata });
   console.log(`Scontrinaio: ${users.length} account, dati in ${DATA_DIR}`);

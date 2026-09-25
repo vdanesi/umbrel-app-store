@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scontrinaio</title>
+<meta name="description" content="Accedi o registrati a Scontrinaio.">
+<meta name="theme-color" content="#EEF1EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121614" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Scontrinaio">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<title>Accedi · Scontrinaio</title>
+<style>
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+:root{
+  --ground:#EEF1EC;
+  --paper:#FFFFFF;
+  --paper-2:#F6F8F4;
+  --ink:#18201C;
+  --ink-2:#4A5650;
+  --ink-3:#7C8781;
+  --line:#D9DFD8;
+  --accent:#2446C9;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#E3E8FB;
+  --bar:#2446C9;
+  --bar-track:#E6EAE4;
+  --good:#1D7A4E;
+  --warn:#B4541A;
+  --danger:#B42318;
+  --danger-soft:#FBE7E5;
+  --shadow:0 1px 2px rgba(24,32,28,.06),0 8px 24px rgba(24,32,28,.08);
+  --f-display:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#121614;--paper:#1B211E;--paper-2:#222925;--ink:#E9EEEA;--ink-2:#B3BDB7;--ink-3:#85908A;
+    --line:#2F3833;--accent:#8EA6FF;--accent-ink:#0E1430;--accent-soft:#232C4D;--bar:#8EA6FF;--bar-track:#2A322E;
+    --good:#6FD19C;--warn:#F0A36B;--danger:#FF8A7E;--danger-soft:#3A1F1C;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#121614;--paper:#1B211E;--paper-2:#222925;--ink:#E9EEEA;--ink-2:#B3BDB7;--ink-3:#85908A;
+  --line:#2F3833;--accent:#8EA6FF;--accent-ink:#0E1430;--accent-soft:#232C4D;--bar:#8EA6FF;--bar-track:#2A322E;
+  --good:#6FD19C;--warn:#F0A36B;--danger:#FF8A7E;--danger-soft:#3A1F1C;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{font-family:var(--f-body);color:var(--ink);background:var(--ground);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:32px 16px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+main{width:100%;max-width:420px;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:26px;letter-spacing:-.01em;justify-content:center}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--f-display);font-size:20px;margin:0;text-wrap:balance}
+.lead{margin:0;color:var(--ink-2);font-size:14px}
+.tabs{display:flex;background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.tabs button{flex:1;border:0;background:transparent;border-radius:9px;padding:10px 4px;font-weight:600;color:var(--ink-2)}
+.tabs button[aria-selected="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+form{display:flex;flex-direction:column;gap:13px}
+label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.inp{height:48px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);padding:0 12px;width:100%;font-size:16px;color:var(--ink)}
+.inp:focus{outline:2px solid var(--accent);outline-offset:-1px;background:var(--paper)}
+.pw{position:relative}
+.pw .inp{padding-right:84px}
+.pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--accent);font-weight:600;font-size:13px;padding:6px 8px}
+.hint{margin:0;color:var(--ink-3);font-size:12.5px;font-weight:400}
+.err{color:var(--danger);font-size:14px;min-height:1.2em;margin:0}
+.primary{border:0;background:var(--accent);color:var(--accent-ink);border-radius:12px;height:50px;font-weight:700;font-size:16px;width:100%}
+.primary[disabled]{opacity:.6;cursor:progress}
+.closed{background:var(--paper-2);border:1px dashed var(--line);border-radius:12px;padding:14px;color:var(--ink-2);font-size:14px;margin:0}
+.meter{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter span{display:block;height:100%;width:0;background:var(--danger);transition:width .2s}
+.foot{text-align:center;color:var(--ink-3);font-size:12.5px;margin:0}
+
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><svg width="32" height="32" viewBox="0 0 26 26" aria-hidden="true"><path d="M5 2h16v21l-2.7-1.8L15.7 23 13 21.2 10.3 23l-2.6-1.8L5 23z" fill="var(--accent)"/><path d="M9 8h8M9 12h8M9 16h5" stroke="var(--accent-ink)" stroke-width="1.8" stroke-linecap="round"/></svg>Scontrinaio</div>
+  <section class="card" aria-labelledby="title">
+    <div>
+      <h1 id="title">Accedi</h1>
+      <p class="lead" id="lead">Le tue spese e i tuoi scontrini sono protetti dal tuo account.</p>
+    </div>
+    <div class="tabs" role="tablist" id="tabs">
+      <button type="button" role="tab" id="tabLogin" aria-selected="true" aria-controls="form">Accedi</button>
+      <button type="button" role="tab" id="tabSignup" aria-selected="false" aria-controls="form">Registrati</button>
+    </div>
+    <p class="closed" id="closedNote" hidden>Le registrazioni sono chiuse. Chiedi all'amministratore di Scontrinaio di aprirle dal menu <b>Backup → Amministrazione</b>, poi ricarica questa pagina.</p>
+    <form id="form" novalidate>
+      <label>Nome utente
+        <input class="inp" id="nome" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        <span class="hint" id="nomeHint" hidden>Da 3 a 32 caratteri: lettere minuscole, numeri, punto o trattino.</span>
+      </label>
+      <label>Password
+        <span class="pw"><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" required><button type="button" id="toggle" aria-label="Mostra password">Mostra</button></span>
+      </label>
+      <div id="signupOnly" hidden style="display:flex;flex-direction:column;gap:13px">
+        <div class="meter" aria-hidden="true"><span id="meter"></span></div>
+        <label>Ripeti la password
+          <input class="inp" id="pw2" type="password" autocomplete="new-password">
+          <span class="hint">Almeno 8 caratteri. Una frase di tre o quattro parole è facile da ricordare e difficile da indovinare.</span>
+        </label>
+      </div>
+      <p class="err" id="err" role="alert"></p>
+      <button class="primary" id="submit">Accedi</button>
+    </form>
+  </section>
+  <p class="foot">I dati restano sul tuo Umbrel.</p>
+</main>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+let mode = "login", state = { primoAvvio:false, registrazioniAperte:false };
+async function api(url, body){
+  const r = await fetch(url, { method: body ? "POST" : "GET", headers: body ? { "Content-Type":"application/json", "X-Scontrinaio":"1" } : {}, body: body ? JSON.stringify(body) : undefined, credentials:"same-origin" });
+  let data = {}; try { data = await r.json(); } catch {}
+  if (!r.ok){ const e = new Error(data.errore || "HTTP " + r.status); e.status = r.status; throw e; }
+  return data;
+}
+function setMode(m){
+  mode = m;
+  const signup = m === "signup";
+  $("tabLogin").setAttribute("aria-selected", String(!signup));
+  $("tabSignup").setAttribute("aria-selected", String(signup));
+  const blocked = signup && !state.registrazioniAperte;
+  $("closedNote").hidden = !blocked;
+  $("form").hidden = blocked;
+  $("signupOnly").hidden = !signup;
+  $("nomeHint").hidden = !signup;
+  $("pw").autocomplete = signup ? "new-password" : "current-password";
+  $("title").textContent = state.primoAvvio ? "Benvenuto" : signup ? "Crea il tuo account" : "Accedi";
+  $("lead").textContent = state.primoAvvio
+    ? "Crea il primo account: sarà l'amministratore di Scontrinaio su questo Umbrel. Ogni account vede solo le proprie spese."
+    : signup ? "Le spese che inserirai saranno visibili solo a te." : "Le tue spese e i tuoi scontrini sono protetti dal tuo account.";
+  $("submit").textContent = signup ? (state.primoAvvio ? "Crea account amministratore" : "Crea account") : "Accedi";
+  $("err").textContent = "";
+  if (!blocked) setTimeout(() => $("nome").focus(), 30);
+}
+$("tabLogin").onclick = () => setMode("login");
+$("tabSignup").onclick = () => setMode("signup");
+$("toggle").onclick = () => {
+  const show = $("pw").type === "password";
+  $("pw").type = $("pw2").type = show ? "text" : "password";
+  $("toggle").textContent = show ? "Nascondi" : "Mostra";
+  $("toggle").setAttribute("aria-label", show ? "Nascondi password" : "Mostra password");
+};
+$("pw").addEventListener("input", () => {
+  const v = $("pw").value; let s = 0;
+  if (v.length >= 8) s++; if (v.length >= 12) s++; if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++; if (/\d/.test(v)) s++; if (/[^\w]/.test(v) || v.length >= 16) s++;
+  const m = $("meter"); m.style.width = Math.min(100, s * 20) + "%";
+  m.style.background = s <= 1 ? "var(--danger)" : s <= 3 ? "var(--warn)" : "var(--good)";
+});
+$("nome").addEventListener("input", e => { const c = e.target.value.toLowerCase().replace(/\s/g,""); if (c !== e.target.value) e.target.value = c; });
+$("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = $("err"); err.textContent = "";
+  const nome = $("nome").value.trim().toLowerCase(), password = $("pw").value;
+  if (!nome || !password){ err.textContent = "Inserisci nome utente e password."; return; }
+  if (mode === "signup"){
+    if (!/^[a-z0-9._-]{3,32}$/.test(nome)){ err.textContent = "Il nome utente deve avere da 3 a 32 caratteri: lettere minuscole, numeri, punto o trattino."; return; }
+    if (password.length < 8){ err.textContent = "La password deve avere almeno 8 caratteri."; return; }
+    if (password !== $("pw2").value){ err.textContent = "Le due password non coincidono."; return; }
+  }
+  const b = $("submit"); b.disabled = true;
+  try {
+    await api(mode === "signup" ? "api/registrati" : "api/accedi", { nome, password });
+    location.replace("./");
+  } catch (e2) {
+    err.textContent = e2.status ? e2.message : "Non riesco a raggiungere il tuo Umbrel. Controlla la connessione e riprova.";
+    b.disabled = false;
+  }
+});
+(async () => {
+  try {
+    const st = await api("api/stato");
+    if (st.utente) return location.replace("./");
+    state = st;
+  } catch {}
+  $("tabs").hidden = state.primoAvvio;
+  const wanted = new URLSearchParams(location.search).get("modo");
+  setMode(state.primoAvvio || wanted === "registrati" ? "signup" : "login");
+})();
+})();
+</script>
+</body>
+</html>

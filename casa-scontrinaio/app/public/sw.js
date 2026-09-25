@@ -1,6 +1,6 @@
 // Scontrinaio service worker: the app works offline after the first visit.
-const VERSION = "scontrinaio-umbrel-v1";
-const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon-180.png", "icons/favicon-64.png"];
+const VERSION = "scontrinaio-umbrel-v2";
+const SHELL = ["manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon-180.png", "icons/favicon-64.png"];
 const OCR = ["ocr/tesseract.min.js", "ocr/worker.min.js", "ocr/ita.traineddata.gz"];
 
 self.addEventListener("install", e => {
@@ -26,7 +26,7 @@ self.addEventListener("fetch", e => {
   // Pages: network first so updates arrive, cache when offline
   if (req.mode === "navigate"){
     e.respondWith((async () => {
-      try { const r = await fetch(req); const c = await caches.open(VERSION); c.put("index.html", r.clone()); return r; }
+      try { const r = await fetch(req); if (r.ok && !r.redirected && /\/(index\.html)?$/.test(url.pathname)){ const c = await caches.open(VERSION); c.put("index.html", r.clone()); } return r; }
       catch { return (await caches.match("index.html")) || (await caches.match("./")); }
     })());
     return;

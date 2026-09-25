@@ -23,13 +23,13 @@ Non c'è niente da compilare. Umbrel scarica l'immagine standard di Node.js, che
    Umbrel deve poterlo scaricare senza credenziali. Nel repository c'è solo il codice dell'app, nessun tuo dato.
 3. Carica tutto il contenuto di questa cartella: **Add file → Upload files**, trascinando `umbrel-app-store.yml`, `LEGGIMI.md` e la cartella `casa-scontrinaio`.
    Controlla che la cartella `casa-scontrinaio/data` contenga il file `.gitkeep`. Se il caricamento dal browser lo salta, crea il file a mano con **Add file → Create new file** e scrivi `casa-scontrinaio/data/.gitkeep`.
-4. Apri `casa-scontrinaio/umbrel-app.yml` su GitHub (icona matita) e sostituisci ovunque `TUO-UTENTE-GITHUB` con il tuo nome utente GitHub. Serve per l'icona e i link.
+4. `casa-scontrinaio/umbrel-app.yml` è già impostato per l'account GitHub `vdanesi` (icona e link). Se usi un altro account, sostituisci `vdanesi` con il tuo nome utente.
 
 ## 2. Aggiungi lo store a Umbrel
 
 1. Apri Umbrel nel browser (di solito http://umbrel.local).
 2. Vai su **App Store**, poi sul menu **⋯** in alto a destra, poi **Community App Stores**.
-3. Incolla l'indirizzo del repository, ad esempio `https://github.com/tuonome/umbrel-app-store`, e premi **Add**.
+3. Incolla l'indirizzo del repository, `https://github.com/vdanesi/umbrel-app-store`, e premi **Add**.
 4. Apri **Casa App Store** e installa **Scontrinaio**.
 
 L'app si apre dall'icona su Umbrel, oppure direttamente su **http://umbrel.local:3958**.
@@ -38,9 +38,12 @@ L'app si apre dall'icona su Umbrel, oppure direttamente su **http://umbrel.local
 
 Scontrinaio ha account suoi, separati da quello di Umbrel. Ogni persona vede **solo le proprie spese e foto**.
 
-- **Primo avvio:** l'app chiede di creare il primo account, che diventa l'**amministratore**. Crealo subito dopo l'installazione. Finché non esiste, chiunque sulla rete apra l'app potrebbe crearlo al posto tuo.
-- **Altri account** (per esempio per altre persone della famiglia): le registrazioni sono chiuse di default.
-  L'amministratore apre **Backup → Amministrazione → Consenti nuove registrazioni**, l'altra persona sceglie **Registrati**, poi l'amministratore richiude le registrazioni.
+Chi non ha fatto l'accesso vede solo la **pagina di accesso** (`http://umbrel.local:3958/accesso`), con le schede **Accedi** e **Registrati**. L'app vera si apre solo dopo l'accesso.
+
+- **Primo avvio:** la pagina chiede di creare il primo account, che diventa l'**amministratore**. Crealo subito dopo l'installazione.
+- **Registrazione:** chiunque apra Scontrinaio può crearsi un account dalla scheda **Registrati**, e ogni account vede solo le proprie spese.
+  L'amministratore può chiudere le registrazioni da **Backup → Amministrazione → Consenti nuove registrazioni**. A registrazioni chiuse, la scheda Registrati spiega di chiedere all'amministratore.
+  Link diretto alla registrazione: `http://umbrel.local:3958/accesso?modo=registrati`.
 - **Password:** almeno 8 caratteri. Si cambia da **Backup → Account → Cambia password**. Dopo il cambio, gli altri dispositivi devono accedere di nuovo.
 - **Accesso ricordato** per 30 giorni su ogni dispositivo. Il pulsante **Esci** chiude la sessione.
 - **Protezione dai tentativi:** dopo 5 password sbagliate l'accesso per quel nome si blocca per 15 minuti.
