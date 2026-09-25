@@ -936,7 +936,7 @@ async function refreshMenu(){
   $("storageNote").textContent = note;
   const lb = lsGet("ultimoBackup:" + (me?.id||""));
   $("lastBackup").textContent = lb ? "Ultimo backup: " + new Date(lb).toLocaleDateString("it-IT",{day:"numeric",month:"long",year:"numeric"}) + "." : "Non hai ancora fatto un backup.";
-  $("accName").textContent = me ? "Connesso come " + me.nome + (me.admin ? " (amministratore)" : "") : "";
+  $("accName").textContent = me ? "Connesso come " + me.nome + (me.admin ? " (amministratore)" : "") + (appVersion ? " · versione " + appVersion : "") : "";
   $("adminSec").hidden = !me?.admin;
   if (me?.admin) loadAdmin();
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
@@ -1010,7 +1010,7 @@ function backupReminder(){
 }
 
 // ---------- Accounts ----------
-let me = null;
+let me = null, appVersion = "";
 function showAuth(){ location.replace("accesso"); }
 $("logoutBtn").onclick = async () => { try { await api("POST", "api/esci"); } catch {} location.replace("accesso"); };
 $("pwForm").addEventListener("submit", async e => {
@@ -1047,7 +1047,7 @@ render();
   try {
     const st = await api("GET", "api/stato");
     if (!st.utente) return showAuth();
-    me = st.utente;
+    me = st.utente; appVersion = st.versione || "";
     await reload();
   } catch (e) { if (e.status !== 401) offlineBanner(true); }
 })();

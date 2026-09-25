@@ -45,7 +45,9 @@ Chi non ha fatto l'accesso vede solo la **pagina di accesso** (`http://umbrel.lo
   L'amministratore può chiudere le registrazioni da **Backup → Amministrazione → Consenti nuove registrazioni**. A registrazioni chiuse, la scheda Registrati spiega di chiedere all'amministratore.
   Link diretto alla registrazione: `http://umbrel.local:3958/accesso?modo=registrati`.
 - **Password:** almeno 8 caratteri. Si cambia da **Backup → Account → Cambia password**. Dopo il cambio, gli altri dispositivi devono accedere di nuovo.
-- **Accesso ricordato** per 30 giorni su ogni dispositivo. Il pulsante **Esci** chiude la sessione.
+- **Durata dell'accesso:** senza **"Resta connesso"** l'accesso finisce quando chiudi il browser, e comunque dopo 12 ore. Con "Resta connesso" dura 30 giorni su quel dispositivo. Il pulsante **Esci** chiude subito la sessione.
+  Sui telefoni il browser spesso non si "chiude" davvero: lì vale il limite delle 12 ore.
+- **Versione in uso:** è scritta in fondo alla pagina di accesso e nel menu **Backup → Account**.
 - **Protezione dai tentativi:** dopo 5 password sbagliate l'accesso per quel nome si blocca per 15 minuti.
 - **Eliminare un account:** l'amministratore può eliminare un account da **Amministrazione**. Vengono cancellate anche le sue spese.
 - **Aggiornamento dalla versione 1.0.0:** le spese già salvate passano al primo account creato.

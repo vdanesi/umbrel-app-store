@@ -15,7 +15,10 @@ const SESS_FILE = path.join(DATA_DIR, "sessioni.json");
 const USERS_DIR = path.join(DATA_DIR, "utenti");
 const MAX_FILE = 25 * 1024 * 1024;
 const MAX_JSON = 1024 * 1024;
-const SESSION_DAYS = 30;
+const VERSION = "1.3.0";
+const SESSION_DAYS = 30;          // with "Resta connesso"
+const SESSION_HOURS_SHORT = 12;   // without: also ends when the browser is closed
+const SESSION_FORMAT = 2;         // sessions from older versions are dropped at start-up
 const COOKIE = "scontrinaio_sessione";
 
 const TYPES = {
@@ -106,12 +109,13 @@ function clientIp(req) {
   const xff = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
   return xff || req.socket.remoteAddress || "";
 }
-function newSession(req, res, uid) {
+function newSession(req, res, uid, ricorda) {
   const token = crypto.randomBytes(32).toString("base64url");
-  const scade = Date.now() + SESSION_DAYS * 864e5;
-  sessions.set(sha(token), { uid, scade, creata: Date.now() });
+  const scade = Date.now() + (ricorda ? SESSION_DAYS * 864e5 : SESSION_HOURS_SHORT * 36e5);
+  sessions.set(sha(token), { uid, scade, creata: Date.now(), v: SESSION_FORMAT });
   saveSessions();
-  res.setHeader("Set-Cookie", `${COOKIE}=${token}; ${cookieAttrs(req)}; Max-Age=${SESSION_DAYS * 86400}`);
+  // without "Resta connesso" the cookie has no Max-Age: the browser drops it when it is closed
+  res.setHeader("Set-Cookie", `${COOKIE}=${token}; ${cookieAttrs(req)}` + (ricorda ? `; Max-Age=${SESSION_DAYS * 86400}` : ""));
 }
 function clearCookie(req, res) { res.setHeader("Set-Cookie", `${COOKIE}=; ${cookieAttrs(req)}; Max-Age=0`); }
 function tokenOf(req) {
@@ -248,11 +252,11 @@ async function handle(req, res) {
   // Changes must come from the app itself: browsers can't add this header from another site without our consent.
   if (method !== "GET" && method !== "HEAD" && req.headers["x-scontrinaio"] !== "1") return send(res, 403, { errore: "Richiesta non consentita" });
 
-  if (p === "/api/salute") return send(res, 200, { ok: true });
+  if (p === "/api/salute") return send(res, 200, { ok: true, versione: VERSION });
 
   // ----- account -----
   if (p === "/api/stato" && method === "GET") {
-    return send(res, 200, { utente: publicUser(currentUser(req)), primoAvvio: users.length === 0, registrazioniAperte: users.length === 0 || settings.registrazioniAperte });
+    return send(res, 200, { versione: VERSION, utente: publicUser(currentUser(req)), primoAvvio: users.length === 0, registrazioniAperte: users.length === 0 || settings.registrazioniAperte });
   }
   if (p === "/api/registrati" && method === "POST") {
     const b = await readJsonBody(req);
@@ -267,7 +271,7 @@ async function handle(req, res) {
     if ((first && users.length) || users.some(x => x.nome === nome)) return send(res, 409, { errore: "Questo nome utente esiste già, oppure l'account amministratore è appena stato creato. Riprova." });
     users.push(u); await saveUsers();
     if (first) await adoptLegacyData(u.id);
-    newSession(req, res, u.id);
+    newSession(req, res, u.id, !!b.ricorda);
     console.log(`Nuovo account: ${nome}${first ? " (amministratore)" : ""}`);
     return send(res, 200, { utente: publicUser(u) });
   }
@@ -285,7 +289,7 @@ async function handle(req, res) {
       return send(res, 401, { errore: "Nome utente o password non corretti." });
     }
     fails.delete(key);
-    newSession(req, res, u.id);
+    newSession(req, res, u.id, !!b.ricorda);
     return send(res, 200, { utente: publicUser(u) });
   }
   if (p === "/api/esci" && method === "POST") {
@@ -304,7 +308,7 @@ async function handle(req, res) {
     if (!validPassword(b.nuova)) return send(res, 400, { errore: "La nuova password deve avere almeno 8 caratteri." });
     Object.assign(me, await hashPassword(b.nuova)); await saveUsers();
     for (const [h, s] of sessions) if (s.uid === me.id) sessions.delete(h);   // sign out everywhere else
-    newSession(req, res, me.id);
+    newSession(req, res, me.id, false);
     return send(res, 200, { ok: true });
   }
 
@@ -407,8 +411,13 @@ async function main() {
   users = Array.isArray(u.utenti) ? u.utenti : [];
   settings = { registrazioniAperte: true, ...(u.impostazioni || {}) };
   const s = await readJson(SESS_FILE, { sessioni: [] });
-  for (const x of s.sessioni || []) if (x.h && x.scade > Date.now()) sessions.set(x.h, { uid: x.uid, scade: x.scade, creata: x.creata });
-  console.log(`Scontrinaio: ${users.length} account, dati in ${DATA_DIR}`);
+  let dropped = 0;
+  for (const x of s.sessioni || []) {
+    if (x.h && x.scade > Date.now() && x.v === SESSION_FORMAT) sessions.set(x.h, { uid: x.uid, scade: x.scade, creata: x.creata, v: x.v });
+    else dropped++;
+  }
+  if (dropped) { saveSessions(); console.log(`${dropped} sessioni vecchie chiuse: serve un nuovo accesso`); }
+  console.log(`Scontrinaio ${VERSION}: ${users.length} account, dati in ${DATA_DIR}`);
   http.createServer((req, res) => {
     handle(req, res).catch(e => {
       if (e.status !== 400 && e.status !== 413) console.error(e);
