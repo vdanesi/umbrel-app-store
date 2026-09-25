@@ -93,14 +93,27 @@ async function checkPassword(user, pw) {
 function validPassword(pw) { return typeof pw === "string" && pw.length >= 8 && pw.length <= 200; }
 const sha = t => crypto.createHash("sha256").update(t).digest("hex");
 
-function newSession(res, uid) {
+// Behind a Cloudflare Tunnel (or another https proxy) the browser talks https even though we get plain http.
+function isHttps(req) {
+  if (String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https") return true;
+  try { return JSON.parse(req.headers["cf-visitor"] || "{}").scheme === "https"; } catch { return false; }
+}
+const cookieAttrs = req => "HttpOnly; SameSite=Lax; Path=/" + (isHttps(req) ? "; Secure" : "");
+// The real visitor address: Cloudflare puts it in CF-Connecting-IP, other proxies in X-Forwarded-For.
+function clientIp(req) {
+  const cf = String(req.headers["cf-connecting-ip"] || "").trim();
+  if (cf) return cf;
+  const xff = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return xff || req.socket.remoteAddress || "";
+}
+function newSession(req, res, uid) {
   const token = crypto.randomBytes(32).toString("base64url");
   const scade = Date.now() + SESSION_DAYS * 864e5;
   sessions.set(sha(token), { uid, scade, creata: Date.now() });
   saveSessions();
-  res.setHeader("Set-Cookie", `${COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_DAYS * 86400}`);
+  res.setHeader("Set-Cookie", `${COOKIE}=${token}; ${cookieAttrs(req)}; Max-Age=${SESSION_DAYS * 86400}`);
 }
-function clearCookie(res) { res.setHeader("Set-Cookie", `${COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`); }
+function clearCookie(req, res) { res.setHeader("Set-Cookie", `${COOKIE}=; ${cookieAttrs(req)}; Max-Age=0`); }
 function tokenOf(req) {
   const m = String(req.headers.cookie || "").match(new RegExp("(?:^|;\\s*)" + COOKIE + "=([^;]+)"));
   return m ? m[1] : null;
@@ -116,7 +129,7 @@ const publicUser = u => u && { id: u.id, nome: u.nome, admin: !!u.admin };
 
 // login throttling: 5 failures per name+address, then 15 minutes wait; 30 per address overall
 const fails = new Map();
-function throttleKey(req, nome) { return (req.socket.remoteAddress || "") + "|" + nome; }
+function throttleKey(req, nome) { return clientIp(req) + "|" + nome; }
 function isLocked(key) { const f = fails.get(key); return f && f.until > Date.now() ? Math.ceil((f.until - Date.now()) / 60000) : 0; }
 function noteFail(key, limit) {
   const f = fails.get(key) || { n: 0, until: 0 };
@@ -254,28 +267,30 @@ async function handle(req, res) {
     if ((first && users.length) || users.some(x => x.nome === nome)) return send(res, 409, { errore: "Questo nome utente esiste già, oppure l'account amministratore è appena stato creato. Riprova." });
     users.push(u); await saveUsers();
     if (first) await adoptLegacyData(u.id);
-    newSession(res, u.id);
+    newSession(req, res, u.id);
     console.log(`Nuovo account: ${nome}${first ? " (amministratore)" : ""}`);
     return send(res, 200, { utente: publicUser(u) });
   }
   if (p === "/api/accedi" && method === "POST") {
     const b = await readJsonBody(req);
     const nome = String(b.nome || "").trim().toLowerCase();
-    const key = throttleKey(req, nome), ipKey = throttleKey(req, "*");
-    const wait = isLocked(key) || isLocked(ipKey);
+    // limits: 5 wrong tries per name and address, 30 per address, 20 per name from any address
+    // (the last one still holds if someone fakes the forwarded address)
+    const key = throttleKey(req, nome), ipKey = throttleKey(req, "*"), nameKey = "*|" + nome;
+    const wait = isLocked(key) || isLocked(ipKey) || isLocked(nameKey);
     if (wait) return send(res, 429, { errore: `Troppi tentativi. Riprova tra ${wait} minut${wait === 1 ? "o" : "i"}.` });
     const u = users.find(x => x.nome === nome);
     if (!(await checkPassword(u, String(b.password || "")))) {
-      noteFail(key, 5); noteFail(ipKey, 30);
+      noteFail(key, 5); noteFail(ipKey, 30); noteFail(nameKey, 20);
       return send(res, 401, { errore: "Nome utente o password non corretti." });
     }
     fails.delete(key);
-    newSession(res, u.id);
+    newSession(req, res, u.id);
     return send(res, 200, { utente: publicUser(u) });
   }
   if (p === "/api/esci" && method === "POST") {
     const t = tokenOf(req); if (t) { sessions.delete(sha(t)); saveSessions(); }
-    clearCookie(res);
+    clearCookie(req, res);
     return send(res, 200, { ok: true });
   }
 
@@ -289,7 +304,7 @@ async function handle(req, res) {
     if (!validPassword(b.nuova)) return send(res, 400, { errore: "La nuova password deve avere almeno 8 caratteri." });
     Object.assign(me, await hashPassword(b.nuova)); await saveUsers();
     for (const [h, s] of sessions) if (s.uid === me.id) sessions.delete(h);   // sign out everywhere else
-    newSession(res, me.id);
+    newSession(req, res, me.id);
     return send(res, 200, { ok: true });
   }
 

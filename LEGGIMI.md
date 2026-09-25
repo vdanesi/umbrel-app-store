@@ -62,7 +62,7 @@ Se vuoi la doppia protezione (password di Umbrel più account di Scontrinaio), c
 - Se si tratta di un altro utente, l'amministratore può eliminarne l'account e farlo registrare di nuovo. Così però si perdono le sue spese, quindi prima fategli esportare un backup, se riesce ancora ad accedere.
 - Se l'amministratore ha perso la password, scrivimi e ti preparo una procedura di ripristino.
 
-**Accesso solo in http:** su Umbrel l'app gira in `http://`, senza https. In casa va bene. Da fuori usa Tailscale, che cifra il collegamento: non esporre la porta 3958 su internet.
+**Accesso da fuori casa:** usa Tailscale oppure un tunnel Cloudflare (vedi sotto). Non aprire la porta 3958 sul router.
 
 ## 3. Sul telefono
 
@@ -74,6 +74,23 @@ Se vuoi la doppia protezione (password di Umbrel più account di Scontrinaio), c
 Umbrel serve le app in `http://` (senza https). Per questo il browser non permette la fotocamera dentro la pagina.
 Il pulsante con la fotocamera apre quindi la **fotocamera del telefono**: scatti, confermi e la foto torna nell'app, che legge lo scontrino come prima.
 Per le stesse ragioni l'app non funziona offline: serve il collegamento all'Umbrel.
+
+## Accesso da internet con Cloudflare Tunnel
+
+Scontrinaio funziona dietro un tunnel Cloudflare, per esempio `https://spese.tuodominio.it`, e in https va meglio che in casa:
+- la **fotocamera si apre dentro l'app**, con la cornice per inquadrare lo scontrino;
+- l'app si può **installare** sul telefono e il cookie di accesso viaggia solo cifrato (flag `Secure`);
+- la protezione dai tentativi usa l'indirizzo reale del visitatore, che Cloudflare invia nell'intestazione `CF-Connecting-IP`.
+
+**Come configurarlo**
+1. Su Umbrel installa l'app **Cloudflare Tunnel** (oppure usa `cloudflared` dal pannello Zero Trust).
+2. Aggiungi un *Public hostname*, per esempio `spese.tuodominio.it`. Come servizio scegli **HTTP**, con indirizzo `umbrel.local:3958` (o l'IP dell'Umbrel seguito da `:3958`).
+3. Nel pannello Cloudflare del dominio, in **Speed → Optimization**, **disattiva Rocket Loader**: modifica gli script della pagina e può bloccare l'app.
+
+**Importante, prima di aprirla su internet**
+- Le registrazioni sono aperte di default. Su internet, chiunque trovi l'indirizzo potrebbe creare un account: vedrebbe solo le proprie spese, ma occuperebbe spazio sul tuo Umbrel. Dopo aver creato gli account che ti servono, **chiudi le registrazioni** da **Backup → Amministrazione**.
+- Protezione consigliata in più: **Cloudflare Access** (Zero Trust → Access → Applications → *Self-hosted*), con una regola che ammette solo le vostre email. Cloudflare chiede un codice via email prima ancora di mostrare la pagina di accesso di Scontrinaio. È gratuito fino a 50 utenti.
+- Non creare regole di cache "Cache Everything" su questo indirizzo. Senza regole particolari, Cloudflare non conserva le pagine né le spese: l'app le marca come non memorizzabili.
 
 ## 4. Portare le spese dalla versione su Claude o dalla PWA
 

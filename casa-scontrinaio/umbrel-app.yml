@@ -4,7 +4,7 @@ name: Scontrinaio
 tagline: Spese e scontrini di casa, letti in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-scontrinaio/app/public/icons/icon-512.png
 category: finance
-version: "1.2.0"
+version: "1.2.1"
 port: 3958
 description: >-
   Scontrinaio registra le spese di casa con la foto dello scontrino o della fattura.
@@ -27,9 +27,9 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Nuova pagina di accesso e registrazione, mostrata prima dell'app: senza account
-  l'app non viene nemmeno caricata. Le registrazioni sono aperte di default e
-  l'amministratore può chiuderle dal menu. Ogni account vede solo le proprie spese.
+  Pagina di accesso e registrazione prima dell'app, con registrazioni aperte di default
+  (l'amministratore può chiuderle). Pronta per Cloudflare Tunnel: cookie di accesso
+  sicuro in https e protezione dai tentativi basata sull'indirizzo reale del visitatore.
 dependencies: []
 path: ""
 defaultUsername: ""
