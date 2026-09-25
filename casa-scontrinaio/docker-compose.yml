@@ -6,6 +6,8 @@ services:
       # Format: <app-id>_<service-name>_1
       APP_HOST: casa-scontrinaio_web_1
       APP_PORT: 8080
+      # Scontrinaio has its own accounts and login, so Umbrel does not ask for its password as well
+      PROXY_AUTH_ADD: "false"
 
   web:
     # Stock Node.js image (amd64 + arm64): the app code ships in this folder, nothing to build.

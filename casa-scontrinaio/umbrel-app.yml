@@ -2,9 +2,9 @@ manifestVersion: 1
 id: casa-scontrinaio
 name: Scontrinaio
 tagline: Spese e scontrini di casa, letti in automatico
-icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-scontrinaio/app/public/icons/icon-512.png
+icon: https://raw.githubusercontent.com/TUO-UTENTE-GITHUB/umbrel-app-store/main/casa-scontrinaio/app/public/icons/icon-512.png
 category: finance
-version: "1.0.0"
+version: "1.1.0"
 port: 3958
 description: >-
   Scontrinaio registra le spese di casa con la foto dello scontrino o della fattura.
@@ -15,18 +15,21 @@ description: >-
   viene inviata a servizi esterni.
 
 
-  Spese e foto sono salvate sul tuo Umbrel e le vedi da telefono, tablet e computer.
+  Spese e foto sono salvate sul tuo Umbrel, protette da account personali con login,
+  e le vedi da telefono, tablet e computer.
   Riepilogo mensile per categoria, confronto con il mese precedente, totale delle spese
   detraibili nel 730, ricerca, esportazione CSV e backup completo.
 developer: Casa
-website: https://github.com/vdanesi/umbrel-app-store
+website: https://github.com/TUO-UTENTE-GITHUB/umbrel-app-store
 submitter: Casa
-submission: https://github.com/vdanesi/umbrel-app-store
-repo: https://github.com/vdanesi/umbrel-app-store
-support: https://github.com/vdanesi/umbrel-app-store/issues
+submission: https://github.com/TUO-UTENTE-GITHUB/umbrel-app-store
+repo: https://github.com/TUO-UTENTE-GITHUB/umbrel-app-store
+support: https://github.com/TUO-UTENTE-GITHUB/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Prima versione.
+  Account con registrazione e login: ogni persona vede solo le proprie spese.
+  Il primo account creato è l'amministratore e decide quando aprire le registrazioni.
+  Le spese della versione precedente vengono assegnate al primo account.
 dependencies: []
 path: ""
 defaultUsername: ""

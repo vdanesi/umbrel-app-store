@@ -33,7 +33,33 @@ Non c'è niente da compilare. Umbrel scarica l'immagine standard di Node.js, che
 4. Apri **Casa App Store** e installa **Scontrinaio**.
 
 L'app si apre dall'icona su Umbrel, oppure direttamente su **http://umbrel.local:3958**.
-Prima di mostrare l'app, Umbrel chiede la sua password.
+
+## Account e login
+
+Scontrinaio ha account suoi, separati da quello di Umbrel. Ogni persona vede **solo le proprie spese e foto**.
+
+- **Primo avvio:** l'app chiede di creare il primo account, che diventa l'**amministratore**. Crealo subito dopo l'installazione. Finché non esiste, chiunque sulla rete apra l'app potrebbe crearlo al posto tuo.
+- **Altri account** (per esempio per altre persone della famiglia): le registrazioni sono chiuse di default.
+  L'amministratore apre **Backup → Amministrazione → Consenti nuove registrazioni**, l'altra persona sceglie **Registrati**, poi l'amministratore richiude le registrazioni.
+- **Password:** almeno 8 caratteri. Si cambia da **Backup → Account → Cambia password**. Dopo il cambio, gli altri dispositivi devono accedere di nuovo.
+- **Accesso ricordato** per 30 giorni su ogni dispositivo. Il pulsante **Esci** chiude la sessione.
+- **Protezione dai tentativi:** dopo 5 password sbagliate l'accesso per quel nome si blocca per 15 minuti.
+- **Eliminare un account:** l'amministratore può eliminare un account da **Amministrazione**. Vengono cancellate anche le sue spese.
+- **Aggiornamento dalla versione 1.0.0:** le spese già salvate passano al primo account creato.
+
+Come sono protetti i dati:
+- le password sono salvate cifrate con scrypt, mai in chiaro;
+- il cookie di accesso non è leggibile dagli script della pagina;
+- le modifiche sono accettate solo se partono dall'app stessa.
+
+Dato che Scontrinaio ha il suo login, Umbrel non chiede anche la propria password: nel `docker-compose.yml` c'è `PROXY_AUTH_ADD: "false"`.
+Se vuoi la doppia protezione (password di Umbrel più account di Scontrinaio), cancella quella riga e aggiorna l'app.
+
+**Password dimenticata:** non c'è il recupero via email.
+- Se si tratta di un altro utente, l'amministratore può eliminarne l'account e farlo registrare di nuovo. Così però si perdono le sue spese, quindi prima fategli esportare un backup, se riesce ancora ad accedere.
+- Se l'amministratore ha perso la password, scrivimi e ti preparo una procedura di ripristino.
+
+**Accesso solo in http:** su Umbrel l'app gira in `http://`, senza https. In casa va bene. Da fuori usa Tailscale, che cifra il collegamento: non esporre la porta 3958 su internet.
 
 ## 3. Sul telefono
 
@@ -54,10 +80,13 @@ Per le stesse ragioni l'app non funziona offline: serve il collegamento all'Umbr
 ## 5. Backup
 
 I dati sono in `~/umbrel/app-data/casa-scontrinaio/data/` sull'Umbrel:
-- `spese.json` contiene tutte le spese;
-- `files/` contiene le foto degli scontrini.
+- `utenti.json` contiene gli account, con le password cifrate;
+- `utenti/<id>/spese.json` contiene le spese di ogni account;
+- `utenti/<id>/files/` contiene le foto degli scontrini.
 
-Esporta comunque un **backup completo** dall'app ogni tanto (**Backup → Esporta backup completo**) e tienilo fuori dall'Umbrel.
+Il backup dall'app contiene le spese dell'account con cui hai fatto l'accesso.
+
+Esporta comunque un **backup completo** dall'app ogni tanto (**Backup → Esporta backup completo**, da ogni account) e tienilo fuori dall'Umbrel.
 **Disinstallare l'app da Umbrel cancella i suoi dati.** Prima di disinstallarla, fai un backup.
 
 ## Aggiornare l'app

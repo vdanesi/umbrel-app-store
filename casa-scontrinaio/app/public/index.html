@@ -220,6 +220,28 @@ textarea.inp{height:auto;min-height:70px;padding:10px 12px;resize:vertical}
 .menu-item span{color:var(--ink-3);font-size:13px}
 .menu-note{color:var(--ink-2);font-size:13.5px;margin:0 0 12px}
 #lastBackup{margin:12px 0 0}
+.auth{position:fixed;inset:0;z-index:60;background:var(--ground);overflow:auto;display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.auth-card{width:100%;max-width:400px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:24px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
+.auth-brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:24px}
+.auth-card h1{font-family:var(--f-display);font-size:19px;margin:0}
+.auth-card p{margin:0;color:var(--ink-2);font-size:14px}
+.auth-tabs{display:flex;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.auth-tabs button{flex:1;border:0;background:transparent;border-radius:8px;padding:9px 4px;font-weight:600;color:var(--ink-2)}
+.auth-tabs button[aria-selected="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.auth-card form{display:flex;flex-direction:column;gap:12px}
+.auth-card .primary{width:100%}
+.pw-wrap{position:relative}
+.pw-wrap .inp{padding-right:78px}
+.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--accent);font-weight:600;font-size:13px;padding:6px 8px}
+.menu-sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.menu-sec h3{margin:0;font-family:var(--f-display);font-size:15px}
+.menu-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.user-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.user-row:last-child{border-bottom:0}
+.user-row small{color:var(--ink-3)}
+.switch{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
+.switch input{width:20px;height:20px;accent-color:var(--accent)}
+.pwform{display:flex;flex-direction:column;gap:8px}
 .linkbtn{border:0;background:none;padding:0;color:var(--accent);font-weight:700;text-decoration:underline;cursor:pointer}
 </style>
 </head>
@@ -237,7 +259,7 @@ textarea.inp{height:auto;min-height:70px;padding:10px 12px;resize:vertical}
       <span id="monthLabel"></span>
       <button id="next" aria-label="Mese successivo"><svg width="16" height="16" viewBox="0 0 16 16"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
-    <button class="ghost" id="menuBtn" aria-label="Backup e impostazioni"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2v8m0 0 3-3m-3 3L5 7M3 12v1.5h10V12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Backup</button>
+    <button class="ghost" id="menuBtn" aria-label="Backup e account"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2v8m0 0 3-3m-3 3L5 7M3 12v1.5h10V12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Backup</button>
   </header>
 
   <div class="banner" id="banner" hidden></div>
@@ -374,10 +396,35 @@ textarea.inp{height:auto;min-height:70px;padding:10px 12px;resize:vertical}
   </div>
 </div>
 
+<div class="auth" id="auth" hidden>
+  <div class="auth-card">
+    <div class="auth-brand"><svg width="30" height="30" viewBox="0 0 26 26" aria-hidden="true"><path d="M5 2h16v21l-2.7-1.8L15.7 23 13 21.2 10.3 23l-2.6-1.8L5 23z" fill="var(--accent)"/><path d="M9 8h8M9 12h8M9 16h5" stroke="var(--accent-ink)" stroke-width="1.8" stroke-linecap="round"/></svg>Scontrinaio</div>
+    <div id="authIntro"></div>
+    <div class="auth-tabs" role="tablist" id="authTabs">
+      <button type="button" role="tab" id="tabLogin" aria-selected="true">Accedi</button>
+      <button type="button" role="tab" id="tabSignup" aria-selected="false">Registrati</button>
+    </div>
+    <form id="authForm" novalidate>
+      <label class="f">Nome utente
+        <input class="inp" id="a-nome" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </label>
+      <label class="f">Password
+        <span class="pw-wrap"><input class="inp" id="a-pw" type="password" autocomplete="current-password" required><button type="button" class="pw-toggle" id="pwToggle">Mostra</button></span>
+      </label>
+      <label class="f" id="pw2Wrap" hidden>Ripeti la password
+        <input class="inp" id="a-pw2" type="password" autocomplete="new-password">
+      </label>
+      <p id="authHint" class="status"></p>
+      <div class="status err" id="authErr" aria-live="polite"></div>
+      <button class="primary" id="authSubmit">Accedi</button>
+    </form>
+  </div>
+</div>
+
 <div class="overlay" id="menu" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
     <div class="sheet-h">
-      <h2 id="menuTitle">Backup e dati</h2>
+      <h2 id="menuTitle">Backup e account</h2>
       <button class="x" id="closeMenu" aria-label="Chiudi">×</button>
     </div>
     <p class="menu-note" id="storageNote">Le spese e le foto sono salvate sul tuo Umbrel.</p>
@@ -390,6 +437,26 @@ textarea.inp{height:auto;min-height:70px;padding:10px 12px;resize:vertical}
     </div>
     <p class="menu-note" id="iosInstall" hidden>Per installarla su iPhone: tocca <b>Condividi</b> in Safari e poi <b>Aggiungi alla schermata Home</b>.</p>
     <p class="menu-note" id="lastBackup"></p>
+
+    <section class="menu-sec" aria-labelledby="accTitle">
+      <h3 id="accTitle">Account</h3>
+      <div class="menu-row"><span id="accName"></span><button class="small" id="logoutBtn">Esci</button></div>
+      <details id="pwDetails">
+        <summary style="cursor:pointer;font-weight:600;font-size:14px">Cambia password</summary>
+        <form class="pwform" id="pwForm" novalidate style="margin-top:10px">
+          <input class="inp" id="pw-old" type="password" autocomplete="current-password" placeholder="Password attuale" aria-label="Password attuale">
+          <input class="inp" id="pw-new" type="password" autocomplete="new-password" placeholder="Nuova password (almeno 8 caratteri)" aria-label="Nuova password">
+          <div class="status" id="pwMsg" aria-live="polite"></div>
+          <button class="small" id="pwSave" style="align-self:flex-start">Salva nuova password</button>
+        </form>
+      </details>
+    </section>
+
+    <section class="menu-sec" id="adminSec" hidden aria-labelledby="admTitle">
+      <h3 id="admTitle">Amministrazione</h3>
+      <label class="switch"><input type="checkbox" id="regOpen"><span>Consenti nuove registrazioni<br><small style="color:var(--ink-3)">Aprile solo mentre qualcuno si sta registrando.</small></span></label>
+      <div id="userList"></div>
+    </section>
   </div>
 </div>
 
@@ -413,8 +480,15 @@ const urls = {};   // attachment id -> object URL
 
 // ---------- Storage on the Umbrel server ----------
 async function api(method, url, body, type){
-  const r = await fetch(url, { method, headers: body ? { "Content-Type": type || "application/json" } : {}, body: body ? (type ? body : JSON.stringify(body)) : undefined, credentials: "same-origin" });
-  if (!r.ok){ const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+  const headers = { "X-Scontrinaio": "1" };
+  if (body) headers["Content-Type"] = type || "application/json";
+  const r = await fetch(url, { method, headers, body: body ? (type ? body : JSON.stringify(body)) : undefined, credentials: "same-origin" });
+  if (!r.ok){
+    const e = new Error("HTTP " + r.status); e.status = r.status;
+    try { e.msg = (await r.json()).errore; } catch {}
+    if (r.status === 401 && !/api\/(accedi|password)/.test(url)) showAuth();
+    throw e;
+  }
   return r.headers.get("content-type")?.includes("json") ? r.json() : r;
 }
 const store = {
@@ -434,7 +508,7 @@ async function reload(){
     render();
     backupReminder();
     offlineBanner(false);
-  } catch (e) { offlineBanner(true); throw e; }
+  } catch (e) { if (e.status !== 401) offlineBanner(true); throw e; }
   finally { loading = false; }
 }
 function offlineBanner(on){
@@ -442,8 +516,8 @@ function offlineBanner(on){
   if (on){ b.hidden = false; b.dataset.kind = "offline"; b.textContent = "Non riesco a raggiungere il tuo Umbrel. Controlla di essere sulla rete di casa (o su Tailscale) e riprova."; }
   else if (b.dataset.kind === "offline"){ b.hidden = true; delete b.dataset.kind; }
 }
-document.addEventListener("visibilitychange", () => { if (!document.hidden) reload().catch(()=>{}); });
-setInterval(() => { if (!document.hidden && $("overlay").hidden) reload().catch(()=>{}); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && me) reload().catch(()=>{}); });
+setInterval(() => { if (!document.hidden && me && $("overlay").hidden) reload().catch(()=>{}); }, 60000);
 
 // ---------- Helpers ----------
 function parseAmount(s){
@@ -883,10 +957,13 @@ $("menuBtn").onclick = openMenu;
 $("closeMenu").onclick = closeMenu;
 $("menu").addEventListener("click", e => { if (e.target === $("menu")) closeMenu(); });
 async function refreshMenu(){
-  const note = (spese.length===1 ? "1 spesa salvata" : `${spese.length} spese salvate`) + " sul tuo Umbrel, condivise da tutti i tuoi dispositivi.";
+  const note = (spese.length===1 ? "1 spesa salvata" : `${spese.length} spese salvate`) + " sul tuo Umbrel, visibili solo a te da tutti i tuoi dispositivi.";
   $("storageNote").textContent = note;
-  const lb = lsGet("ultimoBackup");
+  const lb = lsGet("ultimoBackup:" + (me?.id||""));
   $("lastBackup").textContent = lb ? "Ultimo backup: " + new Date(lb).toLocaleDateString("it-IT",{day:"numeric",month:"long",year:"numeric"}) + "." : "Non hai ancora fatto un backup.";
+  $("accName").textContent = me ? "Connesso come " + me.nome + (me.admin ? " (amministratore)" : "") : "";
+  $("adminSec").hidden = !me?.admin;
+  if (me?.admin) loadAdmin();
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
   $("installBtn").hidden = standalone || !deferredInstall;
   $("iosInstall").hidden = standalone || !/iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -903,7 +980,7 @@ $("backupBtn").onclick = async () => {
     }
     const json = JSON.stringify({ app:"scontrinaio", versione:1, esportato:new Date().toISOString(), spese: out });
     const file = new File([json], `scontrinaio-backup-${todayISO()}.json`, { type:"application/json" });
-    if (await giveFile(file)){ lsSet("ultimoBackup", new Date().toISOString()); toast("Backup pronto: " + (out.length===1 ? "1 spesa" : out.length + " spese")); backupReminder(); refreshMenu(); }
+    if (await giveFile(file)){ lsSet("ultimoBackup:" + (me?.id||""), new Date().toISOString()); toast("Backup pronto: " + (out.length===1 ? "1 spesa" : out.length + " spese")); backupReminder(); refreshMenu(); }
   } catch { toast("Backup non riuscito. Riprova."); }
   finally { b.disabled = false; b.querySelector("b").textContent = "Esporta backup completo"; }
 };
@@ -947,7 +1024,7 @@ $("installBtn").onclick = async () => { if (!deferredInstall) return; deferredIn
 
 function backupReminder(){
   const b = $("banner");
-  const lb = lsGet("ultimoBackup");
+  const lb = lsGet("ultimoBackup:" + (me?.id||""));
   const old = !lb || (Date.now() - new Date(lb).getTime()) > 30*864e5;
   if (spese.length >= 5 && old && b.dataset.kind !== "offline"){
     b.hidden = false;
@@ -957,9 +1034,92 @@ function backupReminder(){
   } else if (b.dataset.kind === "backup"){ b.hidden = true; delete b.dataset.kind; }
 }
 
+// ---------- Accounts ----------
+let me = null, authMode = "login", authState = null;
+function setAuthMode(mode){
+  authMode = mode;
+  const signup = mode === "signup";
+  $("tabLogin").setAttribute("aria-selected", String(!signup));
+  $("tabSignup").setAttribute("aria-selected", String(signup));
+  $("pw2Wrap").hidden = !signup;
+  $("a-pw").autocomplete = signup ? "new-password" : "current-password";
+  $("authSubmit").textContent = signup ? (authState?.primoAvvio ? "Crea account amministratore" : "Crea account") : "Accedi";
+  $("authHint").textContent = signup ? "Nome utente: lettere minuscole, numeri, punto o trattino. Password: almeno 8 caratteri." : "";
+  $("authErr").textContent = "";
+}
+async function showAuth(){
+  me = null; spese = []; render();
+  closeSheet(); closeMenu(); $("banner").hidden = true;
+  try { authState = await api("GET", "api/stato"); } catch { authState = { primoAvvio:false, registrazioniAperte:false }; }
+  const first = authState.primoAvvio;
+  $("authIntro").innerHTML = first
+    ? "<h1>Benvenuto</h1><p>Crea il primo account: sarà l'amministratore di Scontrinaio su questo Umbrel. Le spese di ogni account sono visibili solo a chi le ha inserite.</p>"
+    : "<h1>Accedi</h1><p>Le tue spese sono protette dal tuo account.</p>";
+  $("authTabs").hidden = first || !authState.registrazioniAperte;
+  setAuthMode(first ? "signup" : "login");
+  $("auth").hidden = false;
+  setTimeout(() => $("a-nome").focus(), 50);
+}
+$("tabLogin").onclick = () => setAuthMode("login");
+$("tabSignup").onclick = () => setAuthMode("signup");
+$("pwToggle").onclick = () => { const i=$("a-pw"), show = i.type === "password"; i.type = show ? "text" : "password"; $("a-pw2").type = i.type; $("pwToggle").textContent = show ? "Nascondi" : "Mostra"; };
+$("authForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = $("authErr"); err.textContent = "";
+  const nome = $("a-nome").value.trim().toLowerCase(), password = $("a-pw").value;
+  if (!nome || !password){ err.textContent = "Inserisci nome utente e password."; return; }
+  if (authMode === "signup" && password !== $("a-pw2").value){ err.textContent = "Le due password non coincidono."; return; }
+  const btn = $("authSubmit"); btn.disabled = true;
+  try {
+    const r = await api("POST", authMode === "signup" ? "api/registrati" : "api/accedi", { nome, password });
+    me = r.utente;
+    $("a-pw").value = ""; $("a-pw2").value = "";
+    $("auth").hidden = true;
+    await reload();
+    toast(authMode === "signup" ? "Account creato. Benvenuto, " + me.nome + "!" : "Bentornato, " + me.nome);
+  } catch (e2) {
+    err.textContent = e2.msg || (e2.status ? "Accesso non riuscito." : "Non riesco a raggiungere il tuo Umbrel.");
+  } finally { btn.disabled = false; }
+});
+$("logoutBtn").onclick = async () => { try { await api("POST", "api/esci"); } catch {} showAuth(); };
+$("pwForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = $("pwMsg"); msg.className = "status"; msg.textContent = "";
+  try {
+    await api("POST", "api/password", { attuale: $("pw-old").value, nuova: $("pw-new").value });
+    $("pw-old").value = ""; $("pw-new").value = "";
+    msg.textContent = "Password cambiata. Gli altri dispositivi dovranno accedere di nuovo.";
+  } catch (e2) { msg.className = "status err"; msg.textContent = e2.msg || "Cambio password non riuscito."; }
+});
+async function loadAdmin(){
+  try {
+    const r = await api("GET", "api/admin/utenti");
+    $("regOpen").checked = !!r.impostazioni.registrazioniAperte;
+    $("userList").innerHTML = r.utenti.map(u => `<div class="user-row"><span><b>${esc(u.nome)}</b>${u.admin ? " · amministratore" : ""}<br><small>${u.spese} spese · dal ${new Date(u.creato).toLocaleDateString("it-IT")}</small></span>${u.id === me.id ? "" : `<button class="del" data-uid="${esc(u.id)}" data-nome="${esc(u.nome)}">Elimina</button>`}</div>`).join("");
+  } catch {}
+}
+$("regOpen").onchange = async e => {
+  try { await api("POST", "api/admin/impostazioni", { registrazioniAperte: e.target.checked }); toast(e.target.checked ? "Registrazioni aperte" : "Registrazioni chiuse"); }
+  catch { e.target.checked = !e.target.checked; toast("Modifica non riuscita"); }
+};
+$("userList").addEventListener("click", async e => {
+  const b = e.target.closest("[data-uid]"); if (!b) return;
+  if (!b.classList.contains("arm")){ b.classList.add("arm"); b.textContent = "Elimina " + b.dataset.nome + " e le sue spese"; return; }
+  b.disabled = true;
+  try { await api("DELETE", "api/admin/utenti/" + encodeURIComponent(b.dataset.uid)); toast("Account eliminato"); loadAdmin(); }
+  catch (e2) { toast(e2.msg || "Eliminazione non riuscita"); b.disabled = false; }
+});
+
 // ---------- Boot ----------
 render();
-reload().catch(() => {});
+(async () => {
+  try {
+    const st = await api("GET", "api/stato");
+    if (!st.utente) return showAuth();
+    me = st.utente;
+    await reload();
+  } catch (e) { if (e.status !== 401) offlineBanner(true); }
+})();
 if (location.hash === "#scatta"){ history.replaceState(null, "", location.pathname); setTimeout(() => openCamera(true), 300); }
 if ("serviceWorker" in navigator && window.isSecureContext){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
