@@ -5,16 +5,18 @@ Una volta aggiunto a Umbrel, Scontrinaio si installa e si apre come le altre app
 Spese e foto sono salvate sull'Umbrel e le vedi da tutti i tuoi dispositivi.
 
 ```
-umbrel-app-store.yml          ← nome dello store ("Casa")
+umbrel-app-store.yml              ← nome dello store ("Casa")
+.github/workflows/immagine.yml    ← GitHub costruisce l'immagine Docker dell'app
 casa-scontrinaio/
-  umbrel-app.yml              ← scheda dell'app (nome, icona, porta 3958)
-  docker-compose.yml          ← come Umbrel avvia l'app (immagine ufficiale node:20-alpine)
-  app/server.js               ← piccolo server senza dipendenze
-  app/public/                 ← l'app (pagina, icone, lettura scontrini)
-  data/                       ← qui vengono salvati spese.json e le foto (resta vuota nel repository)
+  umbrel-app.yml                  ← scheda dell'app (nome, icona, porta 3958, versione)
+  docker-compose.yml              ← quale immagine Umbrel avvia (ghcr.io/vdanesi/scontrinaio:<versione>)
+  app/Dockerfile                  ← come è fatta l'immagine (Node.js 20, senza dipendenze)
+  app/server.js                   ← il server: account, spese, foto
+  app/public/                     ← l'app (pagine, icone, lettura scontrini)
+  data/                           ← dati sull'Umbrel (resta vuota nel repository)
 ```
 
-Non c'è niente da compilare. Umbrel scarica l'immagine standard di Node.js, che funziona sia su Umbrel Home (x86) sia su Raspberry Pi (ARM), e avvia `server.js` dalla cartella dell'app.
+**Perché serve l'immagine Docker.** Quando aggiorna un'app, Umbrel copia solo `docker-compose.yml`, `umbrel-app.yml` e pochi altri file di configurazione, mai il codice. Il codice viaggia quindi dentro un'immagine Docker che GitHub costruisce da solo, per Umbrel Home (x86) e Raspberry Pi (ARM), a ogni modifica.
 
 ## 1. Metti la cartella su GitHub
 
@@ -111,10 +113,22 @@ Il backup dall'app contiene le spese dell'account con cui hai fatto l'accesso.
 Esporta comunque un **backup completo** dall'app ogni tanto (**Backup → Esporta backup completo**, da ogni account) e tienilo fuori dall'Umbrel.
 **Disinstallare l'app da Umbrel cancella i suoi dati.** Prima di disinstallarla, fai un backup.
 
-## Aggiornare l'app
+## Aggiornare l'app (nuova versione)
 
 1. Modifica i file su GitHub.
-2. Aumenta `version` in `umbrel-app.yml` (ad esempio da `"1.0.0"` a `"1.0.1"`).
-3. Umbrel proporrà l'aggiornamento nell'App Store.
+2. Aumenta la versione **in due punti, con lo stesso numero**:
+   - `casa-scontrinaio/umbrel-app.yml` → `version: "1.3.2"`
+   - `casa-scontrinaio/docker-compose.yml` → `image: ghcr.io/vdanesi/scontrinaio:1.3.2`
+3. Premi **Commit changes**. GitHub avvia da solo la costruzione dell'immagine: la vedi nella scheda **Actions** del repository e dura 2–4 minuti.
+4. **Aspetta il segno verde** in Actions. Solo dopo, su Umbrel, premi **Update** su Scontrinaio. Se aggiorni prima che l'immagine sia pronta, Umbrel non riesce a scaricarla: in quel caso aspetta e riprova.
+5. Fai un backup prima di ogni aggiornamento.
 
-Fai un backup prima di ogni aggiornamento.
+Per controllare quale versione gira: apri `/api/salute` nell'indirizzo dell'app, ad esempio `https://scontrinaio.dvsolutions.net/api/salute`.
+
+### Solo la prima volta: rendi pubblica l'immagine
+GitHub crea l'immagine come **privata**, e Umbrel non riuscirebbe a scaricarla.
+Dopo la prima costruzione riuscita:
+1. apri il tuo profilo GitHub → **Packages** → **scontrinaio**;
+2. vai in **Package settings** → **Danger Zone** → **Change visibility** e scegli **Public**.
+
+L'immagine contiene solo il codice dell'app, nessun tuo dato.
