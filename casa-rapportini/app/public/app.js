@@ -157,7 +157,7 @@
       testata: { agente: s.agente || '', qualifica: s.qualifica || '', cid: s.cid || '', residenza: s.residenza || '', servizio: s.servizio || '', unita: s.unita || '' },
       lavori: [emptyLav()], anomalie: [],
       moduli: { m0229: [], m0452: [], codice3: s.codiceModulo3 || '', m3: [] },
-      riepilogo: { totaleOre: '', oreStraord: '', straordManuale: false, trasferte: '', surrogazioni: '' },
+      riepilogo: { totaleOre: '', oreStraord: '', straordManuale: false, turnoDalle: s.turnoDalle || '', turnoAlle: s.turnoAlle || '', trasferte: '', surrogazioni: '' },
       note: ''
     };
   }
@@ -172,6 +172,9 @@
     if (!rep.lavori.length) rep.lavori.push(emptyLav());
     rep.moduli = { m0229: [], m0452: [], m3: [], codice3: '', ...(rep.moduli || {}) };
     if (!rep.moduli.codice3 && settings?.codiceModulo3) rep.moduli.codice3 = settings.codiceModulo3;
+    if (!rep.riepilogo.turnoDalle && !rep.riepilogo.turnoAlle && !rep.riepilogo.straordManuale) {
+      rep.riepilogo.turnoDalle = settings?.turnoDalle || ''; rep.riepilogo.turnoAlle = settings?.turnoAlle || '';
+    }
     fillEditor();
     status(repExists ? 'salvato' : 'nuovo', repExists ? 'ok' : '');
   }
@@ -185,6 +188,8 @@
     $('rTrasferte').value = rep.riepilogo.trasferte || '';
     $('rSurrogazioni').value = rep.riepilogo.surrogazioni || '';
     $('rStraordMan').checked = !!rep.riepilogo.straordManuale;
+    $('rTurnoDalle').value = rep.riepilogo.turnoDalle || '';
+    $('rTurnoAlle').value = rep.riepilogo.turnoAlle || '';
     $('note').value = rep.note || '';
     renderLavori(); renderAnomalie(); renderModuli(); recalc(false);
     $('btnDelete').disabled = !repExists;
@@ -306,16 +311,37 @@
     const man = $('rStraordMan').checked;
     rep.riepilogo.straordManuale = man;
     const s = $('rStraord');
+    const turno = between(rep.riepilogo.turnoDalle, rep.riepilogo.turnoAlle) != null;
     if (!man) {
-      const x = Math.max(0, tot - ord);
+      const x = turno ? straordFuoriTurno(rep.lavori, rep.riepilogo.turnoDalle, rep.riepilogo.turnoAlle) : Math.max(0, tot - ord);
       rep.riepilogo.oreStraord = x ? fmtMin(x) : '';
       s.value = rep.riepilogo.oreStraord;
     } else {
       s.value = rep.riepilogo.oreStraord || '';
     }
     s.readOnly = !man; s.classList.toggle('auto', !man);
-    $('straordHint').textContent = man ? 'Valore inserito a mano.' : `Calcolato: ore oltre l'orario ordinario di ${fmtMin(ord)}.`;
+    $('straordHint').textContent = man ? 'Valore inserito a mano.'
+      : turno ? `Calcolato: lavoro fuori dal turno ${rep.riepilogo.turnoDalle}–${rep.riepilogo.turnoAlle}.`
+      : `Calcolato: ore oltre le ${fmtMin(ord)} ordinarie (indica il turno per contare dall'orario di fine).`;
     if (save) scheduleSave();
+  }
+
+  /** Minuti lavorati fuori dalla fascia del turno (anche turni che passano la mezzanotte). */
+  function straordFuoriTurno(lavori, tDalle, tAlle) {
+    const ts = toMin(tDalle), tl = between(tDalle, tAlle);
+    let fuori = 0;
+    for (const l of lavori) {
+      const a = toMin(l.dalle), d = between(l.dalle, l.alle);
+      if (a == null || d == null) continue;   // senza orario non si può sapere: non conta
+      const b = a + d;
+      let dentro = 0;
+      for (const off of [-1440, 0, 1440]) {
+        const s = ts + off, e = ts + off + tl;
+        dentro += Math.max(0, Math.min(b, e) - Math.max(a, s));
+      }
+      fuori += d - Math.min(d, dentro);
+    }
+    return fuori;
   }
 
   function scheduleSave() {
@@ -362,6 +388,8 @@
     $('rSurrogazioni').addEventListener('input', e => { rep.riepilogo.surrogazioni = e.target.value; scheduleSave(); });
     $('rStraord').addEventListener('input', e => { rep.riepilogo.oreStraord = e.target.value.trim().replace('.', ':'); scheduleSave(); });
     $('rStraordMan').addEventListener('change', () => recalc());
+    $('rTurnoDalle').addEventListener('input', e => { rep.riepilogo.turnoDalle = e.target.value; recalc(); });
+    $('rTurnoAlle').addEventListener('input', e => { rep.riepilogo.turnoAlle = e.target.value; recalc(); });
     $('note').addEventListener('input', e => { rep.note = e.target.value; scheduleSave(); });
     $('btnAddLav').onclick = () => {
       if (rep.lavori.length >= MAX_LAV) return;
@@ -442,7 +470,7 @@
     const s = settings;
     $('sAgente').value = s.agente; $('sQualifica').value = s.qualifica; $('sCid').value = s.cid;
     $('sResidenza').value = s.residenza; $('sServizio').value = s.servizio; $('sUnita').value = s.unita;
-    $('sOrario').value = s.orarioOrdinario; $('sCodice3').value = s.codiceModulo3;
+    $('sOrario').value = s.orarioOrdinario; $('sTurnoDalle').value = s.turnoDalle || ''; $('sTurnoAlle').value = s.turnoAlle || ''; $('sCodice3').value = s.codiceModulo3;
     $('sOffX').value = s.stampa.offsetX; $('sOffY').value = s.stampa.offsetY; $('sScala').value = s.stampa.scala;
     $('versionInfo').textContent = 'Rapportini versione ' + (s.versione || '');
   }
@@ -451,6 +479,7 @@
     s.agente = $('sAgente').value; s.qualifica = $('sQualifica').value; s.cid = $('sCid').value;
     s.residenza = $('sResidenza').value; s.servizio = $('sServizio').value; s.unita = $('sUnita').value;
     if (toMin($('sOrario').value) != null) s.orarioOrdinario = $('sOrario').value.trim();
+    s.turnoDalle = $('sTurnoDalle').value; s.turnoAlle = $('sTurnoAlle').value;
     s.codiceModulo3 = $('sCodice3').value.trim();
     s.stampa = { offsetX: Number($('sOffX').value) || 0, offsetY: Number($('sOffY').value) || 0, scala: Number($('sScala').value) || 100 };
   }

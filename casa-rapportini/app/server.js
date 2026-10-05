@@ -22,7 +22,8 @@ const MAX_MODULI_PER_COLONNA = 8;
 const DEFAULT_SETTINGS = {
   agente: '', qualifica: '', cid: '',
   residenza: '', servizio: '', unita: '',
-  orarioOrdinario: '08:00',          // oltre questo totale scatta lo straordinario
+  orarioOrdinario: '08:00',          // senza orario del turno: oltre questo totale scatta lo straordinario
+  turnoDalle: '', turnoAlle: '',     // orario del turno: il lavoro fuori da questa fascia è straordinario
   codiceModulo3: '',                 // terza colonna dei moduli emessi (la prima è 0229, la seconda 0452)
   stampa: { offsetX: 0, offsetY: 0, scala: 100 }  // calibrazione per il modulo prestampato
 };
@@ -57,6 +58,7 @@ function sanitizeSettings(s = {}) {
     agente: str(s.agente, 120), qualifica: str(s.qualifica, 80), cid: str(s.cid, 40),
     residenza: str(s.residenza, 120), servizio: str(s.servizio, 120), unita: str(s.unita, 120),
     orarioOrdinario: durata(s.orarioOrdinario) || DEFAULT_SETTINGS.orarioOrdinario,
+    turnoDalle: ora(s.turnoDalle), turnoAlle: ora(s.turnoAlle),
     codiceModulo3: str(s.codiceModulo3, 12),
     stampa: {
       offsetX: Math.max(-30, Math.min(30, num(st.offsetX))),
@@ -89,6 +91,7 @@ function sanitizeReport(r = {}, data) {
     riepilogo: {
       totaleOre: durata(rr.totaleOre), oreStraord: durata(rr.oreStraord),
       straordManuale: Boolean(rr.straordManuale),
+      turnoDalle: ora(rr.turnoDalle), turnoAlle: ora(rr.turnoAlle),
       trasferte: str(rr.trasferte, 40), surrogazioni: str(rr.surrogazioni, 40)
     },
     note: str(r.note, 4000),

@@ -166,7 +166,7 @@ Registro delle attività lavorative in ambito ferroviario che compila il **Rappo
 
 - Si installa da **Casa App Store → Rapportini** e si apre dall'icona, oppure su **http://umbrel.local:3444**.
 - Non ha account suoi: lo protegge la password di Umbrel. Non serve internet.
-- **Prima volta:** apri **Impostazioni** e inserisci agente, qualifica, CID, residenza di servizio, servizio abituale, unità e orario ordinario (per il calcolo dello straordinario). Compileranno da soli ogni nuovo rapporto.
+- **Prima volta:** apri **Impostazioni** e inserisci agente, qualifica, CID, residenza di servizio, servizio abituale, unità e **inizio e fine turno**: è straordinario il lavoro fatto prima dell'inizio o dopo la fine (turno fino alle 16:48, lavoro fino alle 17:48 = 1:00). Il turno si può cambiare in ogni rapporto. Compileranno da soli ogni nuovo rapporto.
 - **Ogni giorno:** "+ Rapporto di oggi", poi i lavori con *dalle/alle*: ore, totale e straordinario si calcolano da soli. Si salva da solo a ogni modifica. "Copia dal giorno prima" riprende lavori e testata dell'ultimo rapporto.
 - **Stampa:** "Anteprima e stampa" → *Modulo completo* (su foglio bianco) oppure *Solo dati* (sul modulo prestampato). Nella finestra di stampa: A4 orizzontale, scala 100%, margini nessuno.
 - **Calibrare il prestampato:** Impostazioni → "Stampa foglio di prova", sovrapponi il foglio al modulo in controluce e correggi Spostamento X/Y e Scala finché le crocette rosse cadono sugli angoli delle tabelle.

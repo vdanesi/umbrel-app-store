@@ -114,6 +114,10 @@
         <h3><span class="c-cyan">#</span> Riepilogo</h3>
         <div class="riep">
           <label>Totale ore <input id="rTotale" readonly class="auto" title="Somma delle ore dei lavori"></label>
+          <div class="form-grid">
+            <label>Turno dalle <input type="time" id="rTurnoDalle"></label>
+            <label>Turno alle <input type="time" id="rTurnoAlle"></label>
+          </div>
           <label>Ore straordinario
             <input id="rStraord" placeholder="0:00" pattern="\d{1,3}:[0-5]\d">
           </label>
@@ -167,10 +171,12 @@
     <section class="box">
       <h3><span class="c-cyan">#</span> Orario e moduli</h3>
       <div class="form-grid g3">
-        <label>Orario ordinario giornaliero <input id="sOrario" placeholder="8:00" pattern="\d{1,2}:[0-5]\d"></label>
+        <label>Inizio turno <input type="time" id="sTurnoDalle"></label>
+        <label>Fine turno <input type="time" id="sTurnoAlle"></label>
+        <label>Ore ordinarie (se non indichi il turno) <input id="sOrario" placeholder="8:00" pattern="\d{1,2}:[0-5]\d"></label>
         <label>Codice 3ª colonna moduli emessi <input id="sCodice3" maxlength="12" placeholder="es. 0230"></label>
       </div>
-      <p class="hint">Le ore oltre l'orario ordinario diventano straordinario (puoi sempre correggerlo a mano nel rapporto).</p>
+      <p class="hint">Con inizio e fine turno, è straordinario tutto il lavoro fatto prima dell'inizio o dopo la fine (es. turno fino alle 16:48: dalle 16:48 alle 17:48 = 1:00). Senza turno, è straordinario quello che supera le ore ordinarie. Il turno si può cambiare in ogni rapporto, e lo straordinario si può sempre correggere a mano.</p>
     </section>
 
     <section class="box">

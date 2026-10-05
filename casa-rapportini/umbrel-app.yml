@@ -4,7 +4,7 @@ name: Rapportini
 tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
 category: files
-version: "1.0.0"
+version: "1.0.1"
 port: 3444
 description: >-
   Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
@@ -32,7 +32,8 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Prima versione.
+  Lo straordinario si calcola dall'orario del turno: è straordinario il lavoro fatto
+  prima dell'inizio o dopo la fine del turno. Imposta il turno in Impostazioni.
 dependencies: []
 path: ""
 defaultUsername: ""
