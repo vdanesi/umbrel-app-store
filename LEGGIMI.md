@@ -1,6 +1,6 @@
 # Scontrinaio per Umbrel
 
-Questa cartella è un **app store personale per umbrelOS** con una sola app, Scontrinaio.
+Questa cartella è un **app store personale per umbrelOS** con due app: Scontrinaio e Camper Planner (vedi la sezione in fondo).
 Una volta aggiunto a Umbrel, Scontrinaio si installa e si apre come le altre app.
 Spese e foto sono salvate sull'Umbrel e le vedi da tutti i tuoi dispositivi.
 
@@ -14,6 +14,8 @@ casa-scontrinaio/
   app/server.js                   ← il server: account, spese, foto
   app/public/                     ← l'app (pagine, icone, lettura scontrini)
   data/                           ← dati sull'Umbrel (resta vuota nel repository)
+.github/workflows/camper-planner.yml ← GitHub costruisce l'immagine di Camper Planner
+casa-camper-planner/              ← stessa struttura: umbrel-app.yml, docker-compose.yml, app/, data/
 ```
 
 **Perché serve l'immagine Docker.** Quando aggiorna un'app, Umbrel copia solo `docker-compose.yml`, `umbrel-app.yml` e pochi altri file di configurazione, mai il codice. Il codice viaggia quindi dentro un'immagine Docker che GitHub costruisce da solo, per Umbrel Home (x86) e Raspberry Pi (ARM), a ogni modifica.
@@ -132,3 +134,24 @@ Dopo la prima costruzione riuscita:
 2. vai in **Package settings** → **Danger Zone** → **Change visibility** e scegli **Public**.
 
 L'immagine contiene solo il codice dell'app, nessun tuo dato.
+
+---
+
+# Camper Planner
+
+Pianificatore di itinerari in camper: tappe sulla mappa con percorso e tempi di guida, aree camper e campeggi da OpenStreetMap, diario, spese e budget, esportazione GPX e stampa. I viaggi sono salvati sull'Umbrel in `data/`.
+
+- Si installa da **Casa App Store → Camper Planner** e si apre dall'icona, oppure su **http://umbrel.local:3847**.
+- Non ha account suoi: lo protegge la password di Umbrel.
+- Serve internet per mappe, percorsi e ricerca dei luoghi (servizi pubblici di OpenStreetMap).
+- Facoltativo: con una chiave gratuita di [OpenRouteService](https://openrouteservice.org/dev/#/signup), da incollare nella scheda **Mezzo**, il percorso tiene conto di altezza, larghezza, lunghezza e massa del camper. Senza chiave usa OSRM (profilo auto) con tempi aumentati del 15%.
+
+### Solo la prima volta: rendi pubblica l'immagine
+Come per Scontrinaio: dopo la prima costruzione riuscita in **Actions** (“Immagine Docker Camper Planner”), apri **Packages → camper-planner → Package settings → Change visibility → Public**.
+
+### Aggiornare Camper Planner
+Stessa procedura di Scontrinaio, con lo stesso numero di versione in:
+- `casa-camper-planner/umbrel-app.yml` → `version`
+- `casa-camper-planner/docker-compose.yml` → `image: ghcr.io/vdanesi/camper-planner:<versione>`
+- `casa-camper-planner/app/package.json` → `version` (è la versione mostrata da `/api/health`)
+

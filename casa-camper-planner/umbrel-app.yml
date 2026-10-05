@@ -1,0 +1,44 @@
+manifestVersion: 1
+id: casa-camper-planner
+name: Camper Planner
+tagline: Itinerari in camper con aree sosta, diario e costi
+icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
+category: files
+version: "1.0.0"
+port: 3847
+description: >-
+  Pianifica i viaggi in camper dal tuo Umbrel.
+
+
+  Aggiungi le tappe sulla mappa e l'app calcola percorso, distanze e tempi di guida.
+  Per ogni tappa indichi le notti e le date si calcolano da sole.
+
+
+  Cerca su OpenStreetMap aree camper, campeggi, carico/scarico, acqua e GPL, lungo il
+  percorso o vicino a una tappa, e aggiungile al viaggio con un clic.
+
+
+  Tieni il diario di viaggio, registra le spese per categoria, stima il carburante e
+  controlla il budget. Esporta in GPX per il navigatore, stampa l'itinerario o fai un
+  backup JSON.
+
+
+  Con una chiave gratuita di OpenRouteService il percorso tiene conto di altezza,
+  larghezza, lunghezza e massa del camper.
+
+
+  I viaggi sono salvati sul tuo Umbrel. Mappe, percorsi e ricerca dei luoghi usano i
+  servizi pubblici di OpenStreetMap, quindi serve la connessione a internet.
+developer: VC Solutions
+website: https://github.com/vdanesi/umbrel-app-store
+submitter: VC Solutions
+submission: https://github.com/vdanesi/umbrel-app-store
+repo: https://github.com/vdanesi/umbrel-app-store
+support: https://github.com/vdanesi/umbrel-app-store/issues
+gallery: []
+releaseNotes: >-
+  Prima versione.
+dependencies: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""

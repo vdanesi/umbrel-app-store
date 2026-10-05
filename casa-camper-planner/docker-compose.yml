@@ -1,0 +1,21 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      # Format: <app-id>_<service-name>_1
+      APP_HOST: casa-camper-planner_web_1
+      APP_PORT: 3000
+      # Camper Planner non ha un login suo: resta attiva la password di Umbrel
+
+  web:
+    # Built by .github/workflows/camper-planner.yml. Change the tag together with "version" in umbrel-app.yml.
+    image: ghcr.io/vdanesi/camper-planner:1.0.0
+    user: "1000:1000"
+    init: true
+    restart: on-failure
+    environment:
+      PORT: 3000
+      DATA_DIR: /data
+    volumes:
+      - ${APP_DATA_DIR}/data:/data

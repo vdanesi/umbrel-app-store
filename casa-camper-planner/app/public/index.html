@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camper Planner</title>
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="tabbar">
+  <button class="tab tab-home" id="tabHome" title="Tutti i viaggi">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1.5 1 7.5h2V14h4v-4h2v4h4V7.5h2z" fill="#ececec"/><path d="M8 1.5 1 7.5h2.2L8 3.4l4.8 4.1H15z" fill="var(--icon-home)"/><rect x="7" y="10" width="2" height="4" fill="var(--icon-home)"/></svg>
+    <span>Viaggi</span>
+  </button>
+  <div class="tab tab-active" id="tabTrip" hidden>
+    <span class="tab-num">2.</span> <span id="tabTripName">Viaggio</span>
+    <button class="tab-close" id="tabTripClose" title="Chiudi">×</button>
+  </div>
+  <div class="tabbar-spacer"></div>
+  <span class="save-status" id="saveStatus"></span>
+</header>
+
+<!-- ======= ELENCO VIAGGI ======= -->
+<main id="homeView" class="view home">
+  <div class="home-inner">
+    <div class="welcome">
+      <div class="logo-plaque"><img src="img/vc-solutions-logo.jpg" alt="VC Solutions" width="96" height="96"></div>
+      <div>
+        <p class="banner"><span class="c-green">• Camper Planner •</span> <span class="c-yellow">(itinerari in camper)</span></p>
+        <p>► Pianifica le tappe sulla mappa, trova <span class="c-magenta">aree sosta</span> e <span class="c-magenta">campeggi</span>,</p>
+        <p>► tieni il <span class="c-magenta">diario</span> e le <span class="c-magenta">spese</span>, esporta in <span class="c-magenta">GPX</span>.</p>
+        <p class="muted">► <span class="c-cyan">info</span> i dati restano sul tuo Umbrel.</p>
+      </div>
+    </div>
+
+    <div class="home-actions">
+      <button class="btn btn-primary" id="btnNewTrip">+ Nuovo viaggio</button>
+      <label class="btn">Importa backup (.json)<input type="file" id="importFile" accept=".json,application/json" hidden></label>
+    </div>
+
+    <div class="prompt-line" aria-hidden="true">
+      <span class="seg seg-date">⌂ camper</span><span class="seg seg-time">viaggi</span><span class="seg seg-path">~/itinerari</span><span class="cursor"></span>
+    </div>
+    <div id="tripList" class="trip-list"></div>
+  </div>
+</main>
+
+<!-- ======= VIAGGIO ======= -->
+<main id="tripView" class="view trip" hidden>
+  <aside class="panel" id="panel">
+    <div class="trip-head">
+      <input id="tripName" class="trip-name" maxlength="200" aria-label="Nome del viaggio">
+      <label class="field-inline">Partenza <input type="date" id="tripStart"></label>
+    </div>
+    <div class="prompt-line" id="powerline">
+      <span class="seg seg-date" id="plDates">—</span><span class="seg seg-time" id="plDays">—</span><span class="seg seg-path" id="plKm">—</span>
+    </div>
+
+    <nav class="subtabs" role="tablist">
+      <button class="subtab active" data-pane="stops">Tappe</button>
+      <button class="subtab" data-pane="pois">Aree sosta</button>
+      <button class="subtab" data-pane="diary">Diario e costi</button>
+      <button class="subtab" data-pane="vehicle">Mezzo</button>
+      <button class="subtab" data-pane="export">Esporta</button>
+    </nav>
+
+    <!-- Tappe -->
+    <section class="pane" id="pane-stops">
+      <form id="searchForm" class="search">
+        <input id="searchInput" placeholder="Cerca un luogo e aggiungilo come tappa…" autocomplete="off">
+        <button class="btn" type="submit">Cerca</button>
+      </form>
+      <div id="searchResults" class="search-results"></div>
+      <p class="hint">► <span class="c-cyan">info</span> oppure fai clic sulla mappa per aggiungere una tappa. Trascina i segnaposto per spostarle.</p>
+      <ol id="stopList" class="stop-list"></ol>
+      <div class="route-info" id="routeInfo"></div>
+      <div class="row-actions">
+        <button class="btn" id="btnRecalc">Ricalcola percorso</button>
+        <button class="btn" id="btnReverse">Inverti ordine</button>
+        <button class="btn" id="btnFit">Inquadra tutto</button>
+      </div>
+    </section>
+
+    <!-- Aree sosta -->
+    <section class="pane" id="pane-pois" hidden>
+      <h3 class="c-green">Cerca su OpenStreetMap</h3>
+      <div class="poi-types" id="poiTypes"></div>
+      <div class="form-grid">
+        <label>Dove
+          <select id="poiScope"></select>
+        </label>
+        <label>Raggio
+          <select id="poiRadius">
+            <option value="2000">2 km</option>
+            <option value="5000" selected>5 km</option>
+            <option value="10000">10 km</option>
+            <option value="20000">20 km</option>
+            <option value="40000">40 km</option>
+          </select>
+        </label>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="btnPoiSearch">Cerca</button>
+        <button class="btn" id="btnPoiClear">Pulisci mappa</button>
+      </div>
+      <div id="poiStatus" class="hint"></div>
+      <div id="poiList" class="poi-list"></div>
+    </section>
+
+    <!-- Diario e costi -->
+    <section class="pane" id="pane-diary" hidden>
+      <h3 class="c-green">Riepilogo</h3>
+      <dl class="stats" id="stats"></dl>
+      <label class="field-inline">Budget del viaggio (€) <input type="number" id="tripBudget" min="0" step="10"></label>
+
+      <h3 class="c-green">Spese</h3>
+      <form id="expenseForm" class="expense-form">
+        <input type="date" id="expDate" aria-label="Data" required>
+        <select id="expCat" aria-label="Categoria"></select>
+        <input type="number" id="expAmount" placeholder="€" step="0.01" min="0" aria-label="Importo" required>
+        <input id="expDesc" placeholder="Descrizione" maxlength="300" aria-label="Descrizione">
+        <select id="expStop" aria-label="Tappa"></select>
+        <button class="btn btn-primary" type="submit">Aggiungi</button>
+      </form>
+      <div id="catTotals" class="cat-totals"></div>
+      <table class="expenses" id="expenseTable"></table>
+
+      <h3 class="c-green">Diario di viaggio</h3>
+      <p class="hint">Note generali. Le note di ogni tappa sono nella scheda Tappe.</p>
+      <textarea id="tripNotes" rows="8" placeholder="Idee, prenotazioni, cose da non dimenticare…"></textarea>
+    </section>
+
+    <!-- Mezzo -->
+    <section class="pane" id="pane-vehicle" hidden>
+      <h3 class="c-green">Il tuo camper</h3>
+      <p class="hint">Valori comuni a tutti i viaggi. Servono per stimare il carburante e, con OpenRouteService, per evitare strade con limiti di altezza o peso.</p>
+      <form id="vehicleForm" class="form-grid">
+        <label class="span2">Nome <input name="name" maxlength="100"></label>
+        <label>Lunghezza (m) <input name="length" type="number" step="0.01" min="0"></label>
+        <label>Larghezza (m) <input name="width" type="number" step="0.01" min="0"></label>
+        <label>Altezza (m) <input name="height" type="number" step="0.01" min="0"></label>
+        <label>Massa (t) <input name="weight" type="number" step="0.1" min="0"></label>
+        <label>Consumo (l/100 km) <input name="consumption" type="number" step="0.1" min="0"></label>
+        <label>Carburante
+          <select name="fuelType"><option value="diesel">Gasolio</option><option value="benzina">Benzina</option><option value="gpl">GPL</option></select>
+        </label>
+        <label>Prezzo carburante (€/l) <input name="fuelPrice" type="number" step="0.001" min="0"></label>
+        <label>Correzione tempi OSRM <input name="durationFactor" type="number" step="0.05" min="1" max="2"></label>
+        <label class="span2">Chiave API OpenRouteService (facoltativa)
+          <input name="orsApiKey" type="password" autocomplete="off" placeholder="lascia vuoto per non cambiarla">
+        </label>
+        <p class="hint span2" id="orsHint"></p>
+        <div class="row-actions span2">
+          <button class="btn btn-primary" type="submit">Salva</button>
+          <button class="btn" type="button" id="btnClearOrs">Rimuovi chiave</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Esporta -->
+    <section class="pane" id="pane-export" hidden>
+      <h3 class="c-green">Esporta</h3>
+      <div class="export-grid">
+        <button class="btn" id="btnGpx">Scarica GPX<small>per navigatore, Google My Maps, OsmAnd</small></button>
+        <button class="btn" id="btnPrint">Stampa itinerario<small>o salva come PDF dal browser</small></button>
+        <button class="btn" id="btnJson">Backup JSON<small>da reimportare in seguito</small></button>
+        <button class="btn" id="btnDuplicate">Duplica viaggio<small>per un'altra versione del percorso</small></button>
+      </div>
+      <h3 class="c-yellow">Zona pericolosa</h3>
+      <button class="btn btn-danger" id="btnDeleteTrip">✘ Elimina questo viaggio</button>
+    </section>
+  </aside>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-busy" id="mapBusy" hidden>calcolo percorso…</div>
+  </div>
+</main>
+
+<!-- ======= STAMPA ======= -->
+<div id="printView" class="print-view"></div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

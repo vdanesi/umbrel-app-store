@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="#1c1c1c"/>
+  <!-- strada powerline -->
+  <path d="M0 196h92l14 14-14 14H0z" fill="#1296be"/>
+  <path d="M92 196h84l14 14-14 14H92l14-14z" fill="#0eb16c"/>
+  <path d="M176 196h80v28h-80l14-14z" fill="#bebe12"/>
+  <!-- camper -->
+  <path d="M40 84h120l14 14v74H40z" fill="#ececec"/>
+  <path d="M40 84h100c0-14-10-24-24-24H56c-9 0-16 7-16 16z" fill="#ececec"/>
+  <path d="M174 110h22l22 30v32h-44z" fill="#ececec"/>
+  <path d="M180 116h14l16 22h-30z" fill="#1c1c1c"/>
+  <rect x="58" y="100" width="34" height="24" fill="#1c1c1c"/>
+  <rect x="106" y="100" width="34" height="24" fill="#1c1c1c"/>
+  <rect x="40" y="140" width="134" height="6" fill="#ff4dff"/>
+  <circle cx="78" cy="174" r="17" fill="#1c1c1c"/><circle cx="78" cy="174" r="11" fill="#c8c8c8"/>
+  <circle cx="190" cy="174" r="17" fill="#1c1c1c"/><circle cx="190" cy="174" r="11" fill="#c8c8c8"/>
+  <rect x="214" y="44" width="10" height="20" fill="#b4b4c0"/>
+</svg>

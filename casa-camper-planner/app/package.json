@@ -1,0 +1,19 @@
+{
+  "name": "camper-planner",
+  "version": "1.0.0",
+  "description": "Pianificatore di itinerari in camper, self-hosted per Umbrel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "VC Solutions",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.22.3",
+    "leaflet": "1.9"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  }
+}
