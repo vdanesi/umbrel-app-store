@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "1.2.0"
+version: "1.3.0"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -44,11 +44,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Fonti esterne per aree camper e campeggi: un catalogo di dati aperti (Pays de la
-  Loire, Centre-Val de Loire, Hérault, Paesi Baschi) da importare con un clic e
-  aggiornare quando vuoi, e l'importazione da qualsiasi indirizzo web. Ora si possono
-  importare anche file GeoJSON e CSV dei portali open data, con riconoscimento
-  automatico di nome, coordinate, comune, prezzi, posti, sito e telefono.
+  CampingCard ACSI: segna i campeggi che accettano la tessera, con la tariffa a notte,
+  e cercali con il filtro "Solo campeggi ACSI". Ogni campeggio ha il collegamento per
+  cercarlo sul sito CampingCard. Le tappe ACSI mostrano la tariffa e il diario stima
+  il costo delle notti ACSI. I dati ACSI non vengono scaricati: i segni li metti tu.
 dependencies: []
 path: ""
 defaultUsername: ""

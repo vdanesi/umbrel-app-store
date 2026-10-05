@@ -306,6 +306,19 @@ details.notes[open] summary { margin-bottom: 4px; }
 .coll-imports { display: flex; flex-direction: column; }
 .coll-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--bg-tab-new); font-size: 12px; }
 
+/* CampingCard ACSI */
+.acsi {
+  display: inline-block; padding: 0 5px; margin-left: 4px;
+  background: var(--accent-cyan); color: var(--prompt-ink);
+  font: 700 10px/16px var(--mono); vertical-align: 1px; white-space: nowrap;
+}
+.acsi-on { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+.acsi-only { flex-direction: row; align-items: center; gap: 6px; font: 13px var(--ui); color: var(--fg-default); margin: -2px 0 10px; }
+.acsi-field { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; color: var(--fg-default); }
+.acsi-field > span { display: inline-flex; align-items: center; gap: 6px; }
+.acsi-price input { width: 80px; }
+.stop-dates .acsi { margin-left: 8px; }
+
 /* fonti esterne */
 .catalog-list { display: flex; flex-direction: column; }
 .catalog-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bg-tab-new); font-size: 12px; line-height: 18px; }

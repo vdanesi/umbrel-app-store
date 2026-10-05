@@ -249,13 +249,15 @@ function renderStops() {
         <button class="btn-icon" data-a="del" title="Elimina">✕</button>
       </div>
       <div class="stop-body">
-        <span class="stop-dates">${dateTxt}</span>
+        <span class="stop-dates">${dateTxt}${acsiBadge(s.acsi)}</span>
         <label>Tipo
           <select data-f="kind">${Object.entries(KINDS).map(([k, l]) => `<option value="${k}" ${k === s.kind ? 'selected' : ''}>${l}</option>`).join('')}</select>
         </label>
         <label>Notti
           <span class="nights"><button type="button" data-a="n-">−</button><input type="number" min="0" max="365" data-f="nights" value="${s.nights}"><button type="button" data-a="n+">+</button></span>
         </label>
+        ${s.kind === 'campeggio' || s.acsi ? `<label class="full acsi-field"><span><input type="checkbox" data-f="acsi" ${s.acsi ? 'checked' : ''}> CampingCard ACSI</span>
+          <span class="acsi-price">tariffa a notte € <input type="number" min="0" step="0.5" data-f="acsiPrice" value="${s.acsi?.price ?? ''}" ${s.acsi ? '' : 'disabled'}></span></label>` : ''}
         <details class="notes full" ${s.notes ? 'open' : ''}>
           <summary>Note e diario della tappa</summary>
           <textarea data-f="notes" rows="3" placeholder="Prenotazione, cosa vedere, impressioni…">${esc(s.notes)}</textarea>
@@ -289,6 +291,8 @@ stopList.addEventListener('change', e => {
   const f = e.target.dataset.f;
   if (f === 'kind') { s.kind = e.target.value; renderStops(); renderMapStops(); markDirty(); }
   if (f === 'nights') { s.nights = Math.max(0, Math.min(365, parseInt(e.target.value, 10) || 0)); renderStops(); markDirty(); }
+  if (f === 'acsi') { s.acsi = e.target.checked ? { price: s.acsi?.price ?? null } : null; renderStops(); renderDiary(); markDirty(); }
+  if (f === 'acsiPrice') { const n = parseFloat(e.target.value); s.acsi = { price: Number.isFinite(n) ? n : null }; renderStops(); renderDiary(); markDirty(); }
 });
 stopList.addEventListener('click', e => {
   const b = e.target.closest('button[data-a]'); if (!b) return;
@@ -337,7 +341,7 @@ function afterStopsChanged() {
 }
 
 function addStop(stop, index) {
-  const s = { id: uid(), name: stop.name || 'Tappa', lat: +stop.lat, lon: +stop.lon, nights: stop.nights ?? 1, kind: stop.kind || 'tappa', notes: stop.notes || '', poi: stop.poi || null };
+  const s = { id: uid(), name: stop.name || 'Tappa', lat: +stop.lat, lon: +stop.lon, nights: stop.nights ?? 1, kind: stop.kind || 'tappa', notes: stop.notes || '', poi: stop.poi || null, acsi: stop.acsi || null };
   const stops = state.trip.stops;
   if (index == null || index > stops.length) stops.push(s); else stops.splice(index, 0, s);
   afterStopsChanged();
@@ -523,7 +527,7 @@ async function loadCollection() {
 function renderCollection() {
   const c = state.collection;
   $('#collSummary').innerHTML = c.total
-    ? `<span class="c-magenta">${punti(c.total)}</span> · <span class="c-yellow">★ ${c.favorites}</span> ${c.favorites === 1 ? 'preferito' : 'preferiti'}`
+    ? `<span class="c-magenta">${punti(c.total)}</span> · <span class="c-yellow">★ ${c.favorites}</span> ${c.favorites === 1 ? 'preferito' : 'preferiti'}${c.acsi ? ` · <span class="acsi">ACSI</span> ${c.acsi}` : ''}`
     : '<span class="muted">Vuota. Importa un file o una fonte esterna qui sotto, oppure salva le aree che trovi con ☆.</span>';
   $('#collImports').innerHTML = c.imports.map(i => `<div class="coll-row">
       <span>${esc(i.name)} <span class="muted">· ${punti(i.count)} · ${new Date(i.importedAt).toLocaleDateString('it-IT')}${i.licence ? ' · ' + esc(i.licence) : ''}</span></span>
@@ -619,7 +623,7 @@ $('#btnPoiSearch').addEventListener('click', async () => {
   if (!types.length) return toast('Scegli almeno un tipo', true);
   if (!sources.length) return toast('Scegli almeno una fonte', true);
   const scope = $('#poiScope').value, radius = +$('#poiRadius').value;
-  const body = { types, radius, sources };
+  const body = { types, radius, sources, acsiOnly: $('#poiAcsiOnly').checked };
   const t = state.trip;
   if (scope === 'route') { body.line = t.route.geometry; body.radius = Math.min(radius, 10000); }
   else if (scope === 'view') { const c = map.getCenter(); body.center = [c.lat, c.lng]; }
@@ -644,6 +648,18 @@ $('#btnPoiSearch').addEventListener('click', async () => {
 $('#btnPoiClear').addEventListener('click', () => { state.pois = []; renderPois(); $('#poiStatus').textContent = ''; });
 
 function poiName(p) { return p.name || POI_TYPES[p.category]?.label.replace(/i$/, 'o') || 'Punto'; }
+const acsiLabel = a => a ? `ACSI${a.price != null ? ' ' + fmtEur(a.price) : ''}` : '';
+const acsiBadge = a => a ? `<span class="acsi" title="CampingCard ACSI${a.price != null ? ', tariffa a notte' : ''}">${acsiLabel(a)}</span>` : '';
+function campingCardUrl(p) {
+  const city = (p.tags?.address || '').split(',').pop().trim();
+  return 'https://www.google.com/search?q=' + encodeURIComponent(`site:campingcard.it ${p.name || ''} ${city}`.trim());
+}
+function askAcsiPrice(current) {
+  const v = prompt('Tariffa CampingCard ACSI a notte in € (lascia vuoto se non la sai):', current?.price ?? '');
+  if (v === null) return undefined; // annullato
+  const n = parseFloat(String(v).replace(',', '.'));
+  return { price: Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null };
+}
 const srcBadges = p => p.sources.map(s => `<span class="src src-${s}" title="${SOURCES[s].label}">${SOURCES[s].short}</span>`).join('');
 function poiDetails(p) {
   const t = p.tags || {}, bits = [];
@@ -660,7 +676,7 @@ function poiDetails(p) {
   if (t.address) bits.push(esc(t.address));
   if (t.closed) bits.push(`<span class="err">${esc(t.closed)}</span>`);
   if (t.list) bits.push(`da ${esc(t.list)}`);
-  if (t.notes) bits.push(esc(t.notes.length > 140 ? t.notes.slice(0, 140) + '…' : t.notes));
+  if (t.notes && p.sources?.every(x => x === 'mine')) bits.push(esc(t.notes.length > 140 ? t.notes.slice(0, 140) + '…' : t.notes));
   return bits.join(' · ');
 }
 function poiPopup(p, idx) {
@@ -669,12 +685,14 @@ function poiPopup(p, idx) {
   if (t.website) links.push(`<a href="${esc(/^https?:/i.test(t.website) ? t.website : 'https://' + t.website)}" target="_blank" rel="noopener">sito web</a>`);
   if (p.osmType) links.push(`<a href="https://www.openstreetmap.org/${p.osmType}/${p.osmId}" target="_blank" rel="noopener">OpenStreetMap</a>`);
   links.push(`<a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Google Maps</a>`);
-  return `<b>${esc(poiName(p))}</b> ${srcBadges(p)}<br><span class="muted">${POI_TYPES[p.category]?.label || ''}</span>
+  return `<b>${esc(poiName(p))}</b> ${srcBadges(p)} ${acsiBadge(p.acsi)}<br><span class="muted">${POI_TYPES[p.category]?.label || ''}</span>
     ${poiDetails(p) ? '<br>' + poiDetails(p) : ''}
     ${t.phone ? `<br>☎ ${esc(t.phone)}` : ''}
     <br>${links.join(' · ')}
+    ${p.category === 'campeggio' || p.acsi ? `<br><a href="${campingCardUrl(p)}" target="_blank" rel="noopener">Cerca su CampingCard ACSI</a>` : ''}
     <br><button class="btn" data-addpoi="${idx}">+ Aggiungi al viaggio</button>
-    <button class="btn" data-favpoi="${idx}">${p.mineId ? '★ Nella raccolta' : '☆ Salva'}</button>`;
+    <button class="btn" data-favpoi="${idx}">${p.mineId ? '★ Nella raccolta' : '☆ Salva'}</button>
+    <button class="btn" data-acsipoi="${idx}">${p.acsi ? '✎ ' + acsiLabel(p.acsi) : 'Segna ACSI'}</button>`;
 }
 function renderPois() {
   if (!map) return;
@@ -696,8 +714,9 @@ function renderPois() {
     }
     return `<div class="poi" data-i="${i}">
       <span class="poi-dot c-${p.category}">${POI_TYPES[p.category]?.letter || '?'}</span>
-      <span class="poi-name">${esc(poiName(p))} ${srcBadges(p)}</span>
+      <span class="poi-name">${esc(poiName(p))} ${srcBadges(p)} ${acsiBadge(p.acsi)}</span>
       <span class="poi-actions">
+        ${p.category === 'campeggio' || p.acsi ? `<button class="btn-icon ${p.acsi ? 'acsi-on' : ''}" data-acsipoi="${i}" title="${p.acsi ? 'Modifica o togli il segno ACSI' : 'Segna come campeggio CampingCard ACSI'}">A</button>` : ''}
         <button class="btn-icon ${p.mineId ? 'fav-on' : ''}" data-favpoi="${i}" title="${p.mineId ? 'Già nella tua raccolta' : 'Salva nella raccolta'}">${p.mineId ? '★' : '☆'}</button>
         <button class="btn-icon" data-addpoi="${i}" title="Aggiungi al viaggio">＋</button>
       </span>
@@ -710,6 +729,7 @@ function addPoi(i) {
   addStop({ name: poiName(p), lat: p.lat, lon: p.lon, kind: POI_TYPES[p.category]?.kind || 'sosta',
     nights: ['area_camper', 'campeggio'].includes(p.category) ? 1 : 0,
     notes: poiDetails(p).replace(/<[^>]+>/g, ''),
+    acsi: p.acsi || null,
     poi: { osmType: p.osmType || '', osmId: p.osmId || 0, category: p.category, sources: p.sources } }, bestInsertIndex(p.lat, p.lon));
   map.closePopup();
 }
@@ -736,9 +756,40 @@ async function toggleFav(i) {
     renderPois(); renderCollection(); renderPoiSources();
   } catch (e) { toast(e.message, true); }
 }
+async function toggleAcsi(i) {
+  const p = state.pois[i];
+  let acsi;
+  if (p.acsi) {
+    const v = prompt(`"${poiName(p)}" è segnato ACSI. Nuova tariffa a notte in €, oppure scrivi "no" per togliere il segno:`, p.acsi.price ?? '');
+    if (v === null) return;
+    if (/^\s*no\s*$/i.test(v)) acsi = null;
+    else { const n = parseFloat(String(v).replace(',', '.')); acsi = { price: Number.isFinite(n) && n >= 0 ? n : null }; }
+  } else {
+    acsi = askAcsiPrice(null);
+    if (acsi === undefined) return;
+  }
+  try {
+    const t = p.tags || {};
+    const r = await api('/collection/acsi', { method: 'POST', body: {
+      lat: p.lat, lon: p.lon, name: poiName(p), category: p.category, website: t.website || '', phone: t.phone || '',
+      notes: poiDetails(p).replace(/<[^>]+>/g, ''), acsi } });
+    state.collection = r;
+    p.acsi = acsi;
+    if (r.item && !p.mineId) { p.mineId = r.item.id; if (!p.sources.includes('mine')) p.sources.push('mine'); }
+    // aggiorna anche le tappe del viaggio nello stesso punto
+    let changed = false;
+    for (const s of state.trip.stops) if (L.latLng(s.lat, s.lon).distanceTo([p.lat, p.lon]) < 60) { s.acsi = acsi; changed = true; }
+    if (changed) { renderStops(); renderDiary(); markDirty(); }
+    toast(acsi ? `Segnato ${acsiLabel(acsi)}` : 'Segno ACSI tolto');
+    renderPois(); renderCollection(); renderPoiSources();
+    map.closePopup();
+  } catch (e) { toast(e.message, true); }
+}
 $('#poiList').addEventListener('click', e => {
   const add = e.target.closest('[data-addpoi]');
   if (add) return addPoi(+add.dataset.addpoi);
+  const ac = e.target.closest('[data-acsipoi]');
+  if (ac) return toggleAcsi(+ac.dataset.acsipoi);
   const fav = e.target.closest('[data-favpoi]');
   if (fav) return toggleFav(+fav.dataset.favpoi);
   const row = e.target.closest('.poi'); if (!row) return;
@@ -747,7 +798,8 @@ $('#poiList').addEventListener('click', e => {
 });
 document.getElementById('map').addEventListener('click', e => {
   const add = e.target.closest('[data-addpoi]'); if (add) { e.stopPropagation(); addPoi(+add.dataset.addpoi); return; }
-  const fav = e.target.closest('[data-favpoi]'); if (fav) { e.stopPropagation(); toggleFav(+fav.dataset.favpoi); }
+  const fav = e.target.closest('[data-favpoi]'); if (fav) { e.stopPropagation(); toggleFav(+fav.dataset.favpoi); return; }
+  const ac = e.target.closest('[data-acsipoi]'); if (ac) { e.stopPropagation(); toggleAcsi(+ac.dataset.acsipoi); }
 }, true); // fase di cattura: i popup di Leaflet bloccano la propagazione
 
 // ---------- diario e costi ----------
@@ -763,17 +815,23 @@ function renderDiary() {
   const tt = totals(t);
   const fuelGap = Math.max(0, tt.fuelCost - tt.spentFuel);
   const estimate = tt.spent + fuelGap;
+  const acsiStops = t.stops.filter(s => s.acsi && s.nights > 0);
+  const acsiNights = acsiStops.reduce((a, s) => a + s.nights, 0);
+  const acsiKnown = acsiStops.filter(s => s.acsi.price != null);
+  const acsiUnknown = acsiStops.length - acsiKnown.length;
+  const acsiCost = acsiKnown.length ? acsiKnown.reduce((a, s) => a + s.acsi.price * s.nights, 0) : null;
   const rows = [
     ['Distanza', tt.distance ? fmtKm(tt.distance) : '—'],
     ['Guida', tt.duration ? fmtDur(tt.duration) : '—'],
     ['Giorni / notti', `${tt.days} / ${tt.nights}`],
     ['Carburante stimato', tt.distance ? `${Math.round(tt.fuelL)} l · ${fmtEur(tt.fuelCost)}` : '—'],
+    ...(acsiStops.length ? [['Notti ACSI stimate', `${acsiNights} notti · ${acsiCost != null ? fmtEur(acsiCost) : '—'}${acsiUnknown ? ` <span class="muted">(${acsiUnknown} senza tariffa)</span>` : ''}`]] : []),
     ['Già speso', fmtEur(tt.spent)],
     ['Costo previsto', fmtEur(estimate)],
     ...(tt.days ? [['Per giorno', fmtEur(estimate / tt.days)]] : []),
     ...(t.budget ? [['Budget residuo', `<span class="${t.budget - estimate < 0 ? 'err' : 'ok'}">${fmtEur(t.budget - estimate)}</span>`]] : [])
   ];
-  $('#stats').innerHTML = rows.map(([k, v], i) => { const c = i === 5 ? ' class="total"' : ''; return `<dt${c}>${k}</dt><dd${c}>${v}</dd>`; }).join('') +
+  $('#stats').innerHTML = rows.map(([k, v]) => { const c = k === 'Costo previsto' ? ' class="total"' : ''; return `<dt${c}>${k}</dt><dd${c}>${v}</dd>`; }).join('') +
     `<dt class="muted" style="grid-column:1/-1;font-size:12px">Il costo previsto somma le spese inserite e il carburante stimato non ancora registrato.</dt>`;
 
   const byCat = {};
@@ -882,7 +940,7 @@ function buildPrint() {
     </div></div>
     <h2>Itinerario</h2>
     <table><tr><th>#</th><th>Tappa</th><th>Date</th><th class="r">Notti</th><th class="r">Tratto successivo</th></tr>
-    ${t.stops.map((s, i) => `<tr><td>${i + 1}</td><td><b>${esc(s.name)}</b><br><small>${KINDS[s.kind]} · ${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</small>${s.notes ? `<div class="note">${esc(s.notes)}</div>` : ''}</td>
+    ${t.stops.map((s, i) => `<tr><td>${i + 1}</td><td><b>${esc(s.name)}</b><br><small>${KINDS[s.kind]}${s.acsi ? ' · ' + acsiLabel(s.acsi) : ''} · ${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</small>${s.notes ? `<div class="note">${esc(s.notes)}</div>` : ''}</td>
       <td>${dates[i].arrive ? fmtDate(dates[i].arrive) + (s.nights ? ' → ' + fmtDate(dates[i].leave) : '') : ''}</td>
       <td class="r">${s.nights}</td><td class="r">${legs[i] ? fmtKm(legs[i].distance) + '<br>' + fmtDur(legs[i].duration) : ''}</td></tr>`).join('')}
     </table>

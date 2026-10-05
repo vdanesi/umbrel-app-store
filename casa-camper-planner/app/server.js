@@ -88,6 +88,7 @@ function sanitizeTrip(input, existing = {}) {
     nights: Math.max(0, Math.min(365, Math.round(num(s.nights)))),
     kind: ['tappa', 'sosta', 'campeggio', 'visita'].includes(s.kind) ? s.kind : 'tappa',
     notes: str(s.notes, 10000),
+    acsi: s.acsi ? { price: Number.isFinite(Number(s.acsi.price)) && s.acsi.price !== null && s.acsi.price !== '' ? Math.round(Number(s.acsi.price) * 100) / 100 : null } : null,
     poi: s.poi && typeof s.poi === 'object' ? {
       osmType: str(s.poi.osmType, 16), osmId: num(s.poi.osmId), category: str(s.poi.category, 40),
       sources: Array.isArray(s.poi.sources) ? s.poi.sources.slice(0, 5).map(x => str(x, 20)) : undefined
@@ -432,11 +433,13 @@ async function loadCollection() {
 }
 function collectionSummary(c) {
   const fav = c.items.filter(i => i.source === 'preferiti').length;
-  return { total: c.items.length, favorites: fav, imports: c.imports };
+  const acsi = c.items.filter(i => i.acsi).length;
+  return { total: c.items.length, favorites: fav, acsi, imports: c.imports };
 }
 function searchMine(c, area, types) {
   return c.items.filter(i => types.includes(i.category) && area.contains([i.lat, i.lon])).map(i => ({
     id: 'mine:' + i.id, mineId: i.id, sources: ['mine'], lat: i.lat, lon: i.lon, category: i.category, name: i.name || null,
+    acsi: i.acsi || null,
     tags: { notes: i.notes || undefined, list: i.source === 'preferiti' ? undefined : i.source, website: i.website || undefined, phone: i.phone || undefined }
   }));
 }
@@ -564,6 +567,33 @@ app.post('/api/collection/favorites', wrap(async (req, res) => {
   res.status(201).json({ item, ...collectionSummary(c) });
 }));
 
+const parseAcsi = a => a ? { price: a.price === null || a.price === '' || a.price === undefined || !Number.isFinite(Number(a.price)) ? null : Math.round(Number(a.price) * 100) / 100 } : null;
+
+// Segna (o toglie) un campeggio come CampingCard ACSI nella raccolta.
+app.post('/api/collection/acsi', wrap(async (req, res) => {
+  const b = req.body || {};
+  const acsi = parseAcsi(b.acsi);
+  const c = await loadCollection();
+  // il segno va sempre su un preferito: i punti importati vengono sostituiti a ogni aggiornamento
+  let item = b.mineId ? c.items.find(i => i.id === b.mineId && i.source === 'preferiti') : null;
+  const src = b.mineId ? c.items.find(i => i.id === b.mineId) : null;
+  const lat = num(b.lat, src ? src.lat : NaN), lon = num(b.lon, src ? src.lon : NaN);
+  if (!item && Number.isFinite(lat) && Number.isFinite(lon)) {
+    item = c.items.find(i => i.source === 'preferiti' && haversine([i.lat, i.lon], [lat, lon]) < 60) || null;
+  }
+  if (!item) {
+    if (!acsi) return res.json({ item: null, ...collectionSummary(c) });
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return res.status(400).json({ error: 'Coordinate non valide' });
+    item = { id: crypto.randomUUID(), source: 'preferiti', addedAt: new Date().toISOString(), lat, lon,
+      category: ['area_camper', 'campeggio', 'scarico', 'acqua', 'gpl'].includes(b.category) ? b.category : 'campeggio',
+      name: str(b.name, 200), notes: str(b.notes, 2000), website: str(b.website, 300), phone: str(b.phone, 60) };
+    c.items.push(item);
+  }
+  if (acsi) item.acsi = acsi; else delete item.acsi;
+  await writeJsonAtomic(COLLECTION_FILE, c);
+  res.json({ item, ...collectionSummary(c) });
+}));
+
 app.delete('/api/collection/items/:id', wrap(async (req, res) => {
   const c = await loadCollection();
   c.items = c.items.filter(i => i.id !== req.params.id);
@@ -575,7 +605,7 @@ app.get('/api/collection/export', wrap(async (req, res) => {
   const c = await loadCollection();
   const lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<gpx version="1.1" creator="Camper Planner" xmlns="http://www.topografix.com/GPX/1/1">'];
   for (const i of c.items) lines.push(`<wpt lat="${i.lat.toFixed(6)}" lon="${i.lon.toFixed(6)}"><name>${xml(i.name || 'Area sosta')}</name>` +
-    (i.notes ? `<desc>${xml(i.notes)}</desc>` : '') + `<type>${xml(i.category)}</type></wpt>`);
+    ((i.notes || i.acsi) ? `<desc>${xml([i.acsi ? `ACSI${i.acsi.price != null ? ' ' + i.acsi.price + ' €' : ''}` : '', i.notes].filter(Boolean).join(' · '))}</desc>` : '') + `<type>${xml(i.category)}</type></wpt>`);
   lines.push('</gpx>');
   res.setHeader('Content-Type', 'application/gpx+xml; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="la-mia-raccolta.gpx"');
@@ -588,6 +618,8 @@ app.post('/api/pois', wrap(async (req, res) => {
   const b = req.body || {};
   const types = (Array.isArray(b.types) ? b.types : Object.keys(POI_FILTERS)).filter(t => POI_FILTERS[t]);
   const sources = (Array.isArray(b.sources) ? b.sources : ['osm']).filter(s => ['osm', 'overture', 'mine'].includes(s));
+  // i segni ACSI stanno nella raccolta: serve sempre leggerla
+  if (b.acsiOnly && !sources.includes('mine')) sources.push('mine');
   if (!types.length || !sources.length) return res.json({ pois: [], warnings: [], counts: {} });
   const radius = Math.max(500, Math.min(50000, Math.round(num(b.radius, 10000))));
   let area;
@@ -613,7 +645,9 @@ app.post('/api/pois', wrap(async (req, res) => {
   // ordine: OSM (dati più ricchi), poi la raccolta, poi Overture
   const order = ['osm', 'mine', 'overture'];
   const lists = order.filter(s => sources.includes(s)).map(s => results[sources.indexOf(s)]);
-  const pois = mergePois(lists).slice(0, 600);
+  let pois = mergePois(lists);
+  if (b.acsiOnly) pois = pois.filter(p => p.acsi);
+  pois = pois.slice(0, 600);
   res.json({ pois, warnings, counts });
 }));
 

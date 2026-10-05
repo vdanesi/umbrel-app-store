@@ -358,6 +358,7 @@ export function mergePois(lists) {
     if (!hit.name && p.name) hit.name = p.name;
     for (const [k, v] of Object.entries(p.tags || {})) if (v && !hit.tags[k]) hit.tags[k] = v;
     if (p.mineId && !hit.mineId) hit.mineId = p.mineId;
+    if (p.acsi && !hit.acsi) hit.acsi = p.acsi;
   }
   return out;
 }
