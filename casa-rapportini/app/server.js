@@ -12,6 +12,9 @@ const PORT = Number(process.env.PORT || 3444);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const REP_DIR = path.join(DATA_DIR, 'rapporti');
 const SETTINGS_FILE = path.join(DATA_DIR, 'impostazioni.json');
+const PRAT_DIR = path.join(DATA_DIR, 'pratiche');     // domande di congedo e trasferte
+const MOD_DIR = path.join(DATA_DIR, 'modelli');       // PDF vuoti dei moduli aziendali (caricati dall'utente)
+const MODELLI = ['0319', '0692', '0693'];
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const VERSION = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version;
 
@@ -24,7 +27,9 @@ const DEFAULT_SETTINGS = {
   residenza: '', servizio: '', unita: '',
   orarioOrdinario: '08:00',          // senza orario del turno: oltre questo totale scatta lo straordinario
   turnoDalle: '', turnoAlle: '',     // orario del turno: il lavoro fuori da questa fascia è straordinario
-  codiceModulo3: '',                 // terza colonna dei moduli emessi (la prima è 0229, la seconda 0452)
+  codiceModulo3: '',
+  struttura: '', assunto: '', luogo: '', recapito: '',   // per i moduli 0319 / 0692 / 0693
+  tipoAuto: '', euroKm: '',                 // terza colonna dei moduli emessi (la prima è 0229, la seconda 0452)
   stampa: { offsetX: 0, offsetY: 0, scala: 100 }  // calibrazione per il modulo prestampato
 };
 
@@ -60,6 +65,9 @@ function sanitizeSettings(s = {}) {
     orarioOrdinario: durata(s.orarioOrdinario) || DEFAULT_SETTINGS.orarioOrdinario,
     turnoDalle: ora(s.turnoDalle), turnoAlle: ora(s.turnoAlle),
     codiceModulo3: str(s.codiceModulo3, 12),
+    struttura: str(s.struttura, 120), assunto: validDate(s.assunto) ? s.assunto : '',
+    luogo: str(s.luogo, 60), recapito: str(s.recapito, 120),
+    tipoAuto: str(s.tipoAuto, 120), euroKm: str(s.euroKm, 12),
     stampa: {
       offsetX: Math.max(-30, Math.min(30, num(st.offsetX))),
       offsetY: Math.max(-30, Math.min(30, num(st.offsetY))),
@@ -124,6 +132,57 @@ async function listReports() {
     try { out.push(await readJson(path.join(REP_DIR, f), null)); } catch { /* file rovinato: lo salto */ }
   }
   return out.filter(Boolean);
+}
+
+// ---------- pratiche (congedi e trasferte) ----------
+
+const validPid = id => typeof id === 'string' && /^[a-z0-9-]{8,64}$/i.test(id);
+const pratFile = id => path.join(PRAT_DIR, `${id}.json`);
+
+/** Copia "pulita" di dati qualsiasi: solo testo, numeri, sì/no, liste e oggetti piccoli. */
+function cleanAny(v, depth = 0) {
+  if (typeof v === 'string') return str(v, 2000);
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  if (typeof v === 'boolean') return v;
+  if (depth > 4 || v == null) return null;
+  if (Array.isArray(v)) return v.slice(0, 50).map(x => cleanAny(x, depth + 1));
+  if (typeof v === 'object') {
+    const out = {};
+    for (const k of Object.keys(v).slice(0, 80)) if (/^[a-zA-Z0-9_]{1,40}$/.test(k)) out[k] = cleanAny(v[k], depth + 1);
+    return out;
+  }
+  return null;
+}
+function sanitizePratica(p, id, existing) {
+  const c = cleanAny(p || {});
+  return {
+    ...c, id,
+    tipo: ['congedo', 'trasferta'].includes(c.tipo) ? c.tipo : (existing?.tipo || 'congedo'),
+    creato: existing?.creato || str(c.creato, 40) || new Date().toISOString(),
+    aggiornato: new Date().toISOString()
+  };
+}
+async function listPratiche() {
+  let files = [];
+  try { files = await fs.readdir(PRAT_DIR); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  const out = [];
+  for (const f of files.filter(f => f.endsWith('.json'))) {
+    try { const p = await readJson(path.join(PRAT_DIR, f), null); if (p) out.push(p); } catch { /* salto */ }
+  }
+  return out.sort((a, b) => String(b.creato).localeCompare(String(a.creato)));
+}
+async function modelliPresenti() {
+  const out = {};
+  for (const c of MODELLI) { try { const st = await fs.stat(path.join(MOD_DIR, c + '.pdf')); out[c] = st.size; } catch { out[c] = 0; } }
+  return out;
+}
+function readRaw(req, limit = 8 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    let size = 0; const chunks = [];
+    req.on('data', c => { size += c.length; if (size > limit) { reject(Object.assign(new Error('File troppo grande (max 8 MB)'), { status: 413 })); req.destroy(); } else chunks.push(c); });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
 }
 
 // ---------- HTTP ----------
@@ -235,6 +294,49 @@ async function api(req, res, url) {
     }
   }
 
+  // ---- pratiche ----
+  if (p === '/api/pratiche' && m === 'GET') return send(res, 200, await listPratiche());
+  const pm = /^\/api\/pratiche\/([^/]+)$/.exec(p);
+  if (pm) {
+    const id = pm[1];
+    if (!validPid(id)) return fail(res, 400, 'Identificativo non valido');
+    if (m === 'GET') { const x = await readJson(pratFile(id), null); return x ? send(res, 200, x) : fail(res, 404, 'Pratica non trovata'); }
+    if (m === 'PUT') {
+      const existing = await readJson(pratFile(id), null);
+      const x = sanitizePratica(await readBody(req), id, existing);
+      await fs.mkdir(PRAT_DIR, { recursive: true });
+      await writeJsonAtomic(pratFile(id), x);
+      return send(res, 200, x);
+    }
+    if (m === 'DELETE') {
+      try { await fs.unlink(pratFile(id)); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+      return send(res, 200, { ok: true });
+    }
+  }
+
+  // ---- modelli PDF ----
+  if (p === '/api/modelli' && m === 'GET') return send(res, 200, await modelliPresenti());
+  const mm2 = /^\/api\/modelli\/(\d{4})$/.exec(p);
+  if (mm2 && MODELLI.includes(mm2[1])) {
+    const file = path.join(MOD_DIR, mm2[1] + '.pdf');
+    if (m === 'GET') {
+      try { const b = await fs.readFile(file); return send(res, 200, b, 'application/pdf'); }
+      catch { return fail(res, 404, `Il modulo ${mm2[1]} non è ancora stato caricato`); }
+    }
+    if (m === 'PUT') {
+      const b = await readRaw(req);
+      if (b.subarray(0, 5).toString('latin1') !== '%PDF-') return fail(res, 400, 'Il file non è un PDF');
+      await fs.mkdir(MOD_DIR, { recursive: true });
+      const tmp = file + '.tmp';
+      await fs.writeFile(tmp, b); await fs.rename(tmp, file);
+      return send(res, 200, await modelliPresenti());
+    }
+    if (m === 'DELETE') {
+      try { await fs.unlink(file); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+      return send(res, 200, await modelliPresenti());
+    }
+  }
+
   // rapporto precedente più vicino (per "copia dal giorno prima")
   const prev = /^\/api\/precedente\/(\d{4}-\d\d-\d\d)$/.exec(p);
   if (prev && m === 'GET') {
@@ -244,7 +346,10 @@ async function api(req, res, url) {
 
   if (p === '/api/backup' && m === 'GET') {
     const body = JSON.stringify({ app: 'rapportini', versione: VERSION, esportato: new Date().toISOString(),
-      impostazioni: await loadSettings(), rapporti: await listReports() }, null, 2);
+      impostazioni: await loadSettings(), rapporti: await listReports(), pratiche: await listPratiche(),
+      modelli: Object.fromEntries(await Promise.all(MODELLI.map(async c => {
+        try { return [c, (await fs.readFile(path.join(MOD_DIR, c + '.pdf'))).toString('base64')]; } catch { return [c, null]; }
+      }))) }, null, 2);
     const nome = `rapportini-backup-${new Date().toISOString().slice(0, 10)}.json`;
     return send(res, 200, body, 'application/json; charset=utf-8', { 'Content-Disposition': `attachment; filename="${nome}"` });
   }
@@ -263,6 +368,26 @@ async function api(req, res, url) {
       if (r.aggiornato) clean.aggiornato = str(r.aggiornato, 40);
       await writeJsonAtomic(repFile(r.data), clean);
       importati++;
+    }
+    if (Array.isArray(b.pratiche)) {
+      await fs.mkdir(PRAT_DIR, { recursive: true });
+      for (const x of b.pratiche) {
+        if (!validPid(x?.id)) continue;
+        const exists = await readJson(pratFile(x.id), null);
+        if (exists && !sovrascrivi) continue;
+        await writeJsonAtomic(pratFile(x.id), { ...sanitizePratica(x, x.id, exists || { creato: x.creato }), aggiornato: str(x.aggiornato, 40) || new Date().toISOString() });
+      }
+    }
+    if (b.modelli && typeof b.modelli === 'object') {
+      await fs.mkdir(MOD_DIR, { recursive: true });
+      for (const c of MODELLI) {
+        if (typeof b.modelli[c] !== 'string') continue;
+        const file = path.join(MOD_DIR, c + '.pdf');
+        const buf = Buffer.from(b.modelli[c], 'base64');
+        if (buf.subarray(0, 5).toString('latin1') !== '%PDF-') continue;
+        let has = true; try { await fs.stat(file); } catch { has = false; }
+        if (!has || sovrascrivi) await fs.writeFile(file, buf);
+      }
     }
     if (b.impostazioni && (sovrascrivi || !(await readJson(SETTINGS_FILE, null)))) {
       await writeJsonAtomic(SETTINGS_FILE, sanitizeSettings(b.impostazioni));

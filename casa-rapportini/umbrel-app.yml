@@ -4,7 +4,7 @@ name: Rapportini
 tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
 category: files
-version: "1.0.1"
+version: "1.1.0"
 port: 3444
 description: >-
   Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
@@ -22,6 +22,10 @@ description: >-
   solo i dati sul modulo prestampato, con calibrazione della posizione.
 
 
+  Compila anche la domanda di congedo (Mod. 0319) e, per gli interventi in reperibilità,
+  la lettera di incarico (Mod. 0692) e il giustificativo trasferta con rimborso km (Mod. 0693).
+
+
   Riepilogo mensile di giorni, ore e straordinari, esportazione CSV e backup.
   I dati restano sul tuo Umbrel.
 developer: VC Solutions
@@ -32,8 +36,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Lo straordinario si calcola dall'orario del turno: è straordinario il lavoro fatto
-  prima dell'inizio o dopo la fine del turno. Imposta il turno in Impostazioni.
+  Nuova sezione Moduli: domanda di congedo (Mod. 0319), lettera di incarico trasferta
+  (Mod. 0692) e giustificativo trasferta con rimborso km (Mod. 0693) per gli interventi
+  in reperibilità. Carica una volta i PDF vuoti in Impostazioni: l'app li compila con i
+  tuoi dati, conta le giornate di congedo e prende gli orari dai rapportini.
 dependencies: []
 path: ""
 defaultUsername: ""

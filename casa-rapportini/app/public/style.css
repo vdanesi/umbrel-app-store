@@ -317,3 +317,38 @@ label.check { flex-direction: row; align-items: center; gap: 8px; font-size: 13p
   .print-area .sheet { page-break-after: avoid; break-after: avoid; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- moduli: congedi e trasferte ---------- */
+.warn-box { border: 1px solid var(--accent-yellow); color: var(--accent-yellow); padding: 10px 12px; margin-top: 14px; font: 13px/18px var(--ui); }
+.prat-row { grid-template-columns: 150px 1fr auto; }
+.badge { display: inline-block; padding: 0 6px; color: var(--prompt-ink); font: 700 11px/20px var(--mono); white-space: nowrap; justify-self: start; }
+.b-congedo { background: var(--accent-cyan); }
+.b-trasferta { background: var(--accent-yellow); }
+.span2 { grid-column: 1 / -1; }
+.box > .form-grid + .form-grid { margin-top: 10px; }
+.grow {
+  display: grid; gap: 8px; align-items: end; margin-bottom: 8px;
+  border-left: 3px solid var(--prompt-date); padding: 8px 8px 8px 10px; background: var(--bg-terminal);
+}
+.grow.g-timb { grid-template-columns: 26px 150px 140px 1fr 1fr 1fr auto; }
+.grow.g-omessa { grid-template-columns: 26px 150px 140px 110px 110px 90px 2fr auto; border-left-color: var(--accent-yellow); }
+.grow.g-viaggio { grid-template-columns: 26px 150px 3fr 100px auto; border-left-color: var(--accent-magenta); }
+.row-tools { display: flex; gap: 2px; align-self: end; height: 34px; align-items: center; }
+.km-tot { color: var(--accent-magenta); margin: 8px 0 0; }
+.pdf-actions { display: flex; flex-wrap: wrap; gap: 14px 28px; margin-top: 10px; }
+.pdf-group .row-actions { margin-top: 6px; align-items: center; }
+.modelli-list { display: flex; flex-direction: column; border-top: 1px solid var(--bg-tab-new); margin-top: 8px; }
+.modello-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--bg-tab-new); }
+.ok-text { color: var(--status-ok); }
+.err-text { color: var(--status-error); }
+@media (max-width: 900px) {
+  .grow.g-timb, .grow.g-omessa, .grow.g-viaggio { grid-template-columns: 1fr 1fr; }
+  .grow > .rownum { grid-column: 1; text-align: left; }
+  .grow > .row-tools { grid-column: 2; grid-row: 1; justify-content: flex-end; height: auto; }
+  .grow > label[data-f="motivo"], .grow > label[data-f="itinerario"] { grid-column: 1 / -1; }
+  .prat-row { grid-template-columns: 1fr auto; }
+  .prat-row .rep-sub { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 560px) {
+  .tab-new span { display: none; }
+}

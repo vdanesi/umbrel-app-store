@@ -177,6 +177,10 @@ Registro delle attività lavorative in ambito ferroviario che compila il **Rappo
 - **Stampa:** "Anteprima e stampa" → *Modulo completo* (su foglio bianco) oppure *Solo dati* (sul modulo prestampato). Nella finestra di stampa: A4 orizzontale, scala 100%, margini nessuno.
 - **Calibrare il prestampato:** Impostazioni → "Stampa foglio di prova", sovrapponi il foglio al modulo in controluce e correggi Spostamento X/Y e Scala finché le crocette rosse cadono sugli angoli delle tabelle.
 - Il modulo ha 9 righe di lavori e 9 di anormalità, e 8 numeri per colonna nei moduli emessi: l'app non ne accetta di più. I testi lunghi vengono rimpiccioliti per entrare nella casella.
+- **Congedi e trasferte (scheda Moduli):** la prima volta carica i PDF vuoti dei moduli 0319, 0692 e 0693 in **Impostazioni → Moduli aziendali** (restano sull'Umbrel, non vanno su GitHub) e completa struttura, data di assunzione, luogo, recapito, auto ed €/km.
+  - *Domanda di congedo (0319):* indichi dal/al e il tipo; le giornate lavorative (lun–ven, senza festivi) si contano da sole. Il PDF ha già compilate le parti del richiedente di domanda, esito e ricevuta.
+  - *Trasferta / intervento in reperibilità (0692 + 0693):* numero, destinazione e motivazione per la lettera di incarico; giornate con o senza timbratura (↺ prende orari e straordinario dal rapportino di quel giorno); viaggi con auto propria con importo km × €/km.
+  - "Apri PDF" lo apre per stamparlo, "Scarica" lo salva. "Duplica" crea la pratica successiva con il numero aumentato di uno.
 - **Riepilogo del mese** nella pagina principale, **esportazione CSV** (una riga per lavoro, si apre con Excel) e **backup** completo in Impostazioni.
 
 ### Solo la prima volta: rendi pubblica l'immagine

@@ -54,11 +54,12 @@
   }
 
   // ---------- viste ----------
-  const VIEWS = ['homeView', 'editView', 'previewView', 'settingsView'];
+  const VIEWS = ['homeView', 'editView', 'previewView', 'settingsView', 'praticheView', 'praticaView'];
   function show(view) {
     VIEWS.forEach(v => { $(v).hidden = v !== view; });
     $('tabRep').hidden = !(view === 'editView' || view === 'previewView');
     $('tabSettings').classList.toggle('on', view === 'settingsView');
+    $('tabModuli').classList.toggle('on', view === 'praticheView' || view === 'praticaView');
     window.scrollTo(0, 0);
   }
 
@@ -66,9 +67,11 @@
     const h = location.hash.replace(/^#\/?/, '');
     let m;
     try {
+      if (h === 'moduli' || h.startsWith('m/')) { await flushSave(); rep = null; await Pratiche.route(h); return; }
+      await Pratiche.route(h);
       if ((m = /^r\/(\d{4}-\d\d-\d\d)\/stampa$/.exec(h))) { await openReport(m[1]); openPreview(); }
       else if ((m = /^r\/(\d{4}-\d\d-\d\d)$/.exec(h))) { await openReport(m[1]); show('editView'); }
-      else if (h === 'impostazioni') { await flushSave(); fillSettings(); show('settingsView'); }
+      else if (h === 'impostazioni') { await flushSave(); fillSettings(); show('settingsView'); Pratiche.renderModelliSettings(); }
       else { await flushSave(); rep = null; show('homeView'); loadMonth(); }
     } catch (e) { toast(e.message, true); }
   }
@@ -472,6 +475,8 @@
     $('sResidenza').value = s.residenza; $('sServizio').value = s.servizio; $('sUnita').value = s.unita;
     $('sOrario').value = s.orarioOrdinario; $('sTurnoDalle').value = s.turnoDalle || ''; $('sTurnoAlle').value = s.turnoAlle || ''; $('sCodice3').value = s.codiceModulo3;
     $('sOffX').value = s.stampa.offsetX; $('sOffY').value = s.stampa.offsetY; $('sScala').value = s.stampa.scala;
+    $('sStruttura').value = s.struttura || ''; $('sAssunto').value = s.assunto || ''; $('sLuogo').value = s.luogo || '';
+    $('sRecapito').value = s.recapito || ''; $('sTipoAuto').value = s.tipoAuto || ''; $('sEuroKm').value = s.euroKm || '';
     $('versionInfo').textContent = 'Rapportini versione ' + (s.versione || '');
   }
   function readSettings() {
@@ -481,6 +486,8 @@
     if (toMin($('sOrario').value) != null) s.orarioOrdinario = $('sOrario').value.trim();
     s.turnoDalle = $('sTurnoDalle').value; s.turnoAlle = $('sTurnoAlle').value;
     s.codiceModulo3 = $('sCodice3').value.trim();
+    s.struttura = $('sStruttura').value; s.assunto = $('sAssunto').value; s.luogo = $('sLuogo').value;
+    s.recapito = $('sRecapito').value; s.tipoAuto = $('sTipoAuto').value; s.euroKm = $('sEuroKm').value.trim();
     s.stampa = { offsetX: Number($('sOffX').value) || 0, offsetY: Number($('sOffY').value) || 0, scala: Number($('sScala').value) || 100 };
   }
   function bindSettings() {
@@ -504,7 +511,7 @@
       const over = confirm(`Il backup contiene ${data.rapporti?.length || 0} rapporti.\n\nOK = sovrascrivi i giorni già presenti\nAnnulla = aggiungi solo quelli mancanti`);
       try {
         const r = await api('ripristino' + (over ? '?sovrascrivi=1' : ''), { method: 'POST', body: JSON.stringify(data) });
-        settings = await api('impostazioni'); fillSettings(); loadSuggestions();
+        settings = await api('impostazioni'); fillSettings(); loadSuggestions(); Pratiche.renderModelliSettings();
         toast(`Ripristinati ${r.importati} rapporti${r.saltati ? `, ${r.saltati} saltati` : ''}.`);
       } catch (err) { toast(err.message, true); }
     };
@@ -523,7 +530,7 @@
   // ---------- avvio ----------
   async function init() {
     $('tabHome').onclick = () => go('#/');
-    $('tabRepClose').onclick = () => go('#/');
+    $('tabRepClose').onclick = () => go(location.hash.startsWith('#/m/') ? '#/moduli' : '#/');
     $('tabSettings').onclick = () => go('#/impostazioni');
     $('btnToday').onclick = () => go('#/r/' + todayIso());
     $('openDate').onchange = e => { if (e.target.value) go('#/r/' + e.target.value); };
@@ -538,6 +545,11 @@
     window.addEventListener('beforeunload', e => { if (saveTimer) { save(); e.preventDefault(); } });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
     bindHeader(); bindSettings();
+    window.App = {
+      api, toast, status, show, go, todayIso, toMin, fmtMin, between,
+      getSettings: () => settings
+    };
+    Pratiche.init();
     try { settings = await api('impostazioni'); }
     catch (e) { toast('Server non raggiungibile: ' + e.message, true); return; }
     loadSuggestions();

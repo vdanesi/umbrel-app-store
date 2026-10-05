@@ -23,6 +23,7 @@
   </div>
   <div class="tabbar-spacer"></div>
   <span class="save-status" id="saveStatus"></span>
+  <button class="tab tab-new" id="tabModuli" title="Congedi e trasferte">▤ <span>Moduli</span></button>
   <button class="tab tab-new" id="tabSettings" title="Impostazioni">⚙ <span>Impostazioni</span></button>
 </header>
 
@@ -136,6 +137,39 @@
   </div>
 </main>
 
+<!-- ======= MODULI: ELENCO ======= -->
+<main id="praticheView" class="view pratiche" hidden>
+  <div class="inner">
+    <h1>Congedi e trasferte</h1>
+    <p class="muted">► Compila i moduli aziendali con i tuoi dati: <span class="c-magenta">0319</span> domanda di congedo, <span class="c-magenta">0692</span> lettera di incarico e <span class="c-magenta">0693</span> giustificativo per gli interventi in reperibilità.</p>
+    <div class="warn-box" id="pratWarn" hidden>
+      Mancano i PDF vuoti dei moduli <b id="pratWarnList"></b>: caricali una volta da <a href="#/impostazioni">Impostazioni → Moduli aziendali</a>.
+    </div>
+    <div class="home-actions">
+      <button class="btn btn-primary" id="btnNewTrasferta">+ Trasferta / intervento in reperibilità</button>
+      <button class="btn btn-primary" id="btnNewCongedo">+ Domanda di congedo</button>
+    </div>
+    <div class="prompt-line" aria-hidden="true">
+      <span class="seg seg-date">▤ moduli</span><span class="seg seg-time">pratiche</span><span class="seg seg-path">~/congedi-trasferte</span><span class="cursor"></span>
+    </div>
+    <div id="pratList" class="rep-list"></div>
+  </div>
+</main>
+
+<!-- ======= MODULI: PRATICA ======= -->
+<main id="praticaView" class="view edit" hidden>
+  <div class="inner">
+    <div class="edit-head">
+      <h1 id="pratTitle">Pratica</h1>
+      <div class="row-actions">
+        <button class="btn" id="btnPratDup" title="Crea una nuova pratica partendo da questa">Duplica</button>
+        <button class="btn btn-danger" id="btnPratDelete">Elimina</button>
+      </div>
+    </div>
+    <div id="pratBody"></div>
+  </div>
+</main>
+
 <!-- ======= ANTEPRIMA ======= -->
 <main id="previewView" class="view preview" hidden>
   <div class="preview-bar">
@@ -194,6 +228,20 @@
     </section>
 
     <section class="box">
+      <h3><span class="c-cyan">#</span> Moduli aziendali (congedi e trasferte)</h3>
+      <p class="hint">Carica una volta i PDF vuoti dei moduli: restano solo sul tuo Umbrel e l'app li compila con i tuoi dati.</p>
+      <div id="modelliList" class="modelli-list"></div>
+      <div class="form-grid g3" style="margin-top:14px">
+        <label>Struttura organizzativa <input id="sStruttura" maxlength="120"></label>
+        <label>Assunto in servizio il <input type="date" id="sAssunto"></label>
+        <label>Luogo per ", lì" <input id="sLuogo" maxlength="60" placeholder="es. Brescia"></label>
+        <label>Recapito durante l'assenza <input id="sRecapito" maxlength="120" placeholder="es. telefono"></label>
+        <label>Tipo di auto propria <input id="sTipoAuto" maxlength="120"></label>
+        <label>€/km (coefficiente ACI) <input id="sEuroKm" maxlength="12" inputmode="decimal" placeholder="es. 0,35"></label>
+      </div>
+    </section>
+
+    <section class="box">
       <h3><span class="c-cyan">#</span> Backup</h3>
       <div class="row-actions">
         <a class="btn" href="api/backup" download>Scarica backup completo (.json)</a>
@@ -211,12 +259,16 @@
 <datalist id="dlDescrizione"></datalist>
 <datalist id="dlLocalita"></datalist>
 <datalist id="dlAnomalia"></datalist>
+<datalist id="dlMotivoCongedo"><option value="Ferie"><option value="Ferie anno precedente"><option value="Riposo compensativo"><option value="Permesso retribuito"><option value="Congedo straordinario"><option value="Permesso L. 104/92"><option value="Congedo parentale"></datalist>
+<datalist id="dlMotivazione"><option value="Intervento in reperibilità"><option value="Intervento in reperibilità per guasto"><option value="Lavoro notturno programmato"></datalist>
 
 <!-- area di stampa: contiene il modulo durante la stampa -->
 <div id="printArea" class="print-area"></div>
 <div id="toast" class="toast" hidden></div>
 
 <script src="modulo.js"></script>
+<script src="moduli-pdf.js"></script>
+<script src="pratiche.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
