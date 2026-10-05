@@ -107,9 +107,20 @@ export async function searchOverture({ area, types, apiKey, fetchJson }) {
   // punti di interrogazione: il centro, o al massimo 12 punti lungo il percorso
   let queries;
   if (area.kind === 'line') {
-    const n = Math.max(1, Math.min(12, Math.ceil(area.len / (2 * area.radius))));
-    const r = Math.max(area.radius, area.len / (2 * n) * 1.1);
-    const pts = n === 1 ? [area.line[Math.floor(area.line.length / 2)]] : pointsEvery(area.line, area.len / (n - 1) * 0.999).slice(0, n);
+    // cerchi ogni ~50 km lungo il percorso, abbastanza grandi da coprire tutta la fascia
+    const n = Math.max(1, Math.min(10, Math.ceil(area.len / 50000)));
+    const step = area.len / n;
+    const r = Math.sqrt((step / 2) ** 2 + area.radius ** 2) * 1.2;
+    const marks = pointsEvery(area.line, step / 2);           // 0, s/2, s, 3s/2, …
+    const pts = marks.filter((_, i) => i % 2 === 1).slice(0, n);
+    if (!pts.length) pts.push(area.line[Math.floor(area.line.length / 2)]);
+    // controllo: se una parte della fascia resta fuori (curve strette, estremi) aggiungo un cerchio lì
+    const dLat = area.radius / 111000;
+    for (const q of pointsEvery(area.line, Math.max(1000, area.radius / 3))) {
+      const dLon = area.radius / (111000 * Math.cos(q[0] * Math.PI / 180));
+      const probes = [q, [q[0] + dLat, q[1]], [q[0] - dLat, q[1]], [q[0], q[1] + dLon], [q[0], q[1] - dLon]];
+      if (probes.some(x => !pts.some(c => haversine(c, x) <= r)) && pts.length < 14) pts.push(q);
+    }
     queries = pts.map(p => ({ p, r }));
   } else queries = [{ p: area.center, r: area.radius }];
 
@@ -123,7 +134,7 @@ export async function searchOverture({ area, types, apiKey, fetchJson }) {
     }
   }
   const errors = [];
-  const pages = await mapLimit(reqs, 4, async params => {
+  const pages = await mapLimit(reqs, 8, async params => {
     try {
       return await fetchJson(`${OPENPLACES_URL}/v1/places?${new URLSearchParams(params)}`, {
         headers: { Authorization: `Bearer ${apiKey}` }

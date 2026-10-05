@@ -35,7 +35,8 @@ const state = {
   dirty: false,
   saving: false,
   pois: [],
-  routeSeq: 0
+  routeSeq: 0,
+  poiSeq: 0
 };
 
 // ---------- API ----------
@@ -632,22 +633,60 @@ $('#btnPoiSearch').addEventListener('click', async () => {
   if (scope === 'route') { body.line = t.route.geometry; body.radius = Math.min(radius, 10000); }
   else if (scope === 'view') { const c = map.getCenter(); body.center = [c.lat, c.lng]; }
   else { const s = t.stops[+scope]; body.center = [s.lat, s.lon]; }
-  $('#poiStatus').innerHTML = `<span class="c-cyan">…</span> ricerca su ${sources.map(x => SOURCES[x].label).join(', ')} (può richiedere qualche secondo)`;
   $('#btnPoiSearch').disabled = true;
-  try {
-    const r = await api('/pois', { method: 'POST', body });
-    state.pois = r.pois;
+  const seq = ++state.poiSeq;
+  const pending = new Set(sources);
+  let osmInfo = '';
+  let fitted = false;
+  const status = (r, final) => {
     const per = Object.entries(r.counts || {}).map(([k, n]) => `<span class="src src-${k}">${SOURCES[k].short}</span> ${n}`).join(' ');
+    const wait = [...pending].map(k => `<span class="src src-${k}">${SOURCES[k].short}</span> …`).join(' ');
     const merged = state.pois.filter(p => p.sources.length > 1).length;
-    $('#poiStatus').innerHTML = (state.pois.length
-      ? `<span class="ok">✔</span> ${state.pois.length} risultati · ${per}${merged ? ` · <span class="muted">${merged} presenti in più fonti</span>` : ''}${scope === 'route' && radius > 10000 ? '<br><span class="muted">raggio limitato a 10 km lungo il percorso</span>' : ''}`
-      : 'Nessun risultato: prova un raggio più ampio o un\'altra fonte.') +
+    const cache = r.osm ? (r.osm.fromCache === r.osm.tiles ? ' · <span class="muted">OSM dalla cache</span>' : r.osm.fromCache ? ` · <span class="muted">OSM ${r.osm.fromCache}/${r.osm.tiles} zone dalla cache</span>` : '') : '';
+    $('#poiStatus').innerHTML = (final
+      ? (state.pois.length ? `<span class="ok">✔</span> ${state.pois.length} risultati · ${per}${merged ? ` · <span class="muted">${merged} presenti in più fonti</span>` : ''}${cache}` : 'Nessun risultato: prova un raggio più ampio o un\'altra fonte.')
+      : `<span class="c-cyan">…</span> ${state.pois.length} risultati finora · ${per} ${wait}${osmInfo}`) +
+      (final && scope === 'route' && radius > 10000 ? '<br><span class="muted">raggio limitato a 10 km lungo il percorso</span>' : '') +
       (r.warnings || []).map(w => `<br><span class="c-yellow">⚠ ${esc(w)}</span>`).join('');
-    renderPois();
-    if (state.pois.length) map.fitBounds(state.pois.map(p => [p.lat, p.lon]).concat(t.stops.map(s => [s.lat, s.lon])), { padding: [30, 30] });
+  };
+  const show = (r, final) => {
+    if (seq !== state.poiSeq) return;
+    state.pois = r.pois || [];
+    renderPois(); status(r, final);
+    if (state.pois.length && (!fitted || final)) {
+      map.fitBounds(state.pois.map(p => [p.lat, p.lon]).concat(t.stops.map(s => [s.lat, s.lon])), { padding: [30, 30] });
+      fitted = true;
+    }
+  };
+  status({ counts: {} }, false);
+  try {
+    const res = await fetch('api/pois', { method: 'POST', headers: { 'X-Camper': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, stream: true }) });
+    if (!res.ok) { const j = await res.json().catch(() => ({})); if (res.status === 401) location.replace('accesso'); throw new Error(j.error || res.statusText); }
+    const reader = res.body.getReader(); const dec = new TextDecoder();
+    let buf = '', last = null;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i); buf = buf.slice(i + 1);
+        if (!line.trim()) continue;
+        const msg = JSON.parse(line);
+        if (msg.progress?.osm) {
+          const p = msg.progress.osm;
+          const todo = p.tiles - p.cached;
+          osmInfo = todo ? ` · <span class="muted">OSM: scarico ${todo} ${todo === 1 ? 'zona' : 'zone'}${p.done ? ` (${p.done - p.cached}/${todo})` : ''}</span>` : '';
+          if (seq === state.poiSeq) status({ counts: last?.counts || {}, warnings: last?.warnings }, false);
+        } else if (msg.final) { last = msg; pending.clear(); show(msg, true); }
+        else if (msg.partial) { last = msg; pending.delete(msg.done); if (msg.done === 'osm') osmInfo = ''; show(msg, false); }
+      }
+    }
+    if (!last?.final) throw new Error('ricerca interrotta');
+    if (!last.pois.length && last.warnings.length === sources.length) $('#poiStatus').innerHTML = `<span class="err">✘</span> ${esc(last.warnings.join(' · '))}`;
   } catch (e) {
-    $('#poiStatus').innerHTML = `<span class="err">✘</span> ${esc(e.message)}`;
-  } finally { $('#btnPoiSearch').disabled = false; }
+    if (seq === state.poiSeq) $('#poiStatus').innerHTML = `<span class="err">✘</span> ${esc(e.message)}`;
+  } finally { if (seq === state.poiSeq) $('#btnPoiSearch').disabled = false; }
 });
 $('#btnPoiClear').addEventListener('click', () => { state.pois = []; renderPois(); $('#poiStatus').textContent = ''; });
 

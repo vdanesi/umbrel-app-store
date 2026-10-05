@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "2.0.0"
+version: "2.1.0"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -49,11 +49,11 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Account personali: ogni utente si registra e vede solo i propri viaggi, la propria
-  raccolta e il proprio mezzo. Il primo account creato è l'amministratore e riceve i
-  viaggi già salvati. L'amministratore apre o chiude le registrazioni, azzera le
-  password con una password temporanea, nomina altri amministratori ed elimina gli
-  account. Corretto il campo Lunghezza del mezzo, che non veniva salvato.
+  Ricerca delle aree sosta molto più veloce. OpenStreetMap viene interrogato a zone
+  di circa 25 km invece che lungo tutto il percorso, e le zone già scaricate restano
+  sull'Umbrel per 14 giorni per tutti gli utenti: le ricerche ripetute o vicine sono
+  quasi immediate. Se un server OpenStreetMap è lento si usa subito il secondo, Overture
+  fa meno richieste e i risultati compaiono man mano che arrivano dalle varie fonti.
 dependencies: []
 path: ""
 defaultUsername: ""

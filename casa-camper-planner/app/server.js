@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { haversine, makeArea, searchOverture, parsePoiFile, mergePois, guessCategory } from './sources.js';
 import { CATALOG, MANUAL_SOURCES } from './catalog.js';
 import { createAuth } from './auth.js';
+import { createOsmTiles } from './osmtiles.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -213,22 +214,6 @@ async function routeORS(coords, settings) {
   };
 }
 
-// Punti campione lungo la linea, distanziati in modo uniforme (per Overpass "around").
-function samplePolyline(pts, maxPoints = 120) {
-  if (pts.length <= maxPoints) return pts;
-  let total = 0;
-  for (let i = 1; i < pts.length; i++) total += haversine(pts[i - 1], pts[i]);
-  const step = total / (maxPoints - 1);
-  const out = [pts[0]];
-  let acc = 0;
-  for (let i = 1; i < pts.length; i++) {
-    acc += haversine(pts[i - 1], pts[i]);
-    if (acc >= step) { out.push(pts[i]); acc = 0; }
-  }
-  if (out.at(-1) !== pts.at(-1)) out.push(pts.at(-1));
-  return out;
-}
-
 const POI_FILTERS = {
   area_camper: ['nwr["tourism"="caravan_site"]'],
   campeggio: ['nwr["tourism"="camp_site"]["caravans"!="no"]'],
@@ -244,20 +229,6 @@ function classifyPoi(tags) {
   if (tags.amenity === 'water_point') return 'acqua';
   if (tags.amenity === 'fuel') return 'gpl';
   return 'altro';
-}
-
-async function overpass(query) {
-  let lastErr;
-  for (const base of OVERPASS_URLS) {
-    try {
-      return await fetchJson(base, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'data=' + encodeURIComponent(query)
-      }, 60000);
-    } catch (e) { lastErr = e; }
-  }
-  throw lastErr || new Error('Overpass non raggiungibile');
 }
 
 // ---------- GPX ----------
@@ -429,25 +400,21 @@ app.get('/api/reverse', wrap(async (req, res) => {
   res.json({ name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, label: d.display_name || '' });
 }));
 
-async function searchOsm(area, types, b) {
-  let around;
-  if (area.kind === 'line') {
-    const pts = samplePolyline(area.line, 120);
-    around = `around:${area.radius},${pts.map(([la, lo]) => `${la.toFixed(5)},${lo.toFixed(5)}`).join(',')}`;
-  } else around = `around:${area.radius},${area.center[0].toFixed(5)},${area.center[1].toFixed(5)}`;
-  const parts = types.flatMap(t => POI_FILTERS[t].map(f => `${f}(${around});`)).join('');
-  const data = await overpass(`[out:json][timeout:50];(${parts});out center tags 400;`);
+const osmTiles = createOsmTiles({ cacheDir: path.join(DATA_DIR, 'cache'), overpassUrls: OVERPASS_URLS, userAgent: USER_AGENT });
+
+async function searchOsm(area, types, onProgress) {
+  const { elements, tiles, fromCache } = await osmTiles.elementsFor(area, onProgress);
   const seen = new Set();
   const out = [];
-  for (const el of data.elements || []) {
+  for (const el of elements) {
     const key = el.type + el.id;
     if (seen.has(key)) continue; seen.add(key);
-    const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon;
-    if (lat == null) continue;
     const tags = el.tags || {};
+    const category = classifyPoi(tags);
+    if (!types.includes(category) || !area.contains([el.lat, el.lon])) continue;
     out.push({
       id: `osm:${el.type}/${el.id}`, sources: ['osm'],
-      osmType: el.type, osmId: el.id, lat, lon, category: classifyPoi(tags),
+      osmType: el.type, osmId: el.id, lat: el.lat, lon: el.lon, category,
       name: tags.name || tags.operator || null,
       tags: {
         fee: tags.fee, charge: tags.charge, capacity: tags.capacity, power: tags.power_supply,
@@ -458,14 +425,40 @@ async function searchOsm(area, types, b) {
       }
     });
   }
+  out.stats = { tiles, fromCache };
   return out;
+}
+
+// Risposte di Open Places API in cache per 7 giorni (stessa domanda = stessa risposta).
+const OVT_DIR = path.join(DATA_DIR, 'cache', 'overture');
+async function cachedFetchJson(url, opts = {}, timeoutMs) {
+  if (opts.method && opts.method !== 'GET') return fetchJson(url, opts, timeoutMs);
+  const file = path.join(OVT_DIR, crypto.createHash('sha1').update(url).digest('hex') + '.json');
+  try {
+    const c = JSON.parse(await fs.readFile(file, 'utf8'));
+    if (Date.now() - c.at < 7 * 864e5) return c.data;
+  } catch { /* non in cache */ }
+  const data = await fetchJson(url, opts, timeoutMs);
+  await fs.mkdir(OVT_DIR, { recursive: true });
+  await writeJsonAtomic(file, { at: Date.now(), data });
+  return data;
 }
 
 // ---------- la mia raccolta ----------
 
+// La raccolta può avere decine di migliaia di punti: si rilegge solo se il file è cambiato.
+const collMemo = new Map();   // file -> {mtime, data}
 async function loadCollection() {
-  const c = await readJson(ctx().collectionFile, null);
-  return c && Array.isArray(c.items) ? c : { items: [], imports: [] };
+  const file = ctx().collectionFile;
+  let mtime = 0;
+  try { mtime = (await fs.stat(file)).mtimeMs; } catch { return { items: [], imports: [] }; }
+  const m = collMemo.get(file);
+  if (m && m.mtime === mtime) return structuredClone(m.data);
+  const c = await readJson(file, null);
+  const data = c && Array.isArray(c.items) ? c : { items: [], imports: [] };
+  collMemo.set(file, { mtime, data });
+  if (collMemo.size > 50) collMemo.delete(collMemo.keys().next().value);
+  return structuredClone(data);
 }
 function collectionSummary(c) {
   const fav = c.items.filter(i => i.source === 'preferiti').length;
@@ -666,25 +659,38 @@ app.post('/api/pois', wrap(async (req, res) => {
   const settings = await loadSettings();
   const warnings = [];
   const labels = { osm: 'OpenStreetMap', overture: 'Overture', mine: 'La mia raccolta' };
+  const stream = !!b.stream;
+  if (stream) {
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+  }
+  const send = obj => { if (stream && !res.writableEnded) res.write(JSON.stringify(obj) + '\n'); };
   const jobs = {
-    osm: () => searchOsm(area, types, b),
+    osm: () => searchOsm(area, types, p => send({ progress: { osm: p } })),
     overture: () => settings.openPlacesKey
-      ? searchOverture({ area, types, apiKey: settings.openPlacesKey, fetchJson })
+      ? searchOverture({ area, types, apiKey: settings.openPlacesKey, fetchJson: cachedFetchJson })
       : Promise.reject(new Error('manca la chiave Open Places API (scheda Mezzo)')),
     mine: async () => searchMine(await loadCollection(), area, types)
   };
-  const results = await Promise.all(sources.map(s => jobs[s]().catch(e => { warnings.push(`${labels[s]}: ${e.message}`); return []; })));
-  const counts = Object.fromEntries(sources.map((s, i) => [s, results[i].length]));
-  if (results.every(r => !r.length) && warnings.length === sources.length) {
-    return res.status(502).json({ error: warnings.join(' · ') });
-  }
-  // ordine: OSM (dati più ricchi), poi la raccolta, poi Overture
-  const order = ['osm', 'mine', 'overture'];
-  const lists = order.filter(s => sources.includes(s)).map(s => results[sources.indexOf(s)]);
-  let pois = mergePois(lists);
-  if (b.acsiOnly) pois = pois.filter(p => p.acsi);
-  pois = pois.slice(0, 600);
-  res.json({ pois, warnings, counts });
+  const results = {};
+  const order = ['osm', 'mine', 'overture'];   // OSM ha i dati più ricchi, poi la raccolta, poi Overture
+  const build = () => {
+    const lists = order.filter(s => results[s]).map(s => results[s]);
+    let pois = mergePois(lists);
+    if (b.acsiOnly) pois = pois.filter(p => p.acsi);
+    return pois.slice(0, 600);
+  };
+  const counts = () => Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.length]));
+  await Promise.all(sources.map(s => jobs[s]()
+    .then(r => { results[s] = r; })
+    .catch(e => { results[s] = []; warnings.push(`${labels[s]}: ${e.message}`); })
+    .finally(() => send({ partial: true, done: s, pois: build(), counts: counts(), warnings, osm: results.osm?.stats }))));
+  const final = { pois: build(), warnings, counts: counts(), osm: results.osm?.stats };
+  if (stream) { send({ ...final, final: true }); return res.end(); }
+  if (sources.every(s => !results[s].length) && warnings.length === sources.length) return res.status(502).json({ error: warnings.join(' · ') });
+  res.json(final);
 }));
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Non trovato' }));
