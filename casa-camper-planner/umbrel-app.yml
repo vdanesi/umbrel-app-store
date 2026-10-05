@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "1.3.0"
+version: "2.0.0"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -34,6 +34,11 @@ description: >-
   larghezza, lunghezza e massa del camper.
 
 
+  Ogni persona ha il suo account: vede solo i propri viaggi, la propria raccolta e
+  le proprie impostazioni. Il primo account creato è l'amministratore, che gestisce
+  le registrazioni e può azzerare le password.
+
+
   I viaggi sono salvati sul tuo Umbrel. Mappe, percorsi e ricerca dei luoghi usano i
   servizi pubblici di OpenStreetMap, quindi serve la connessione a internet.
 developer: VC Solutions
@@ -44,10 +49,11 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  CampingCard ACSI: segna i campeggi che accettano la tessera, con la tariffa a notte,
-  e cercali con il filtro "Solo campeggi ACSI". Ogni campeggio ha il collegamento per
-  cercarlo sul sito CampingCard. Le tappe ACSI mostrano la tariffa e il diario stima
-  il costo delle notti ACSI. I dati ACSI non vengono scaricati: i segni li metti tu.
+  Account personali: ogni utente si registra e vede solo i propri viaggi, la propria
+  raccolta e il proprio mezzo. Il primo account creato è l'amministratore e riceve i
+  viaggi già salvati. L'amministratore apre o chiude le registrazioni, azzera le
+  password con una password temporanea, nomina altri amministratori ed elimina gli
+  account. Corretto il campo Lunghezza del mezzo, che non veniva salvato.
 dependencies: []
 path: ""
 defaultUsername: ""

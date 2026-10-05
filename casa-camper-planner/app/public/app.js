@@ -42,11 +42,14 @@ const state = {
 async function api(path, opts = {}) {
   const res = await fetch('api' + path, {
     ...opts,
-    headers: opts.body ? { 'Content-Type': 'application/json' } : {},
+    headers: { 'X-Camper': '1', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
   if (res.status === 204) return null;
   const data = await res.json().catch(() => ({}));
+  // sessione scaduta o password da cambiare: torna alla pagina di accesso
+  if (res.status === 401 && data.accesso) { location.replace('accesso'); throw new Error('Accedi per continuare'); }
+  if (res.status === 403 && data.cambioPassword) { location.replace('accesso'); throw new Error(data.error); }
   if (!res.ok) throw new Error(data.error || res.statusText);
   return data;
 }
@@ -115,13 +118,14 @@ async function save() {
     state.dirty = true;
   } finally { state.saving = false; }
 }
+window.App = { api, toast, save: () => save(), get dirty() { return state.dirty; }, closeTrip: () => { if (state.dirty) save(); state.trip = null; } };
 window.addEventListener('beforeunload', e => { if (state.dirty) { save(); e.preventDefault(); } });
 
 // ---------- navigazione ----------
 function showHome() {
   if (state.dirty) save();
   state.trip = null;
-  $('#homeView').hidden = false; $('#tripView').hidden = true; $('#tabTrip').hidden = true;
+  $('#homeView').hidden = false; $('#tripView').hidden = true; $('#tabTrip').hidden = true; $('#accountView').hidden = true; $('#tabUser').classList.remove('tab-active');
   $('#tabHome').classList.add('tab-active-home');
   setSaveStatus('');
   history.replaceState(null, '', '#');
@@ -133,7 +137,7 @@ async function openTrip(id) {
   } catch (e) { toast(e.message, true); return showHome(); }
   state.pois = [];
   delete $('#poiScope').dataset.touched;
-  $('#homeView').hidden = true; $('#tripView').hidden = false; $('#tabTrip').hidden = false;
+  $('#homeView').hidden = true; $('#tripView').hidden = false; $('#tabTrip').hidden = false; $('#accountView').hidden = true; $('#tabUser').classList.remove('tab-active');
   history.replaceState(null, '', '#' + id);
   initMap();
   setTimeout(() => map.invalidateSize(), 0);
@@ -864,14 +868,16 @@ $('#expenseTable').addEventListener('click', e => {
 });
 
 // ---------- mezzo / impostazioni ----------
+// "length" è anche una proprietà dei form: i campi si cercano per nome
+const fld = (f, name) => f.querySelector(`[name="${name}"]`);
 async function loadSettings() {
   state.settings = await api('/settings');
   const f = $('#vehicleForm'), s = state.settings;
-  for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType']) f.elements[k].value = s.vehicle[k];
-  f.elements.fuelPrice.value = s.fuelPrice;
-  f.elements.durationFactor.value = s.durationFactor;
-  f.elements.orsApiKey.value = '';
-  f.elements.openPlacesKey.value = '';
+  for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType']) fld(f, k).value = s.vehicle[k];
+  fld(f, 'fuelPrice').value = s.fuelPrice;
+  fld(f, 'durationFactor').value = s.durationFactor;
+  fld(f, 'orsApiKey').value = '';
+  fld(f, 'openPlacesKey').value = '';
   $('#opHint').innerHTML = s.openPlacesKeySet
     ? '<span class="ok">✔</span> Chiave impostata: nelle Aree sosta puoi cercare anche su Overture.'
     : `<span class="c-cyan">info</span> Aggiunge le aree sosta di Overture Maps (dati aperti), oltre a OpenStreetMap. Chiave gratuita, 10.000 ricerche al mese, su <a href="https://openplacesapi.com" target="_blank" rel="noopener">openplacesapi.com</a>.`;
@@ -883,10 +889,10 @@ async function loadSettings() {
 $('#vehicleForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target, v = {};
-  for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType']) v[k] = f.elements[k].value;
-  const body = { vehicle: v, fuelPrice: f.elements.fuelPrice.value, durationFactor: f.elements.durationFactor.value };
-  if (f.elements.orsApiKey.value.trim()) body.orsApiKey = f.elements.orsApiKey.value.trim();
-  if (f.elements.openPlacesKey.value.trim()) body.openPlacesKey = f.elements.openPlacesKey.value.trim();
+  for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType']) v[k] = fld(f, k).value;
+  const body = { vehicle: v, fuelPrice: fld(f, 'fuelPrice').value, durationFactor: fld(f, 'durationFactor').value };
+  if (fld(f, 'orsApiKey').value.trim()) body.orsApiKey = fld(f, 'orsApiKey').value.trim();
+  if (fld(f, 'openPlacesKey').value.trim()) body.openPlacesKey = fld(f, 'openPlacesKey').value.trim();
   try {
     await api('/settings', { method: 'PUT', body });
     await loadSettings(); toast('Mezzo salvato');
@@ -958,6 +964,8 @@ function buildPrint() {
 (async function boot() {
   try { await loadSettings(); } catch (e) { toast('Server non raggiungibile: ' + e.message, true); }
   loadCollection();
+  window.Account?.init();
   const id = location.hash.slice(1);
+  if (id === 'account') return; // la apre Account.init dopo aver letto l'utente
   if (id) openTrip(id); else showHome();
 })();

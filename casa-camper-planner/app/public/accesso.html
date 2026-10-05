@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141414">
+<title>Camper Planner · Accesso</title>
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/icon-512.png">
+<link rel="stylesheet" href="style.css">
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  .acc-wrap { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px 40px; }
+  .acc { width: 100%; max-width: 440px; }
+  .acc .welcome { margin-bottom: 18px; }
+  .acc .logo-plaque img { width: 64px; height: 64px; }
+  .acc-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border-tab); }
+  .acc-tab { background: var(--bg-tabbar); border: 1px solid var(--bg-tab-new); border-bottom: 0; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    padding: 6px 14px; color: var(--fg-icon); cursor: pointer; font: 13px/18px var(--ui); }
+  .acc-tab.active { background: var(--bg-tab-active); color: var(--fg-default); border-color: var(--border-tab); margin-bottom: -1px; padding-bottom: 7px; }
+  .acc-form { background: var(--bg-tab-active); border: 1px solid var(--border-tab); border-top: 0; padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .acc-form .btn-primary { min-height: 40px; font-size: 14px; }
+  .msg { font: 13px/18px var(--ui); padding: 8px 10px; border: 1px solid; }
+  .msg.err { color: var(--status-error); border-color: var(--status-error); }
+  .msg.info { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+  .acc-form input:invalid { border-color: var(--border-tab); }
+  .acc-form input:focus { border-color: var(--accent-cyan); }
+  #fCambio { border-top: 1px solid var(--border-tab); }
+  .check { flex-direction: row; align-items: center; gap: 8px; font: 13px var(--ui); color: var(--fg-default); }
+  .ver { text-align: center; color: var(--fg-muted); font-size: 12px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<header class="tabbar">
+  <div class="tab tab-active"><span class="tab-num">1.</span> Camper Planner · accesso</div>
+</header>
+
+<div class="acc-wrap">
+  <div class="acc">
+    <div class="welcome">
+      <div class="logo-plaque"><img src="img/vc-solutions-logo.jpg" alt="VC Solutions" width="64" height="64"></div>
+      <div>
+        <p class="banner"><span class="c-green">• Camper Planner •</span> <span class="c-yellow">(itinerari in camper)</span></p>
+        <p class="muted">► viaggi, aree sosta, diario e costi</p>
+        <p class="muted">► ogni account vede <span class="c-magenta">solo i propri viaggi</span></p>
+      </div>
+    </div>
+
+    <div class="prompt-line" aria-hidden="true">
+      <span class="seg seg-date">⌂ camper</span><span class="seg seg-time" id="plMode">accesso</span><span class="seg seg-path">~/login</span><span class="cursor"></span>
+    </div>
+
+    <div class="acc-tabs" id="tabs">
+      <button class="acc-tab active" data-m="accedi" type="button">Accedi</button>
+      <button class="acc-tab" data-m="registrati" type="button">Registrati</button>
+    </div>
+
+    <!-- accesso / registrazione -->
+    <form class="acc-form" id="fAuth" autocomplete="on">
+      <div class="msg info" id="mInfo" hidden></div>
+      <label>Nome utente <input id="nome" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="32"></label>
+      <label>Password <input id="pw" type="password" name="password" autocomplete="current-password" required minlength="8" maxlength="200"></label>
+      <label id="lPw2" hidden>Ripeti la password <input id="pw2" type="password" autocomplete="new-password" minlength="8" maxlength="200"></label>
+      <label class="check"><input type="checkbox" id="ricorda"> Resta connesso su questo dispositivo (30 giorni)</label>
+      <div class="msg err" id="mErr" hidden></div>
+      <button class="btn btn-primary" id="bGo" type="submit">Accedi</button>
+      <p class="hint" id="hint"></p>
+    </form>
+
+    <!-- cambio password obbligatorio dopo il reset dell'amministratore -->
+    <form class="acc-form" id="fCambio" hidden>
+      <div class="msg info">L'amministratore ha azzerato la tua password. Scegline una nuova per continuare.</div>
+      <label>Password temporanea <input id="cAtt" type="password" autocomplete="current-password" required></label>
+      <label>Nuova password <input id="cNew" type="password" autocomplete="new-password" required minlength="8" maxlength="200"></label>
+      <label>Ripeti la nuova password <input id="cNew2" type="password" autocomplete="new-password" required minlength="8" maxlength="200"></label>
+      <div class="msg err" id="cErr" hidden></div>
+      <button class="btn btn-primary" type="submit">Salva e continua</button>
+      <button class="btn" type="button" id="cEsci">Esci</button>
+    </form>
+
+    <p class="ver" id="ver"></p>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  let mode = 'accedi', stato = null;
+
+  async function api(path, body) {
+    const res = await fetch('api/' + path, {
+      method: body ? 'POST' : 'GET',
+      headers: { 'X-Camper': '1', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.error || j.errore || 'Errore ' + res.status);
+    return j;
+  }
+  function err(el, msg) { el.textContent = msg || ''; el.hidden = !msg; }
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.acc-tab').forEach(t => t.classList.toggle('active', t.dataset.m === m));
+    const reg = m === 'registrati';
+    $('lPw2').hidden = !reg;
+    $('pw2').required = reg;
+    $('pw').autocomplete = reg ? 'new-password' : 'current-password';
+    $('bGo').textContent = reg ? (stato?.primoAvvio ? 'Crea account amministratore' : 'Crea account') : 'Accedi';
+    $('plMode').textContent = reg ? 'registrazione' : 'accesso';
+    $('hint').textContent = reg
+      ? 'Nome utente: 3–32 caratteri, lettere minuscole, numeri, punto o trattino. Password: almeno 8 caratteri.'
+      : "Password dimenticata? Chiedi all'amministratore di azzerarla: ti darà una password temporanea.";
+    const closed = reg && stato && !stato.registrazioniAperte;
+    $('bGo').disabled = closed;
+    err($('mErr'), closed ? "Le registrazioni sono chiuse. Chiedi all'amministratore di aprirle." : '');
+  }
+
+  document.querySelectorAll('.acc-tab').forEach(t => t.onclick = () => setMode(t.dataset.m));
+
+  $('fAuth').onsubmit = async e => {
+    e.preventDefault();
+    err($('mErr'));
+    const nome = $('nome').value.trim().toLowerCase(), password = $('pw').value, ricorda = $('ricorda').checked;
+    if (mode === 'registrati' && password !== $('pw2').value) { err($('mErr'), 'Le due password non coincidono.'); return; }
+    $('bGo').disabled = true;
+    try {
+      const r = await api(mode, { nome, password, ricorda });
+      if (r.utente?.cambioPassword) { showCambio(password); return; }
+      location.replace('./');
+    } catch (x) { err($('mErr'), x.message); }
+    finally { $('bGo').disabled = false; }
+  };
+
+  function showCambio(tempPw) {
+    $('fAuth').hidden = true; $('tabs').hidden = true; $('fCambio').hidden = false;
+    $('plMode').textContent = 'nuova password';
+    if (tempPw) $('cAtt').value = tempPw;
+    (tempPw ? $('cNew') : $('cAtt')).focus();
+  }
+  $('fCambio').onsubmit = async e => {
+    e.preventDefault(); err($('cErr'));
+    if ($('cNew').value !== $('cNew2').value) { err($('cErr'), 'Le due password non coincidono.'); return; }
+    try { await api('password', { attuale: $('cAtt').value, nuova: $('cNew').value }); location.replace('./'); }
+    catch (x) { err($('cErr'), x.message); }
+  };
+  $('cEsci').onclick = async () => { await api('esci', {}).catch(() => {}); location.reload(); };
+
+  (async () => {
+    try { stato = await api('stato'); } catch { err($('mErr'), 'Server non raggiungibile.'); return; }
+    fetch('api/health').then(r => r.json()).then(h => { $('ver').textContent = 'Camper Planner versione ' + h.version; }).catch(() => {});
+    if (stato.utente?.cambioPassword) { showCambio(''); return; }
+    if (stato.utente) { location.replace('./'); return; }
+    if (stato.primoAvvio) {
+      setMode('registrati');
+      $('mInfo').textContent = 'Primo avvio: crea il tuo account. Sarà l\'amministratore e riceverà i viaggi già salvati.';
+      $('mInfo').hidden = false;
+      $('tabs').querySelector('[data-m=accedi]').hidden = true;
+    } else {
+      const q = new URLSearchParams(location.search);
+      setMode(q.get('modo') === 'registrati' ? 'registrati' : 'accedi');
+    }
+    $('nome').focus();
+  })();
+})();
+</script>
+</body>
+</html>

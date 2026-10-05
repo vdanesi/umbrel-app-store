@@ -6,11 +6,13 @@ services:
       # Format: <app-id>_<service-name>_1
       APP_HOST: casa-camper-planner_web_1
       APP_PORT: 3000
-      # Camper Planner non ha un login suo: resta attiva la password di Umbrel
+      # Camper Planner ha account suoi, quindi Umbrel non chiede anche la propria password.
+      # Per la doppia protezione cancella questa riga e aggiorna l'app.
+      PROXY_AUTH_ADD: "false"
 
   web:
     # Built by .github/workflows/camper-planner.yml. Change the tag together with "version" in umbrel-app.yml.
-    image: ghcr.io/vdanesi/camper-planner:1.3.0
+    image: ghcr.io/vdanesi/camper-planner:2.0.0
     user: "1000:1000"
     init: true
     restart: on-failure

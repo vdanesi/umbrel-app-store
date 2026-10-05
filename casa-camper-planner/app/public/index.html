@@ -21,6 +21,7 @@
   </div>
   <div class="tabbar-spacer"></div>
   <span class="save-status" id="saveStatus"></span>
+  <button class="tab tab-user" id="tabUser" title="Account">◉ <span id="userName">—</span></button>
 </header>
 
 <!-- ======= ELENCO VIAGGI ======= -->
@@ -32,7 +33,7 @@
         <p class="banner"><span class="c-green">• Camper Planner •</span> <span class="c-yellow">(itinerari in camper)</span></p>
         <p>► Pianifica le tappe sulla mappa, trova <span class="c-magenta">aree sosta</span> e <span class="c-magenta">campeggi</span>,</p>
         <p>► tieni il <span class="c-magenta">diario</span> e le <span class="c-magenta">spese</span>, esporta in <span class="c-magenta">GPX</span>.</p>
-        <p class="muted">► <span class="c-cyan">info</span> i dati restano sul tuo Umbrel.</p>
+        <p class="muted">► <span class="c-cyan">info</span> i dati restano sul tuo Umbrel e ogni account vede solo i propri viaggi.</p>
       </div>
     </div>
 
@@ -215,6 +216,39 @@
   </div>
 </main>
 
+<!-- ======= ACCOUNT ======= -->
+<main id="accountView" class="view home" hidden>
+  <div class="home-inner account">
+    <div class="prompt-line" aria-hidden="true">
+      <span class="seg seg-date">⌂ camper</span><span class="seg seg-time">account</span><span class="seg seg-path" id="plUser">~</span><span class="cursor"></span>
+    </div>
+
+    <section class="box">
+      <h3 class="c-green">Account <span class="muted" id="accNome"></span></h3>
+      <details>
+        <summary>Cambia password</summary>
+        <form id="fPw" class="form-grid">
+          <label class="span2">Password attuale <input id="pwOld" type="password" autocomplete="current-password" required></label>
+          <label>Nuova password <input id="pwNew" type="password" autocomplete="new-password" minlength="8" maxlength="200" required></label>
+          <label>Ripeti la nuova password <input id="pwNew2" type="password" autocomplete="new-password" minlength="8" maxlength="200" required></label>
+          <div class="row-actions span2"><button class="btn btn-primary" type="submit">Salva la nuova password</button></div>
+          <p class="hint span2">Dopo il cambio, gli altri dispositivi dovranno accedere di nuovo.</p>
+        </form>
+      </details>
+      <div class="row-actions"><button class="btn" id="btnEsci">Esci</button></div>
+    </section>
+
+    <section class="box admin-box" id="secAdmin" hidden>
+      <h3 class="c-yellow">Amministrazione</h3>
+      <label class="check"><input type="checkbox" id="regAperte"> Consenti nuove registrazioni</label>
+      <p class="hint">Link per registrarsi: <code id="regLink"></code></p>
+      <div class="msg-temp" id="tempPwBox" hidden></div>
+      <div id="usersList" class="users-list"></div>
+      <p class="hint">"Reset password" crea una password temporanea da comunicare all'utente: al primo accesso dovrà sceglierne una nuova. "Elimina" cancella l'account con tutti i suoi viaggi e la sua raccolta.</p>
+    </section>
+  </div>
+</main>
+
 <!-- ======= STAMPA ======= -->
 <div id="printView" class="print-view"></div>
 
@@ -222,5 +256,6 @@
 
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="app.js"></script>
+<script src="account.js"></script>
 </body>
 </html>

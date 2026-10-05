@@ -144,7 +144,12 @@ L'immagine contiene solo il codice dell'app, nessun tuo dato.
 Pianificatore di itinerari in camper: tappe sulla mappa con percorso e tempi di guida, aree camper e campeggi da OpenStreetMap, diario, spese e budget, esportazione GPX e stampa. I viaggi sono salvati sull'Umbrel in `data/`.
 
 - Si installa da **Casa App Store → Camper Planner** e si apre dall'icona, oppure su **http://umbrel.local:3847**.
-- Non ha account suoi: lo protegge la password di Umbrel.
+- **Account** (dalla versione 2.0.0), con le stesse regole di Scontrinaio e Rapportini:
+  - al primo avvio la pagina chiede di creare il primo account, che diventa l'**amministratore** e riceve i viaggi, la raccolta e le impostazioni già salvati;
+  - ogni utente vede **solo i propri** viaggi, raccolta e mezzo, e le proprie chiavi API;
+  - l'amministratore, dal pulsante con il suo nome in alto a destra → **Amministrazione**: apre o chiude le registrazioni, fa **Reset password** (crea una password temporanea da comunicare: al primo accesso l'utente ne sceglie una nuova), nomina altri amministratori, elimina un account con tutti i suoi dati;
+  - "Resta connesso" dura 30 giorni, altrimenti l'accesso finisce alla chiusura del browser (al massimo 12 ore); dopo 5 password sbagliate quel nome si blocca per 15 minuti;
+  - Umbrel non chiede più anche la propria password (`PROXY_AUTH_ADD: "false"` nel `docker-compose.yml`); per la doppia protezione cancella quella riga e aggiorna.
 - Serve internet per mappe, percorsi e ricerca dei luoghi (servizi pubblici di OpenStreetMap).
 - **Fonti delle aree sosta** (scheda Aree sosta → Fonti):
   - **OpenStreetMap**, sempre attiva.

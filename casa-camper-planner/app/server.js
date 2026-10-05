@@ -10,13 +10,20 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { haversine, makeArea, searchOverture, parsePoiFile, mergePois, guessCategory } from './sources.js';
 import { CATALOG, MANUAL_SOURCES } from './catalog.js';
+import { createAuth } from './auth.js';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-const TRIPS_DIR = path.join(DATA_DIR, 'trips');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
-const COLLECTION_FILE = path.join(DATA_DIR, 'collection.json');
+// Ogni richiesta lavora nella cartella del proprio account (vedi il middleware dopo l'accesso).
+const userStore = new AsyncLocalStorage();
+const ctx = () => {
+  const c = userStore.getStore();
+  if (!c) throw new Error('Nessun account per questa richiesta');
+  return c;
+};
+const userCtx = dir => ({ dir, tripsDir: path.join(dir, 'trips'), settingsFile: path.join(dir, 'settings.json'), collectionFile: path.join(dir, 'collection.json') });
 const VERSION = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version;
 
 const OSRM_URL = process.env.OSRM_URL || 'https://router.project-osrm.org';
@@ -45,8 +52,14 @@ const DEFAULT_SETTINGS = {
 
 // ---------- archivio ----------
 
-async function ensureDirs() {
-  await fs.mkdir(TRIPS_DIR, { recursive: true });
+const auth = createAuth({ dataDir: DATA_DIR, writeJsonAtomic: (f, d) => writeJsonAtomic(f, d), readJson: (f, d) => readJson(f, d) });
+
+async function countData(dir) {
+  const U = userCtx(dir);
+  let trips = 0, points = 0;
+  try { trips = (await fs.readdir(U.tripsDir)).filter(f => f.endsWith('.json')).length; } catch { /* nessun viaggio */ }
+  try { points = (JSON.parse(await fs.readFile(U.collectionFile, 'utf8')).items || []).length; } catch { /* raccolta vuota */ }
+  return { viaggi: trips, punti: points };
 }
 
 async function writeJsonAtomic(file, data) {
@@ -61,10 +74,10 @@ async function readJson(file, fallback) {
 }
 
 const validId = id => /^[a-f0-9-]{8,64}$/i.test(id);
-const tripFile = id => path.join(TRIPS_DIR, `${id}.json`);
+const tripFile = id => path.join(ctx().tripsDir, `${id}.json`);
 
 async function loadSettings() {
-  const s = await readJson(SETTINGS_FILE, {});
+  const s = await readJson(ctx().settingsFile, {});
   return { ...DEFAULT_SETTINGS, ...s, vehicle: { ...DEFAULT_SETTINGS.vehicle, ...(s.vehicle || {}) } };
 }
 
@@ -278,8 +291,22 @@ function tripToGpx(t) {
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '25mb' }));
+
+// Le modifiche devono partire dall'app stessa: un altro sito non può aggiungere questa intestazione.
+app.use('/api', (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers['x-camper'] !== '1') return res.status(403).json({ error: 'Richiesta non consentita' });
+  next();
+});
+
+// pagine: l'app solo con un account, altrimenti la pagina di accesso
+const sendPage = file => (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.sendFile(path.join(__dirname, 'public', file)); };
+app.get(['/', '/index.html'], (req, res, next) => auth.pageGuard(req).needsLogin ? res.redirect(302, 'accesso') : sendPage('index.html')(req, res, next));
+app.get(['/accesso', '/accesso.html'], (req, res, next) => {
+  const g = auth.pageGuard(req);
+  return g.user && !g.needsLogin ? res.redirect(302, './') : sendPage('accesso.html')(req, res, next);
+});
 app.use('/vendor/leaflet', express.static(path.join(__dirname, 'node_modules/leaflet/dist'), { maxAge: '7d' }));
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0 }));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0, index: false }));
 
 const wrap = fn => (req, res) => fn(req, res).catch(e => {
   console.error(req.method, req.path, e.message);
@@ -287,6 +314,15 @@ const wrap = fn => (req, res) => fn(req, res).catch(e => {
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
+
+auth.routes(app, { wrap, countData });
+
+// da qui in poi ogni API lavora sui dati dell'account che ha fatto l'accesso
+app.use('/api', (req, res, next) => {
+  const U = userCtx(auth.userDir(req.user.id));
+  fs.mkdir(U.tripsDir, { recursive: true }).then(() => userStore.run(U, next), next);
+});
+app.get('/api/me', (req, res) => res.json({ id: req.user.id, nome: req.user.nome, admin: !!req.user.admin, version: VERSION }));
 
 app.get('/api/settings', wrap(async (req, res) => res.json(publicSettings(await loadSettings()))));
 
@@ -308,15 +344,15 @@ app.put('/api/settings', wrap(async (req, res) => {
   };
   if (typeof b.orsApiKey === 'string') next.orsApiKey = b.orsApiKey.trim().slice(0, 300);
   if (typeof b.openPlacesKey === 'string') next.openPlacesKey = b.openPlacesKey.trim().slice(0, 300);
-  await writeJsonAtomic(SETTINGS_FILE, next);
+  await writeJsonAtomic(ctx().settingsFile, next);
   res.json(publicSettings(next));
 }));
 
 app.get('/api/trips', wrap(async (req, res) => {
-  const files = (await fs.readdir(TRIPS_DIR)).filter(f => f.endsWith('.json'));
+  const files = (await fs.readdir(ctx().tripsDir)).filter(f => f.endsWith('.json'));
   const trips = [];
   for (const f of files) {
-    try { trips.push(summary(JSON.parse(await fs.readFile(path.join(TRIPS_DIR, f), 'utf8')))); }
+    try { trips.push(summary(JSON.parse(await fs.readFile(path.join(ctx().tripsDir, f), 'utf8')))); }
     catch (e) { console.error('Viaggio illeggibile', f, e.message); }
   }
   trips.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
@@ -428,7 +464,7 @@ async function searchOsm(area, types, b) {
 // ---------- la mia raccolta ----------
 
 async function loadCollection() {
-  const c = await readJson(COLLECTION_FILE, null);
+  const c = await readJson(ctx().collectionFile, null);
   return c && Array.isArray(c.items) ? c : { items: [], imports: [] };
 }
 function collectionSummary(c) {
@@ -454,7 +490,7 @@ async function storeImport(name, pts, meta = {}) {
   const now = new Date().toISOString();
   for (const p of pts) c.items.push({ id: crypto.randomUUID(), source: name, addedAt: now, ...p });
   c.imports = c.imports.filter(i => i.name !== name).concat({ name, count: pts.length, importedAt: now, ...meta });
-  await writeJsonAtomic(COLLECTION_FILE, c);
+  await writeJsonAtomic(ctx().collectionFile, c);
   return { added: pts.length, ...collectionSummary(c) };
 }
 
@@ -548,7 +584,7 @@ app.delete('/api/collection/imports/:name', wrap(async (req, res) => {
   const c = await loadCollection();
   c.items = c.items.filter(i => i.source !== req.params.name);
   c.imports = c.imports.filter(i => i.name !== req.params.name);
-  await writeJsonAtomic(COLLECTION_FILE, c);
+  await writeJsonAtomic(ctx().collectionFile, c);
   res.json(collectionSummary(c));
 }));
 
@@ -563,7 +599,7 @@ app.post('/api/collection/favorites', wrap(async (req, res) => {
   const item = { id: crypto.randomUUID(), source: 'preferiti', addedAt: new Date().toISOString(), lat, lon, category,
     name: str(b.name, 200), notes: str(b.notes, 2000), website: str(b.website, 300), phone: str(b.phone, 60) };
   c.items.push(item);
-  await writeJsonAtomic(COLLECTION_FILE, c);
+  await writeJsonAtomic(ctx().collectionFile, c);
   res.status(201).json({ item, ...collectionSummary(c) });
 }));
 
@@ -590,14 +626,14 @@ app.post('/api/collection/acsi', wrap(async (req, res) => {
     c.items.push(item);
   }
   if (acsi) item.acsi = acsi; else delete item.acsi;
-  await writeJsonAtomic(COLLECTION_FILE, c);
+  await writeJsonAtomic(ctx().collectionFile, c);
   res.json({ item, ...collectionSummary(c) });
 }));
 
 app.delete('/api/collection/items/:id', wrap(async (req, res) => {
   const c = await loadCollection();
   c.items = c.items.filter(i => i.id !== req.params.id);
-  await writeJsonAtomic(COLLECTION_FILE, c);
+  await writeJsonAtomic(ctx().collectionFile, c);
   res.json(collectionSummary(c));
 }));
 
@@ -652,7 +688,8 @@ app.post('/api/pois', wrap(async (req, res) => {
 }));
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Non trovato' }));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('*', (req, res) => res.redirect(302, auth.pageGuard(req).needsLogin ? '/accesso' : '/'));
 
-await ensureDirs();
+await fs.mkdir(DATA_DIR, { recursive: true });
+await auth.load();
 app.listen(PORT, () => console.log(`Camper Planner ${VERSION} in ascolto su :${PORT}, dati in ${DATA_DIR}`));
