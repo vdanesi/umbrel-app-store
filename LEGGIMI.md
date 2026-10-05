@@ -150,6 +150,7 @@ Pianificatore di itinerari in camper: tappe sulla mappa con percorso e tempi di 
   - **OpenStreetMap**, sempre attiva.
   - **Overture Maps**: dati aperti di Meta, Microsoft e Foursquare. Serve una chiave gratuita di [Open Places API](https://openplacesapi.com) (10.000 ricerche al mese), da incollare nella scheda **Mezzo**.
   - **La mia raccolta**: file GPX, KML o CSV importati (POI per navigatori, mappe esportate da Google My Maps, CSV con colonne `lat` e `lon`) e aree salvate con ☆. Resta sull'Umbrel in `data/collection.json` e si esporta in GPX.
+  - **Fonti esterne** (in fondo alla scheda Aree sosta): dati aperti di regioni ed enti turistici da importare nella raccolta con un clic, e aggiornare con ↻. Li scarica direttamente l'Umbrel. Puoi anche incollare l'indirizzo di qualsiasi file GeoJSON, CSV, KML o GPX pubblico. Sotto "Altre fonti da scaricare a mano" trovi Archies Campings, DATAtourisme, Areas AC e Google My Maps.
   - Le aree trovate in più fonti a meno di 60 m (o 300 m con nome simile) diventano un solo risultato.
   - Park4Night e Campercontact non sono collegati: non hanno un'API pubblica e le loro condizioni vietano di riutilizzarne i dati.
 - Facoltativo: con una chiave gratuita di [OpenRouteService](https://openrouteservice.org/dev/#/signup), da incollare nella scheda **Mezzo**, il percorso tiene conto di altezza, larghezza, lunghezza e massa del camper. Senza chiave usa OSRM (profilo auto) con tempi aumentati del 15%.

@@ -115,10 +115,28 @@
       <p class="hint" id="collSummary"></p>
       <div id="collImports" class="coll-imports"></div>
       <div class="row-actions">
-        <label class="btn">Importa GPX, KML o CSV<input type="file" id="collFile" accept=".gpx,.kml,.csv,.txt" multiple hidden></label>
+        <label class="btn">Importa file<input type="file" id="collFile" accept=".gpx,.kml,.csv,.txt,.json,.geojson" multiple hidden></label>
         <button class="btn" id="btnCollExport">Esporta raccolta (GPX)</button>
       </div>
-      <p class="hint">Vanno bene i file POI per navigatori, le mappe esportate da Google My Maps (KML) e i CSV con colonne lat e lon. Reimportare un file con lo stesso nome lo aggiorna.</p>
+      <p class="hint">GPX, KML, GeoJSON o CSV con coordinate: file POI per navigatori, mappe di Google My Maps, dati aperti. Reimportare un file con lo stesso nome lo aggiorna.</p>
+
+      <h3 class="c-yellow">Fonti esterne</h3>
+      <p class="hint">Dati aperti di regioni ed enti turistici. L'Umbrel li scarica direttamente e li aggiunge alla raccolta; con <span class="c-magenta">Aggiorna</span> riscarichi la versione più recente.</p>
+      <div id="catalogList" class="catalog-list"></div>
+      <form id="urlForm" class="url-form">
+        <input id="urlInput" type="url" placeholder="Oppure incolla l'indirizzo di un GeoJSON, CSV, KML o GPX" required>
+        <select id="urlCat" aria-label="Tipo">
+          <option value="">Tipo: automatico</option>
+          <option value="area_camper">Aree camper</option>
+          <option value="campeggio">Campeggi</option>
+          <option value="scarico">Carico/scarico</option>
+        </select>
+        <button class="btn" type="submit">Importa</button>
+      </form>
+      <details class="manual-sources">
+        <summary>Altre fonti da scaricare a mano</summary>
+        <div id="manualList"></div>
+      </details>
     </section>
 
     <!-- Diario e costi -->

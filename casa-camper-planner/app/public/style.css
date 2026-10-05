@@ -306,6 +306,17 @@ details.notes[open] summary { margin-bottom: 4px; }
 .coll-imports { display: flex; flex-direction: column; }
 .coll-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--bg-tab-new); font-size: 12px; }
 
+/* fonti esterne */
+.catalog-list { display: flex; flex-direction: column; }
+.catalog-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bg-tab-new); font-size: 12px; line-height: 18px; }
+.catalog-row b { font-size: 13px; }
+.catalog-row .btn { padding: 4px 10px; }
+.url-form { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; margin-top: 10px; }
+.manual-sources { margin-top: 12px; }
+.manual-sources summary { cursor: pointer; color: var(--fg-icon); font: 13px var(--ui); }
+.manual { padding: 8px 0; border-bottom: 1px solid var(--bg-tab-new); font-size: 12px; line-height: 18px; }
+@media (max-width: 420px) { .url-form { grid-template-columns: 1fr; } }
+
 /* forms */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .span2 { grid-column: 1 / -1; }

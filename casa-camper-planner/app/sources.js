@@ -189,24 +189,127 @@ function splitCsvLine(line, sep) {
   return out.map(s => s.trim());
 }
 
-function parseCsv(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'));
-  if (!lines.length) return [];
-  const sep = [';', '\t', ','].map(s => [s, (lines[0].match(new RegExp(s === '\t' ? '\t' : `\\${s}`, 'g')) || []).length]).sort((a, b) => b[1] - a[1])[0][0];
-  const first = splitCsvLine(lines[0], sep).map(h => h.toLowerCase().replace(/^﻿/, ''));
-  const find = (...names) => first.findIndex(h => names.includes(h));
-  let iLat = find('lat', 'latitude', 'latitudine', 'y'), iLon = find('lon', 'lng', 'long', 'longitude', 'longitudine', 'x');
-  let iName = find('name', 'nome', 'title', 'titolo'), iNote = find('description', 'desc', 'descrizione', 'note', 'notes', 'comment');
-  let rows = lines.slice(1);
-  if (iLat < 0 || iLon < 0) {
-    // senza intestazione: formato POI Garmin "lon,lat,nome,descrizione"
-    iLon = 0; iLat = 1; iName = 2; iNote = 3; rows = lines;
+// Sceglie i campi utili da un record con nomi di colonna sconosciuti
+// (dataset aperti di regioni e comuni: ognuno li chiama a modo suo).
+const FIELD_RULES = {
+  name: [/^(name|nome|nom|title|titolo|titre|denominazione|denomination|nomoffre|nom_offre|nom_de_l_offre|nom_du_poi|raison_sociale|raisonsociale|documentname|syndicobjectname|nombre|nombre_establecimiento|libelle|label)$/,
+    /(^|_)(nom|name|nome|denominaz|titre|title|nombre)(_|$)/],
+  notes: [/^(description|desc|descrizione|descriptif|presentation|descripcion|documentdescription|note|notes|comment|commentaire)$/,
+    /(descri|presentation|comment)/],
+  website: [/^(website|web|site|site_web|siteweb|sito|sito_web|url|www)$/, /(site.?web|sito|website|url)/],
+  phone: [/^(phone|telephone|tel|telefono|téléphone|telefon)$/, /(t(e|é)l(e|é)phone|telefono|phone)/],
+  city: [/^(commune|comune|city|ville|municipio|municipality|locality|localita|località|town)$/, /(commune|comune|municip|ville|locali)/],
+  price: [/^(tarif|tarifs|prix|price|prezzo|prezzi|precio)$/, /(tarif|prix|prezz|price|precio)/],
+  capacity: [/^(capacity|capacite|capacité|posti|places|plazas|nb_places|emplacements)$/, /(capacit|nb_?places|emplacement|posti|plazas)/],
+  type: [/^(type|tipo|tipologia|typologie|categorie|category|categoria|modalidad|lodgingtype|type_offre|typeoffre)$/, /(tipolog|typolog|type|modalid|categor)/],
+  lat: [/^(lat|latitude|latitudine|latitud|y|coord_y|gps_lat|geo_lat)$/, /(^|_)lat(itud[ei]?)?(_|$)/],
+  lon: [/^(lon|lng|long|longitude|longitudine|longitud|x|coord_x|gps_lon|gps_lng|geo_lon)$/, /(^|_)(lon|lng)(gitud[ei]?)?(_|$)/],
+  point: [/^(geo_point_2d|geopoint|geo_point|coordonnees|coordonnees_gps|coordinate|coordinates|coordenadas|geolocalisation|geolocalizzazione|position|location|gps)$/, /(geo_?point|coordonn|coordin|coorden|geoloc)/]
+};
+const keyNorm = k => String(k).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+function pickFields(keys) {
+  const nk = keys.map(keyNorm);
+  const out = {};
+  for (const [field, [exact, loose]] of Object.entries(FIELD_RULES)) {
+    let i = nk.findIndex(k => exact.test(k));
+    if (i < 0) i = nk.findIndex(k => loose.test(k) && !Object.values(out).includes(keys[nk.indexOf(k)]));
+    if (i >= 0) out[field] = keys[i];
   }
-  const num = v => parseFloat(String(v ?? '').replace(',', '.'));
-  return rows.map(l => {
+  return out;
+}
+
+const toNum = v => typeof v === 'number' ? v : parseFloat(String(v ?? '').trim().replace(',', '.'));
+const clean = v => {
+  if (v == null) return '';
+  if (Array.isArray(v)) return v.map(clean).filter(Boolean).join(', ');
+  if (typeof v === 'object') return '';
+  return String(v).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+};
+
+function parsePointValue(v) {
+  if (v == null) return null;
+  if (Array.isArray(v) && v.length >= 2) return [toNum(v[0]), toNum(v[1])]; // Opendatasoft: [lat, lon]
+  if (typeof v === 'object') {
+    const la = v.lat ?? v.latitude, lo = v.lon ?? v.lng ?? v.longitude;
+    return la != null && lo != null ? [toNum(la), toNum(lo)] : null;
+  }
+  const m = String(v).match(/(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)/);
+  return m ? [toNum(m[1]), toNum(m[2])] : null;
+}
+
+function recordToPoint(rec, f, coords) {
+  let lat, lon;
+  if (coords) [lon, lat] = coords;
+  if (!(Number.isFinite(lat) && Number.isFinite(lon)) && f.lat && f.lon) { lat = toNum(rec[f.lat]); lon = toNum(rec[f.lon]); }
+  if (!(Number.isFinite(lat) && Number.isFinite(lon)) && f.point) { const p = parsePointValue(rec[f.point]); if (p) [lat, lon] = p; }
+  const extras = [];
+  if (f.city && rec[f.city]) extras.push(clean(rec[f.city]));
+  if (f.price && clean(rec[f.price])) extras.push(clean(rec[f.price]).slice(0, 200));
+  if (f.capacity && clean(rec[f.capacity])) extras.push(`${clean(rec[f.capacity])} posti`);
+  const desc = f.notes ? clean(rec[f.notes]) : '';
+  return {
+    lat, lon,
+    name: f.name ? clean(rec[f.name]) : '',
+    notes: [extras.join(' · '), desc.length > 600 ? desc.slice(0, 600) + '…' : desc].filter(Boolean).join(' — '),
+    website: f.website ? clean(rec[f.website]).split(/[\s,;]+/)[0] : '',
+    phone: f.phone ? clean(rec[f.phone]).slice(0, 60) : '',
+    kindHint: f.type ? clean(rec[f.type]) : ''
+  };
+}
+
+function parseCsv(text) {
+  const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'));
+  if (!lines.length) return [];
+  const sep = [';', '\t', ','].map(s => [s, splitCsvLine(lines[0], s).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const head = splitCsvLine(lines[0], sep);
+  const f = pickFields(head);
+  if ((f.lat && f.lon) || f.point) {
+    return lines.slice(1).map(l => {
+      const c = splitCsvLine(l, sep);
+      const rec = Object.fromEntries(head.map((h, i) => [h, c[i]]));
+      return recordToPoint(rec, f);
+    });
+  }
+  // senza intestazione riconoscibile: formato POI Garmin/MIO "lon,lat,nome,descrizione"
+  return lines.map(l => {
     const c = splitCsvLine(l, sep);
-    return { lat: num(c[iLat]), lon: num(c[iLon]), name: c[iName] || '', notes: iNote >= 0 ? c[iNote] || '' : '' };
+    return { lat: toNum(c[1]), lon: toNum(c[0]), name: c[2] || '', notes: c[3] || '' };
   });
+}
+
+function centroid(geom) {
+  if (!geom) return null;
+  const t = geom.type, c = geom.coordinates;
+  if (t === 'Point') return c;
+  if (t === 'MultiPoint' || t === 'LineString') return c[0];
+  if (t === 'Polygon' || t === 'MultiLineString') {
+    const ring = c[0]; let x = 0, y = 0;
+    for (const p of ring) { x += p[0]; y += p[1]; }
+    return [x / ring.length, y / ring.length];
+  }
+  if (t === 'MultiPolygon') return centroid({ type: 'Polygon', coordinates: c[0] });
+  if (t === 'GeometryCollection') return centroid(geom.geometries?.[0]);
+  return null;
+}
+
+function parseJson(text) {
+  const data = JSON.parse(text);
+  // GeoJSON
+  const feats = data.type === 'FeatureCollection' ? data.features : data.type === 'Feature' ? [data] : null;
+  if (feats) {
+    const keys = new Set();
+    for (const ft of feats.slice(0, 50)) Object.keys(ft.properties || {}).forEach(k => keys.add(k));
+    const f = pickFields([...keys]);
+    return feats.map(ft => recordToPoint(ft.properties || {}, f, centroid(ft.geometry)));
+  }
+  // array di record (export JSON di Opendatasoft, CKAN, Socrata…)
+  const rows = Array.isArray(data) ? data : Array.isArray(data.results) ? data.results : Array.isArray(data.records) ? data.records.map(r => r.fields || r.record?.fields || r) : null;
+  if (!rows) return [];
+  const keys = new Set();
+  for (const r of rows.slice(0, 50)) Object.keys(r || {}).forEach(k => keys.add(k));
+  const f = pickFields([...keys]);
+  return rows.map(r => recordToPoint(r || {}, f, r?.geometry?.coordinates || r?.geo_shape?.geometry?.coordinates));
 }
 
 export function guessCategory(text) {
@@ -215,16 +318,19 @@ export function guessCategory(text) {
   return 'area_camper';
 }
 
-export function parsePoiFile(filename, text) {
-  const ext = (filename.split('.').pop() || '').toLowerCase();
+export function parsePoiFile(filename, text, { category } = {}) {
+  const ext = (filename.split(/[?#]/)[0].split('.').pop() || '').toLowerCase();
+  const head = text.slice(0, 2000).trimStart();
   let pts;
-  if (ext === 'gpx' || /<gpx[\s>]/i.test(text.slice(0, 2000))) pts = parseGpx(text);
-  else if (ext === 'kml' || /<kml[\s>]/i.test(text.slice(0, 2000))) pts = parseKml(text);
+  if (ext === 'gpx' || /<gpx[\s>]/i.test(head)) pts = parseGpx(text);
+  else if (ext === 'kml' || /<kml[\s>]/i.test(head)) pts = parseKml(text);
+  else if (/^(geo)?json$/.test(ext) || head.startsWith('{') || head.startsWith('[')) pts = parseJson(text);
   else pts = parseCsv(text);
   return pts
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && !(p.lat === 0 && p.lon === 0))
     .map(p => ({ lat: p.lat, lon: p.lon, name: String(p.name || '').slice(0, 200), notes: String(p.notes || '').slice(0, 2000),
-      category: guessCategory(`${p.name} ${p.kindHint || ''} ${filename}`) }));
+      website: String(p.website || '').slice(0, 300), phone: String(p.phone || '').slice(0, 60),
+      category: category || guessCategory(`${p.name} ${p.kindHint || ''} ${filename}`) }));
 }
 
 // ---------- unione dei duplicati ----------

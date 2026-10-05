@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { haversine, makeArea, searchOverture, parsePoiFile, mergePois, guessCategory } from './sources.js';
+import { CATALOG, MANUAL_SOURCES } from './catalog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -442,20 +443,102 @@ function searchMine(c, area, types) {
 
 app.get('/api/collection', wrap(async (req, res) => res.json(collectionSummary(await loadCollection()))));
 
+async function storeImport(name, pts, meta = {}) {
+  const c = await loadCollection();
+  // reimportare la stessa fonte la sostituisce
+  c.items = c.items.filter(i => i.source !== name);
+  if (c.items.length + pts.length > 200000) { const e = new Error('Raccolta troppo grande (massimo 200.000 punti)'); e.status = 400; throw e; }
+  const now = new Date().toISOString();
+  for (const p of pts) c.items.push({ id: crypto.randomUUID(), source: name, addedAt: now, ...p });
+  c.imports = c.imports.filter(i => i.name !== name).concat({ name, count: pts.length, importedAt: now, ...meta });
+  await writeJsonAtomic(COLLECTION_FILE, c);
+  return { added: pts.length, ...collectionSummary(c) };
+}
+
 app.post('/api/collection/import', wrap(async (req, res) => {
   const filename = str(req.body?.filename, 120).replace(/[\\/]/g, '_') || 'importazione';
   const text = typeof req.body?.content === 'string' ? req.body.content : '';
-  const pts = parsePoiFile(filename, text);
-  if (!pts.length) return res.status(400).json({ error: 'Nessun punto trovato nel file (servono GPX, KML o CSV con coordinate)' });
+  let pts;
+  try { pts = parsePoiFile(filename, text); } catch (e) { return res.status(400).json({ error: 'File non leggibile: ' + e.message }); }
+  if (!pts.length) return res.status(400).json({ error: 'Nessun punto trovato nel file (servono GPX, KML, GeoJSON o CSV con coordinate)' });
+  res.json(await storeImport(filename, pts));
+}));
+
+// Scarica una fonte esterna (dati aperti) direttamente dall'Umbrel.
+async function downloadText(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 120000);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': USER_AGENT, 'Accept': 'application/geo+json, application/json, text/csv, application/gpx+xml, */*' } });
+    if (!r.ok) { const e = new Error(`il server ha risposto ${r.status}`); e.status = 502; throw e; }
+    const len = Number(r.headers.get('content-length') || 0);
+    if (len > 60 * 1024 * 1024) { const e = new Error('file troppo grande (oltre 60 MB)'); e.status = 400; throw e; }
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 60 * 1024 * 1024) { const e = new Error('file troppo grande (oltre 60 MB)'); e.status = 400; throw e; }
+    if (buf[0] === 0x50 && buf[1] === 0x4b) { const e = new Error('è un archivio ZIP: scaricalo, estrai il file GeoJSON, CSV, KML o GPX e importalo'); e.status = 400; throw e; }
+    let text = buf.toString('utf8');
+    if (text.includes('�')) text = buf.toString('latin1'); // vecchi CSV in Windows-1252
+    return { text, type: r.headers.get('content-type') || '' };
+  } catch (e) {
+    if (e.name === 'AbortError') { const x = new Error('download troppo lento (oltre 2 minuti)'); x.status = 504; throw x; }
+    throw e;
+  } finally { clearTimeout(timer); }
+}
+
+// CATALOG_BASE (solo per i test) riscrive gli indirizzi verso un server locale
+const catalogEntries = () => process.env.CATALOG_BASE
+  ? CATALOG.map(s => ({ ...s, url: `${process.env.CATALOG_BASE}/${s.id}` })) : CATALOG;
+
+async function importFromUrl({ url, name, category, meta }) {
+  let u;
+  try { u = new URL(url); } catch { const e = new Error('Indirizzo non valido'); e.status = 400; throw e; }
+  if (!/^https?:$/.test(u.protocol)) { const e = new Error('Servono indirizzi http o https'); e.status = 400; throw e; }
+  // solo siti pubblici: niente indirizzi della rete di casa
+  if (!process.env.ALLOW_PRIVATE_URLS && /^(localhost|.*\.local|.*\.internal|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[)/i.test(u.hostname)) {
+    const e = new Error('Sono ammessi solo indirizzi pubblici'); e.status = 400; throw e;
+  }
+  const { text, type } = await downloadText(u.href);
+  let hint = u.pathname;
+  if (/json/.test(type) && !/\.(geo)?json$/i.test(hint)) hint += '.json';
+  else if (/csv/.test(type) && !/\.csv$/i.test(hint)) hint += '.csv';
+  let pts;
+  try { pts = parsePoiFile(hint, text, { category }); }
+  catch (e) { const x = new Error('Formato non riconosciuto: ' + e.message); x.status = 400; throw x; }
+  if (!pts.length) { const e = new Error('Nessun punto con coordinate trovato a quell\'indirizzo'); e.status = 400; throw e; }
+  return storeImport(name, pts, { url: u.href, ...meta });
+}
+
+app.get('/api/catalog', wrap(async (req, res) => {
   const c = await loadCollection();
-  // reimportare lo stesso file lo sostituisce
-  c.items = c.items.filter(i => i.source !== filename);
-  if (c.items.length + pts.length > 200000) return res.status(400).json({ error: 'Raccolta troppo grande (massimo 200.000 punti)' });
-  const now = new Date().toISOString();
-  for (const p of pts) c.items.push({ id: crypto.randomUUID(), source: filename, addedAt: now, ...p });
-  c.imports = c.imports.filter(i => i.name !== filename).concat({ name: filename, count: pts.length, importedAt: now });
-  await writeJsonAtomic(COLLECTION_FILE, c);
-  res.json({ added: pts.length, ...collectionSummary(c) });
+  const byUrl = new Map(c.imports.filter(i => i.url).map(i => [i.catalogId || i.url, i]));
+  res.json({
+    sources: catalogEntries().map(s => ({ ...s, imported: byUrl.get(s.id) || byUrl.get(s.url) || null })),
+    manual: MANUAL_SOURCES
+  });
+}));
+
+app.post('/api/collection/import-catalog', wrap(async (req, res) => {
+  const s = catalogEntries().find(x => x.id === req.body?.id);
+  if (!s) return res.status(404).json({ error: 'Fonte non trovata' });
+  res.json(await importFromUrl({ url: s.url, name: s.name, category: s.category,
+    meta: { catalogId: s.id, licence: s.licence, attribution: s.attribution, page: s.page } }));
+}));
+
+app.post('/api/collection/import-url', wrap(async (req, res) => {
+  const url = str(req.body?.url, 2000).trim();
+  let name = str(req.body?.name, 120).trim().replace(/[\\/]/g, '_');
+  if (!name) { try { const u = new URL(url); name = `${u.hostname}${u.pathname.split('/').filter(Boolean).slice(-1).map(x => ' · ' + x)}`.slice(0, 120); } catch { name = 'dal web'; } }
+  const category = ['area_camper', 'campeggio', 'scarico', 'acqua', 'gpl'].includes(req.body?.category) ? req.body.category : undefined;
+  res.json(await importFromUrl({ url, name, category, meta: { category: category || '' } }));
+}));
+
+app.post('/api/collection/refresh', wrap(async (req, res) => {
+  const c = await loadCollection();
+  const imp = c.imports.find(i => i.name === req.body?.name && i.url);
+  if (!imp) return res.status(404).json({ error: 'Questa fonte non ha un indirizzo da cui aggiornarla' });
+  const s = imp.catalogId && catalogEntries().find(x => x.id === imp.catalogId);
+  const { name, count, importedAt, url, ...meta } = imp;
+  res.json(await importFromUrl({ url: s ? s.url : url, name, category: s ? s.category : (imp.category || undefined), meta }));
 }));
 
 app.delete('/api/collection/imports/:name', wrap(async (req, res) => {

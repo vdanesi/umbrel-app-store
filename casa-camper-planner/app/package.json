@@ -1,6 +1,6 @@
 {
   "name": "camper-planner",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Pianificatore di itinerari in camper, self-hosted per Umbrel",
   "main": "server.js",
   "scripts": {

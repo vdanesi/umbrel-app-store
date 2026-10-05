@@ -203,7 +203,7 @@ $('#tripNotes').addEventListener('input', e => { state.trip.notes = e.target.val
 $$('.subtab').forEach(b => b.addEventListener('click', () => {
   $$('.subtab').forEach(x => x.classList.toggle('active', x === b));
   $$('.pane').forEach(p => (p.hidden = p.id !== 'pane-' + b.dataset.pane));
-  if (b.dataset.pane === 'pois') { renderPoiScope(); loadCollection(); }
+  if (b.dataset.pane === 'pois') { renderPoiScope(); loadCollection(); if (!state.catalog) loadCatalog(); }
   if (b.dataset.pane === 'diary') renderDiary();
 }));
 
@@ -524,11 +524,63 @@ function renderCollection() {
   const c = state.collection;
   $('#collSummary').innerHTML = c.total
     ? `<span class="c-magenta">${punti(c.total)}</span> · <span class="c-yellow">★ ${c.favorites}</span> ${c.favorites === 1 ? 'preferito' : 'preferiti'}`
-    : '<span class="muted">Vuota. Importa un file GPX, KML o CSV, oppure salva le aree che trovi con ★.</span>';
+    : '<span class="muted">Vuota. Importa un file o una fonte esterna qui sotto, oppure salva le aree che trovi con ☆.</span>';
   $('#collImports').innerHTML = c.imports.map(i => `<div class="coll-row">
-      <span>${esc(i.name)} <span class="muted">· ${punti(i.count)} · ${new Date(i.importedAt).toLocaleDateString('it-IT')}</span></span>
-      <button class="btn-icon" data-delimport="${esc(i.name)}" title="Rimuovi questo file">✕</button></div>`).join('');
+      <span>${esc(i.name)} <span class="muted">· ${punti(i.count)} · ${new Date(i.importedAt).toLocaleDateString('it-IT')}${i.licence ? ' · ' + esc(i.licence) : ''}</span></span>
+      <span class="poi-actions">${i.url ? `<button class="btn-icon" data-refresh="${esc(i.name)}" title="Riscarica la versione più recente">↻</button>` : ''}
+      <button class="btn-icon" data-delimport="${esc(i.name)}" title="Rimuovi dalla raccolta">✕</button></span></div>`).join('');
+  renderCatalog();
 }
+
+const FLAGS = { FR: 'Francia', ES: 'Spagna', IT: 'Italia', DE: 'Germania' };
+async function loadCatalog() {
+  try { state.catalog = await api('/catalog'); } catch { state.catalog = state.catalog || { sources: [], manual: [] }; }
+  renderCatalog();
+  $('#manualList').innerHTML = state.catalog.manual.map(m => `<div class="manual">
+      <b>${esc(m.name)}</b> <span class="muted">· ${esc(m.country)}</span><br>${esc(m.what)}<br>
+      <span class="muted">${esc(m.how)}</span><br><a href="${esc(m.page)}" target="_blank" rel="noopener">Apri il sito</a></div>`).join('');
+}
+function renderCatalog() {
+  const cat = state.catalog; if (!cat) return;
+  const imported = new Map(state.collection.imports.filter(i => i.catalogId).map(i => [i.catalogId, i]));
+  $('#catalogList').innerHTML = cat.sources.map(s => {
+    const imp = imported.get(s.id);
+    return `<div class="catalog-row">
+      <span class="poi-dot c-${s.category}">${POI_TYPES[s.category]?.letter || '?'}</span>
+      <span class="cat-main"><b>${esc(s.name)}</b> <span class="muted">· ${FLAGS[s.country] || s.country}</span><br>
+        <span class="muted">${esc(s.attribution)} · ${esc(s.licence)} · aggiornamento ${esc(s.updated)} · <a href="${esc(s.page)}" target="_blank" rel="noopener">pagina</a></span>
+        ${imp ? `<br><span class="ok">✔</span> <span class="c-magenta">${punti(imp.count)}</span> <span class="muted">· ${new Date(imp.importedAt).toLocaleDateString('it-IT')}</span>` : ''}</span>
+      <button class="btn ${imp ? '' : 'btn-primary'}" data-catimport="${esc(s.id)}">${imp ? 'Aggiorna' : 'Importa'}</button>
+    </div>`;
+  }).join('');
+}
+async function runImport(label, btn, fn) {
+  const old = btn?.textContent;
+  let ok = false;
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  toast(`${label}: download in corso…`);
+  try {
+    const r = await fn();
+    state.collection = r;
+    toast(`${label}: ${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}`);
+    ok = true;
+  } catch (err) { toast(`${label}: ${err.message}`, true); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
+  renderCollection(); renderPoiSources();
+  return ok;
+}
+$('#catalogList').addEventListener('click', e => {
+  const b = e.target.closest('[data-catimport]'); if (!b) return;
+  const s = state.catalog.sources.find(x => x.id === b.dataset.catimport);
+  runImport(s.name, b, () => api('/collection/import-catalog', { method: 'POST', body: { id: s.id } }));
+});
+$('#urlForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const url = $('#urlInput').value.trim(); if (!url) return;
+  const btn = e.target.querySelector('button');
+  runImport('Importazione dal web', btn, () => api('/collection/import-url', { method: 'POST', body: { url, category: $('#urlCat').value } }))
+    .then(ok => { if (ok) $('#urlInput').value = ''; });
+});
 $('#collFile').addEventListener('change', async e => {
   const files = [...e.target.files]; e.target.value = '';
   for (const f of files) {
@@ -541,6 +593,8 @@ $('#collFile').addEventListener('change', async e => {
   renderCollection(); renderPoiSources();
 });
 $('#collImports').addEventListener('click', async e => {
+  const rf = e.target.closest('[data-refresh]');
+  if (rf) return runImport(rf.dataset.refresh, rf, () => api('/collection/refresh', { method: 'POST', body: { name: rf.dataset.refresh } }));
   const b = e.target.closest('[data-delimport]'); if (!b) return;
   if (!confirm(`Rimuovere dalla raccolta i punti di "${b.dataset.delimport}"?`)) return;
   state.collection = await api('/collection/imports/' + encodeURIComponent(b.dataset.delimport), { method: 'DELETE' });

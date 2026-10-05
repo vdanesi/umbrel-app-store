@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "1.1.0"
+version: "1.2.0"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -18,6 +18,11 @@ description: >-
   a una tappa, su più fonti: OpenStreetMap, Overture Maps (dati aperti, con chiave
   gratuita) e la tua raccolta personale, dove importi file GPX, KML o CSV e salvi i
   posti preferiti. Le aree presenti in più fonti vengono unite in un solo risultato.
+
+
+  Dalla raccolta importi con un clic i dati aperti di regioni ed enti turistici
+  (aree camper e campeggi), oppure qualsiasi file GeoJSON, CSV, KML o GPX da un
+  indirizzo web: li scarica direttamente l'Umbrel e li tiene aggiornati.
 
 
   Tieni il diario di viaggio, registra le spese per categoria, stima il carburante e
@@ -39,11 +44,11 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Ricerca delle aree sosta su più fonti: oltre a OpenStreetMap ora puoi cercare su
-  Overture Maps (serve una chiave gratuita di Open Places API, da inserire nella scheda
-  Mezzo) e nella tua raccolta personale. Nella raccolta importi file GPX, KML o CSV
-  (POI per navigatori, mappe di Google My Maps) e salvi con la stella le aree che trovi.
-  Le aree presenti in più fonti vengono unite e i dati si completano a vicenda.
+  Fonti esterne per aree camper e campeggi: un catalogo di dati aperti (Pays de la
+  Loire, Centre-Val de Loire, Hérault, Paesi Baschi) da importare con un clic e
+  aggiornare quando vuoi, e l'importazione da qualsiasi indirizzo web. Ora si possono
+  importare anche file GeoJSON e CSV dei portali open data, con riconoscimento
+  automatico di nome, coordinate, comune, prezzi, posti, sito e telefono.
 dependencies: []
 path: ""
 defaultUsername: ""
