@@ -86,8 +86,10 @@
 
     <!-- Aree sosta -->
     <section class="pane" id="pane-pois" hidden>
-      <h3 class="c-green">Cerca su OpenStreetMap</h3>
+      <h3 class="c-green">Cosa cercare</h3>
       <div class="poi-types" id="poiTypes"></div>
+      <h3 class="c-green">Fonti</h3>
+      <div class="poi-sources" id="poiSources"></div>
       <div class="form-grid">
         <label>Dove
           <select id="poiScope"></select>
@@ -108,6 +110,15 @@
       </div>
       <div id="poiStatus" class="hint"></div>
       <div id="poiList" class="poi-list"></div>
+
+      <h3 class="c-yellow">La mia raccolta</h3>
+      <p class="hint" id="collSummary"></p>
+      <div id="collImports" class="coll-imports"></div>
+      <div class="row-actions">
+        <label class="btn">Importa GPX, KML o CSV<input type="file" id="collFile" accept=".gpx,.kml,.csv,.txt" multiple hidden></label>
+        <button class="btn" id="btnCollExport">Esporta raccolta (GPX)</button>
+      </div>
+      <p class="hint">Vanno bene i file POI per navigatori, le mappe esportate da Google My Maps (KML) e i CSV con colonne lat e lon. Reimportare un file con lo stesso nome lo aggiorna.</p>
     </section>
 
     <!-- Diario e costi -->
@@ -153,9 +164,14 @@
           <input name="orsApiKey" type="password" autocomplete="off" placeholder="lascia vuoto per non cambiarla">
         </label>
         <p class="hint span2" id="orsHint"></p>
+        <label class="span2">Chiave Open Places API (facoltativa, per le aree sosta Overture)
+          <input name="openPlacesKey" type="password" autocomplete="off" placeholder="lascia vuoto per non cambiarla">
+        </label>
+        <p class="hint span2" id="opHint"></p>
         <div class="row-actions span2">
           <button class="btn btn-primary" type="submit">Salva</button>
-          <button class="btn" type="button" id="btnClearOrs">Rimuovi chiave</button>
+          <button class="btn" type="button" id="btnClearOrs">Rimuovi chiave ORS</button>
+          <button class="btn" type="button" id="btnClearOp">Rimuovi chiave Open Places</button>
         </div>
       </form>
     </section>

@@ -8,12 +8,14 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
+import { haversine, makeArea, searchOverture, parsePoiFile, mergePois, guessCategory } from './sources.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const TRIPS_DIR = path.join(DATA_DIR, 'trips');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const COLLECTION_FILE = path.join(DATA_DIR, 'collection.json');
 const VERSION = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version;
 
 const OSRM_URL = process.env.OSRM_URL || 'https://router.project-osrm.org';
@@ -36,6 +38,7 @@ const DEFAULT_SETTINGS = {
   fuelPrice: 1.75,     // €/l
   durationFactor: 1.15, // i tempi OSRM sono per auto: un camper è più lento
   orsApiKey: '',
+  openPlacesKey: '',
   currency: 'EUR'
 };
 
@@ -65,8 +68,8 @@ async function loadSettings() {
 }
 
 function publicSettings(s) {
-  const { orsApiKey, ...rest } = s;
-  return { ...rest, orsApiKeySet: Boolean(orsApiKey) };
+  const { orsApiKey, openPlacesKey, ...rest } = s;
+  return { ...rest, orsApiKeySet: Boolean(orsApiKey), openPlacesKeySet: Boolean(openPlacesKey) };
 }
 
 function num(v, fallback = 0) {
@@ -85,7 +88,8 @@ function sanitizeTrip(input, existing = {}) {
     kind: ['tappa', 'sosta', 'campeggio', 'visita'].includes(s.kind) ? s.kind : 'tappa',
     notes: str(s.notes, 10000),
     poi: s.poi && typeof s.poi === 'object' ? {
-      osmType: str(s.poi.osmType, 16), osmId: num(s.poi.osmId), category: str(s.poi.category, 40)
+      osmType: str(s.poi.osmType, 16), osmId: num(s.poi.osmId), category: str(s.poi.category, 40),
+      sources: Array.isArray(s.poi.sources) ? s.poi.sources.slice(0, 5).map(x => str(x, 20)) : undefined
     } : null
   })) : [];
   const expenses = Array.isArray(t.expenses) ? t.expenses.slice(0, 2000).map(e => ({
@@ -195,12 +199,6 @@ async function routeORS(coords, settings) {
 }
 
 // Punti campione lungo la linea, distanziati in modo uniforme (per Overpass "around").
-function haversine(a, b) {
-  const R = 6371000, toR = Math.PI / 180;
-  const dLat = (b[0] - a[0]) * toR, dLon = (b[1] - a[1]) * toR;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * toR) * Math.cos(b[0] * toR) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
 function samplePolyline(pts, maxPoints = 120) {
   if (pts.length <= maxPoints) return pts;
   let total = 0;
@@ -307,6 +305,7 @@ app.put('/api/settings', wrap(async (req, res) => {
     durationFactor: Math.min(2, Math.max(1, num(b.durationFactor, cur.durationFactor)))
   };
   if (typeof b.orsApiKey === 'string') next.orsApiKey = b.orsApiKey.trim().slice(0, 300);
+  if (typeof b.openPlacesKey === 'string') next.openPlacesKey = b.openPlacesKey.trim().slice(0, 300);
   await writeJsonAtomic(SETTINGS_FILE, next);
   res.json(publicSettings(next));
 }));
@@ -392,21 +391,14 @@ app.get('/api/reverse', wrap(async (req, res) => {
   res.json({ name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`, label: d.display_name || '' });
 }));
 
-app.post('/api/pois', wrap(async (req, res) => {
-  const b = req.body || {};
-  const types = (Array.isArray(b.types) ? b.types : Object.keys(POI_FILTERS)).filter(t => POI_FILTERS[t]);
-  if (!types.length) return res.json([]);
-  const radius = Math.max(500, Math.min(50000, Math.round(num(b.radius, 10000))));
+async function searchOsm(area, types, b) {
   let around;
-  if (Array.isArray(b.line) && b.line.length >= 2) {
-    const pts = samplePolyline(b.line.map(p => [num(p[0]), num(p[1])]), 120);
-    around = `around:${radius},${pts.map(([la, lo]) => `${la.toFixed(5)},${lo.toFixed(5)}`).join(',')}`;
-  } else if (b.center) {
-    around = `around:${radius},${num(b.center[0]).toFixed(5)},${num(b.center[1]).toFixed(5)}`;
-  } else return res.status(400).json({ error: 'Indica una tappa o un percorso' });
+  if (area.kind === 'line') {
+    const pts = samplePolyline(area.line, 120);
+    around = `around:${area.radius},${pts.map(([la, lo]) => `${la.toFixed(5)},${lo.toFixed(5)}`).join(',')}`;
+  } else around = `around:${area.radius},${area.center[0].toFixed(5)},${area.center[1].toFixed(5)}`;
   const parts = types.flatMap(t => POI_FILTERS[t].map(f => `${f}(${around});`)).join('');
-  const query = `[out:json][timeout:50];(${parts});out center tags 400;`;
-  const data = await overpass(query);
+  const data = await overpass(`[out:json][timeout:50];(${parts});out center tags 400;`);
   const seen = new Set();
   const out = [];
   for (const el of data.elements || []) {
@@ -415,9 +407,9 @@ app.post('/api/pois', wrap(async (req, res) => {
     const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon;
     if (lat == null) continue;
     const tags = el.tags || {};
-    const category = classifyPoi(tags);
     out.push({
-      osmType: el.type, osmId: el.id, lat, lon, category,
+      id: `osm:${el.type}/${el.id}`, sources: ['osm'],
+      osmType: el.type, osmId: el.id, lat, lon, category: classifyPoi(tags),
       name: tags.name || tags.operator || null,
       tags: {
         fee: tags.fee, charge: tags.charge, capacity: tags.capacity, power: tags.power_supply,
@@ -428,7 +420,118 @@ app.post('/api/pois', wrap(async (req, res) => {
       }
     });
   }
-  res.json(out);
+  return out;
+}
+
+// ---------- la mia raccolta ----------
+
+async function loadCollection() {
+  const c = await readJson(COLLECTION_FILE, null);
+  return c && Array.isArray(c.items) ? c : { items: [], imports: [] };
+}
+function collectionSummary(c) {
+  const fav = c.items.filter(i => i.source === 'preferiti').length;
+  return { total: c.items.length, favorites: fav, imports: c.imports };
+}
+function searchMine(c, area, types) {
+  return c.items.filter(i => types.includes(i.category) && area.contains([i.lat, i.lon])).map(i => ({
+    id: 'mine:' + i.id, mineId: i.id, sources: ['mine'], lat: i.lat, lon: i.lon, category: i.category, name: i.name || null,
+    tags: { notes: i.notes || undefined, list: i.source === 'preferiti' ? undefined : i.source, website: i.website || undefined, phone: i.phone || undefined }
+  }));
+}
+
+app.get('/api/collection', wrap(async (req, res) => res.json(collectionSummary(await loadCollection()))));
+
+app.post('/api/collection/import', wrap(async (req, res) => {
+  const filename = str(req.body?.filename, 120).replace(/[\\/]/g, '_') || 'importazione';
+  const text = typeof req.body?.content === 'string' ? req.body.content : '';
+  const pts = parsePoiFile(filename, text);
+  if (!pts.length) return res.status(400).json({ error: 'Nessun punto trovato nel file (servono GPX, KML o CSV con coordinate)' });
+  const c = await loadCollection();
+  // reimportare lo stesso file lo sostituisce
+  c.items = c.items.filter(i => i.source !== filename);
+  if (c.items.length + pts.length > 200000) return res.status(400).json({ error: 'Raccolta troppo grande (massimo 200.000 punti)' });
+  const now = new Date().toISOString();
+  for (const p of pts) c.items.push({ id: crypto.randomUUID(), source: filename, addedAt: now, ...p });
+  c.imports = c.imports.filter(i => i.name !== filename).concat({ name: filename, count: pts.length, importedAt: now });
+  await writeJsonAtomic(COLLECTION_FILE, c);
+  res.json({ added: pts.length, ...collectionSummary(c) });
+}));
+
+app.delete('/api/collection/imports/:name', wrap(async (req, res) => {
+  const c = await loadCollection();
+  c.items = c.items.filter(i => i.source !== req.params.name);
+  c.imports = c.imports.filter(i => i.name !== req.params.name);
+  await writeJsonAtomic(COLLECTION_FILE, c);
+  res.json(collectionSummary(c));
+}));
+
+app.post('/api/collection/favorites', wrap(async (req, res) => {
+  const b = req.body || {};
+  const lat = num(b.lat, NaN), lon = num(b.lon, NaN);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return res.status(400).json({ error: 'Coordinate non valide' });
+  const c = await loadCollection();
+  const near = c.items.find(i => i.source === 'preferiti' && haversine([i.lat, i.lon], [lat, lon]) < 30);
+  if (near) return res.json({ item: near, ...collectionSummary(c) });
+  const category = ['area_camper', 'campeggio', 'scarico', 'acqua', 'gpl'].includes(b.category) ? b.category : guessCategory(str(b.name));
+  const item = { id: crypto.randomUUID(), source: 'preferiti', addedAt: new Date().toISOString(), lat, lon, category,
+    name: str(b.name, 200), notes: str(b.notes, 2000), website: str(b.website, 300), phone: str(b.phone, 60) };
+  c.items.push(item);
+  await writeJsonAtomic(COLLECTION_FILE, c);
+  res.status(201).json({ item, ...collectionSummary(c) });
+}));
+
+app.delete('/api/collection/items/:id', wrap(async (req, res) => {
+  const c = await loadCollection();
+  c.items = c.items.filter(i => i.id !== req.params.id);
+  await writeJsonAtomic(COLLECTION_FILE, c);
+  res.json(collectionSummary(c));
+}));
+
+app.get('/api/collection/export', wrap(async (req, res) => {
+  const c = await loadCollection();
+  const lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<gpx version="1.1" creator="Camper Planner" xmlns="http://www.topografix.com/GPX/1/1">'];
+  for (const i of c.items) lines.push(`<wpt lat="${i.lat.toFixed(6)}" lon="${i.lon.toFixed(6)}"><name>${xml(i.name || 'Area sosta')}</name>` +
+    (i.notes ? `<desc>${xml(i.notes)}</desc>` : '') + `<type>${xml(i.category)}</type></wpt>`);
+  lines.push('</gpx>');
+  res.setHeader('Content-Type', 'application/gpx+xml; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="la-mia-raccolta.gpx"');
+  res.send(lines.join('\n'));
+}));
+
+// ---------- ricerca aree sosta su tutte le fonti ----------
+
+app.post('/api/pois', wrap(async (req, res) => {
+  const b = req.body || {};
+  const types = (Array.isArray(b.types) ? b.types : Object.keys(POI_FILTERS)).filter(t => POI_FILTERS[t]);
+  const sources = (Array.isArray(b.sources) ? b.sources : ['osm']).filter(s => ['osm', 'overture', 'mine'].includes(s));
+  if (!types.length || !sources.length) return res.json({ pois: [], warnings: [], counts: {} });
+  const radius = Math.max(500, Math.min(50000, Math.round(num(b.radius, 10000))));
+  let area;
+  if (Array.isArray(b.line) && b.line.length >= 2) area = makeArea({ line: b.line.map(p => [num(p[0]), num(p[1])]), radius });
+  else if (b.center) area = makeArea({ center: [num(b.center[0]), num(b.center[1])], radius });
+  else return res.status(400).json({ error: 'Indica una tappa o un percorso' });
+
+  const settings = await loadSettings();
+  const warnings = [];
+  const labels = { osm: 'OpenStreetMap', overture: 'Overture', mine: 'La mia raccolta' };
+  const jobs = {
+    osm: () => searchOsm(area, types, b),
+    overture: () => settings.openPlacesKey
+      ? searchOverture({ area, types, apiKey: settings.openPlacesKey, fetchJson })
+      : Promise.reject(new Error('manca la chiave Open Places API (scheda Mezzo)')),
+    mine: async () => searchMine(await loadCollection(), area, types)
+  };
+  const results = await Promise.all(sources.map(s => jobs[s]().catch(e => { warnings.push(`${labels[s]}: ${e.message}`); return []; })));
+  const counts = Object.fromEntries(sources.map((s, i) => [s, results[i].length]));
+  if (results.every(r => !r.length) && warnings.length === sources.length) {
+    return res.status(502).json({ error: warnings.join(' · ') });
+  }
+  // ordine: OSM (dati più ricchi), poi la raccolta, poi Overture
+  const order = ['osm', 'mine', 'overture'];
+  const lists = order.filter(s => sources.includes(s)).map(s => results[sources.indexOf(s)]);
+  const pois = mergePois(lists).slice(0, 600);
+  res.json({ pois, warnings, counts });
 }));
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Non trovato' }));

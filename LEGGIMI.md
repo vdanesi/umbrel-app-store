@@ -146,6 +146,12 @@ Pianificatore di itinerari in camper: tappe sulla mappa con percorso e tempi di 
 - Si installa da **Casa App Store → Camper Planner** e si apre dall'icona, oppure su **http://umbrel.local:3847**.
 - Non ha account suoi: lo protegge la password di Umbrel.
 - Serve internet per mappe, percorsi e ricerca dei luoghi (servizi pubblici di OpenStreetMap).
+- **Fonti delle aree sosta** (scheda Aree sosta → Fonti):
+  - **OpenStreetMap**, sempre attiva.
+  - **Overture Maps**: dati aperti di Meta, Microsoft e Foursquare. Serve una chiave gratuita di [Open Places API](https://openplacesapi.com) (10.000 ricerche al mese), da incollare nella scheda **Mezzo**.
+  - **La mia raccolta**: file GPX, KML o CSV importati (POI per navigatori, mappe esportate da Google My Maps, CSV con colonne `lat` e `lon`) e aree salvate con ☆. Resta sull'Umbrel in `data/collection.json` e si esporta in GPX.
+  - Le aree trovate in più fonti a meno di 60 m (o 300 m con nome simile) diventano un solo risultato.
+  - Park4Night e Campercontact non sono collegati: non hanno un'API pubblica e le loro condizioni vietano di riutilizzarne i dati.
 - Facoltativo: con una chiave gratuita di [OpenRouteService](https://openrouteservice.org/dev/#/signup), da incollare nella scheda **Mezzo**, il percorso tiene conto di altezza, larghezza, lunghezza e massa del camper. Senza chiave usa OSRM (profilo auto) con tempi aumentati del 15%.
 
 ### Solo la prima volta: rendi pubblica l'immagine

@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "1.0.0"
+version: "1.1.0"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -14,8 +14,10 @@ description: >-
   Per ogni tappa indichi le notti e le date si calcolano da sole.
 
 
-  Cerca su OpenStreetMap aree camper, campeggi, carico/scarico, acqua e GPL, lungo il
-  percorso o vicino a una tappa, e aggiungile al viaggio con un clic.
+  Cerca aree camper, campeggi, carico/scarico, acqua e GPL lungo il percorso o vicino
+  a una tappa, su più fonti: OpenStreetMap, Overture Maps (dati aperti, con chiave
+  gratuita) e la tua raccolta personale, dove importi file GPX, KML o CSV e salvi i
+  posti preferiti. Le aree presenti in più fonti vengono unite in un solo risultato.
 
 
   Tieni il diario di viaggio, registra le spese per categoria, stima il carburante e
@@ -37,7 +39,11 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Prima versione.
+  Ricerca delle aree sosta su più fonti: oltre a OpenStreetMap ora puoi cercare su
+  Overture Maps (serve una chiave gratuita di Open Places API, da inserire nella scheda
+  Mezzo) e nella tua raccolta personale. Nella raccolta importi file GPX, KML o CSV
+  (POI per navigatori, mappe di Google My Maps) e salvi con la stella le aree che trovi.
+  Le aree presenti in più fonti vengono unite e i dati si completano a vicenda.
 dependencies: []
 path: ""
 defaultUsername: ""

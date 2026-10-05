@@ -203,7 +203,7 @@ $('#tripNotes').addEventListener('input', e => { state.trip.notes = e.target.val
 $$('.subtab').forEach(b => b.addEventListener('click', () => {
   $$('.subtab').forEach(x => x.classList.toggle('active', x === b));
   $$('.pane').forEach(p => (p.hidden = p.id !== 'pane-' + b.dataset.pane));
-  if (b.dataset.pane === 'pois') renderPoiScope();
+  if (b.dataset.pane === 'pois') { renderPoiScope(); loadCollection(); }
   if (b.dataset.pane === 'diary') renderDiary();
 }));
 
@@ -487,11 +487,67 @@ async function computeRoute(force) {
 }
 
 // ---------- aree sosta ----------
+const SOURCES = {
+  osm: { label: 'OpenStreetMap', short: 'OSM' },
+  overture: { label: 'Overture', short: 'OVT' },
+  mine: { label: 'La mia raccolta', short: 'MIA' }
+};
+state.collection = { total: 0, favorites: 0, imports: [] };
+const punti = n => `${n.toLocaleString('it-IT')} ${n === 1 ? 'punto' : 'punti'}`;
+
 (function initPoiTypes() {
   $('#poiTypes').innerHTML = Object.entries(POI_TYPES).map(([k, p]) =>
     `<label><input type="checkbox" value="${k}" ${['area_camper', 'campeggio', 'scarico'].includes(k) ? 'checked' : ''}>
       <span class="poi-dot c-${k}">${p.letter}</span>${p.label}</label>`).join('');
 })();
+
+function renderPoiSources() {
+  const s = state.settings || {};
+  const prev = Object.fromEntries($$('#poiSources input').map(i => [i.value, i.checked]));
+  const items = [
+    { k: 'osm', on: prev.osm ?? true, note: 'aree, campeggi, servizi' },
+    { k: 'overture', on: prev.overture ?? Boolean(s.openPlacesKeySet), disabled: !s.openPlacesKeySet,
+      note: s.openPlacesKeySet ? 'dati aperti Meta, Microsoft, Foursquare' : 'serve la chiave gratuita (scheda Mezzo)' },
+    { k: 'mine', on: prev.mine ?? state.collection.total > 0, disabled: !state.collection.total,
+      note: state.collection.total ? punti(state.collection.total) : 'vuota: importa un file o salva con ★' }
+  ];
+  $('#poiSources').innerHTML = items.map(i => `<label class="${i.disabled ? 'off' : ''}">
+    <input type="checkbox" value="${i.k}" ${i.on && !i.disabled ? 'checked' : ''} ${i.disabled ? 'disabled' : ''}>
+    <span class="src src-${i.k}">${SOURCES[i.k].short}</span>${SOURCES[i.k].label} <span class="muted">· ${i.note}</span></label>`).join('');
+}
+
+async function loadCollection() {
+  try { state.collection = await api('/collection'); } catch { /* resta il valore precedente */ }
+  renderCollection(); renderPoiSources();
+}
+function renderCollection() {
+  const c = state.collection;
+  $('#collSummary').innerHTML = c.total
+    ? `<span class="c-magenta">${punti(c.total)}</span> · <span class="c-yellow">★ ${c.favorites}</span> ${c.favorites === 1 ? 'preferito' : 'preferiti'}`
+    : '<span class="muted">Vuota. Importa un file GPX, KML o CSV, oppure salva le aree che trovi con ★.</span>';
+  $('#collImports').innerHTML = c.imports.map(i => `<div class="coll-row">
+      <span>${esc(i.name)} <span class="muted">· ${punti(i.count)} · ${new Date(i.importedAt).toLocaleDateString('it-IT')}</span></span>
+      <button class="btn-icon" data-delimport="${esc(i.name)}" title="Rimuovi questo file">✕</button></div>`).join('');
+}
+$('#collFile').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  for (const f of files) {
+    if (f.size > 20 * 1024 * 1024) { toast(`${f.name}: file troppo grande (max 20 MB)`, true); continue; }
+    try {
+      const r = await api('/collection/import', { method: 'POST', body: { filename: f.name, content: await f.text() } });
+      state.collection = r; toast(`${f.name}: ${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}`);
+    } catch (err) { toast(`${f.name}: ${err.message}`, true); }
+  }
+  renderCollection(); renderPoiSources();
+});
+$('#collImports').addEventListener('click', async e => {
+  const b = e.target.closest('[data-delimport]'); if (!b) return;
+  if (!confirm(`Rimuovere dalla raccolta i punti di "${b.dataset.delimport}"?`)) return;
+  state.collection = await api('/collection/imports/' + encodeURIComponent(b.dataset.delimport), { method: 'DELETE' });
+  renderCollection(); renderPoiSources();
+});
+$('#btnCollExport').addEventListener('click', () => { location.href = 'api/collection/export'; });
+
 function renderPoiScope() {
   const t = state.trip; if (!t) return;
   const sel = $('#poiScope'); const prev = sel.value;
@@ -505,20 +561,26 @@ function renderPoiScope() {
 $('#poiScope').addEventListener('change', e => (e.target.dataset.touched = '1'));
 $('#btnPoiSearch').addEventListener('click', async () => {
   const types = $$('#poiTypes input:checked').map(i => i.value);
+  const sources = $$('#poiSources input:checked').map(i => i.value);
   if (!types.length) return toast('Scegli almeno un tipo', true);
+  if (!sources.length) return toast('Scegli almeno una fonte', true);
   const scope = $('#poiScope').value, radius = +$('#poiRadius').value;
-  const body = { types, radius };
+  const body = { types, radius, sources };
   const t = state.trip;
   if (scope === 'route') { body.line = t.route.geometry; body.radius = Math.min(radius, 10000); }
   else if (scope === 'view') { const c = map.getCenter(); body.center = [c.lat, c.lng]; }
   else { const s = t.stops[+scope]; body.center = [s.lat, s.lon]; }
-  $('#poiStatus').innerHTML = '<span class="c-cyan">…</span> ricerca su OpenStreetMap (può richiedere qualche secondo)';
+  $('#poiStatus').innerHTML = `<span class="c-cyan">…</span> ricerca su ${sources.map(x => SOURCES[x].label).join(', ')} (può richiedere qualche secondo)`;
   $('#btnPoiSearch').disabled = true;
   try {
-    state.pois = await api('/pois', { method: 'POST', body });
-    $('#poiStatus').innerHTML = state.pois.length
-      ? `<span class="ok">✔</span> ${state.pois.length} risultati${scope === 'route' && radius > 10000 ? ' (raggio limitato a 10 km lungo il percorso)' : ''}`
-      : 'Nessun risultato: prova un raggio più ampio.';
+    const r = await api('/pois', { method: 'POST', body });
+    state.pois = r.pois;
+    const per = Object.entries(r.counts || {}).map(([k, n]) => `<span class="src src-${k}">${SOURCES[k].short}</span> ${n}`).join(' ');
+    const merged = state.pois.filter(p => p.sources.length > 1).length;
+    $('#poiStatus').innerHTML = (state.pois.length
+      ? `<span class="ok">✔</span> ${state.pois.length} risultati · ${per}${merged ? ` · <span class="muted">${merged} presenti in più fonti</span>` : ''}${scope === 'route' && radius > 10000 ? '<br><span class="muted">raggio limitato a 10 km lungo il percorso</span>' : ''}`
+      : 'Nessun risultato: prova un raggio più ampio o un\'altra fonte.') +
+      (r.warnings || []).map(w => `<br><span class="c-yellow">⚠ ${esc(w)}</span>`).join('');
     renderPois();
     if (state.pois.length) map.fitBounds(state.pois.map(p => [p.lat, p.lon]).concat(t.stops.map(s => [s.lat, s.lon])), { padding: [30, 30] });
   } catch (e) {
@@ -528,8 +590,9 @@ $('#btnPoiSearch').addEventListener('click', async () => {
 $('#btnPoiClear').addEventListener('click', () => { state.pois = []; renderPois(); $('#poiStatus').textContent = ''; });
 
 function poiName(p) { return p.name || POI_TYPES[p.category]?.label.replace(/i$/, 'o') || 'Punto'; }
+const srcBadges = p => p.sources.map(s => `<span class="src src-${s}" title="${SOURCES[s].label}">${SOURCES[s].short}</span>`).join('');
 function poiDetails(p) {
-  const t = p.tags, bits = [];
+  const t = p.tags || {}, bits = [];
   const yes = v => v === 'yes';
   if (t.fee) bits.push(yes(t.fee) ? (t.charge ? `<b>${esc(t.charge)}</b>` : 'a pagamento') : t.fee === 'no' ? '<b>gratuita</b>' : esc(t.fee));
   if (t.capacity) bits.push(`${esc(t.capacity)} posti`);
@@ -540,17 +603,24 @@ function poiDetails(p) {
   if (yes(t.shower)) bits.push('docce');
   if (t.maxstay) bits.push(`max ${esc(t.maxstay)}`);
   if (t.opening) bits.push(esc(t.opening));
+  if (t.address) bits.push(esc(t.address));
+  if (t.closed) bits.push(`<span class="err">${esc(t.closed)}</span>`);
+  if (t.list) bits.push(`da ${esc(t.list)}`);
+  if (t.notes) bits.push(esc(t.notes.length > 140 ? t.notes.slice(0, 140) + '…' : t.notes));
   return bits.join(' · ');
 }
 function poiPopup(p, idx) {
-  const t = p.tags;
-  const osm = `https://www.openstreetmap.org/${p.osmType}/${p.osmId}`;
-  return `<b>${esc(poiName(p))}</b><br><span class="muted">${POI_TYPES[p.category]?.label || ''}</span>
+  const t = p.tags || {};
+  const links = [];
+  if (t.website) links.push(`<a href="${esc(/^https?:/i.test(t.website) ? t.website : 'https://' + t.website)}" target="_blank" rel="noopener">sito web</a>`);
+  if (p.osmType) links.push(`<a href="https://www.openstreetmap.org/${p.osmType}/${p.osmId}" target="_blank" rel="noopener">OpenStreetMap</a>`);
+  links.push(`<a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Google Maps</a>`);
+  return `<b>${esc(poiName(p))}</b> ${srcBadges(p)}<br><span class="muted">${POI_TYPES[p.category]?.label || ''}</span>
     ${poiDetails(p) ? '<br>' + poiDetails(p) : ''}
-    ${t.website ? `<br><a href="${esc(t.website)}" target="_blank" rel="noopener">sito web</a>` : ''}
     ${t.phone ? `<br>☎ ${esc(t.phone)}` : ''}
-    <br><a href="${osm}" target="_blank" rel="noopener">OpenStreetMap</a>
-    <br><button class="btn" data-addpoi="${idx}">+ Aggiungi al viaggio</button>`;
+    <br>${links.join(' · ')}
+    <br><button class="btn" data-addpoi="${idx}">+ Aggiungi al viaggio</button>
+    <button class="btn" data-favpoi="${idx}">${p.mineId ? '★ Nella raccolta' : '☆ Salva'}</button>`;
 }
 function renderPois() {
   if (!map) return;
@@ -559,8 +629,9 @@ function renderPois() {
   const ref = state.trip.stops.length ? state.trip.stops : null;
   state.pois.forEach((p, i) => {
     const pt = POI_TYPES[p.category] || { letter: '?' };
-    const icon = L.divIcon({ className: '', html: `<span class="poi-dot poi-marker c-${p.category}">${pt.letter}</span>`, iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -10] });
-    p._marker = L.marker([p.lat, p.lon], { icon, title: poiName(p) }).bindPopup(poiPopup(p, i)).addTo(poiLayer);
+    const cls = p.sources.length === 1 && p.sources[0] !== 'osm' ? ` poi-${p.sources[0]}` : '';
+    const icon = L.divIcon({ className: '', html: `<span class="poi-dot poi-marker c-${p.category}${cls}">${pt.letter}</span>`, iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -10] });
+    p._marker = L.marker([p.lat, p.lon], { icon, title: poiName(p) }).bindPopup(() => poiPopup(p, i)).addTo(poiLayer);
   });
   list.innerHTML = state.pois.map((p, i) => {
     let near = '';
@@ -571,8 +642,11 @@ function renderPois() {
     }
     return `<div class="poi" data-i="${i}">
       <span class="poi-dot c-${p.category}">${POI_TYPES[p.category]?.letter || '?'}</span>
-      <span class="poi-name">${esc(poiName(p))}</span>
-      <button class="btn-icon" data-addpoi="${i}" title="Aggiungi al viaggio">＋</button>
+      <span class="poi-name">${esc(poiName(p))} ${srcBadges(p)}</span>
+      <span class="poi-actions">
+        <button class="btn-icon ${p.mineId ? 'fav-on' : ''}" data-favpoi="${i}" title="${p.mineId ? 'Già nella tua raccolta' : 'Salva nella raccolta'}">${p.mineId ? '★' : '☆'}</button>
+        <button class="btn-icon" data-addpoi="${i}" title="Aggiungi al viaggio">＋</button>
+      </span>
       <span class="poi-tags">${near ? `<span class="c-cyan">${near}</span>` : ''}${poiDetails(p) ? ' · ' + poiDetails(p) : ''}</span>
     </div>`;
   }).join('');
@@ -582,18 +656,44 @@ function addPoi(i) {
   addStop({ name: poiName(p), lat: p.lat, lon: p.lon, kind: POI_TYPES[p.category]?.kind || 'sosta',
     nights: ['area_camper', 'campeggio'].includes(p.category) ? 1 : 0,
     notes: poiDetails(p).replace(/<[^>]+>/g, ''),
-    poi: { osmType: p.osmType, osmId: p.osmId, category: p.category } }, bestInsertIndex(p.lat, p.lon));
+    poi: { osmType: p.osmType || '', osmId: p.osmId || 0, category: p.category, sources: p.sources } }, bestInsertIndex(p.lat, p.lon));
   map.closePopup();
+}
+async function toggleFav(i) {
+  const p = state.pois[i];
+  try {
+    if (p.mineId) {
+      if (!p.sources.includes('mine') || !confirm(`Togliere "${poiName(p)}" dalla raccolta?`)) {
+        if (!p.sources.includes('mine')) toast('Già nella raccolta');
+        return;
+      }
+      state.collection = await api('/collection/items/' + encodeURIComponent(p.mineId), { method: 'DELETE' });
+      p.mineId = null; p.sources = p.sources.filter(s => s !== 'mine');
+      if (!p.sources.length) { state.pois.splice(i, 1); map.closePopup(); }
+      toast('Tolto dalla raccolta');
+    } else {
+      const t = p.tags || {};
+      const r = await api('/collection/favorites', { method: 'POST', body: {
+        lat: p.lat, lon: p.lon, name: poiName(p), category: p.category, website: t.website || '', phone: t.phone || '',
+        notes: poiDetails(p).replace(/<[^>]+>/g, '') } });
+      state.collection = r; p.mineId = r.item.id;
+      toast('★ Salvato nella raccolta');
+    }
+    renderPois(); renderCollection(); renderPoiSources();
+  } catch (e) { toast(e.message, true); }
 }
 $('#poiList').addEventListener('click', e => {
   const add = e.target.closest('[data-addpoi]');
   if (add) return addPoi(+add.dataset.addpoi);
+  const fav = e.target.closest('[data-favpoi]');
+  if (fav) return toggleFav(+fav.dataset.favpoi);
   const row = e.target.closest('.poi'); if (!row) return;
   const p = state.pois[+row.dataset.i];
   map.setView([p.lat, p.lon], Math.max(map.getZoom(), 13)); p._marker.openPopup();
 });
 document.getElementById('map').addEventListener('click', e => {
-  const add = e.target.closest('[data-addpoi]'); if (add) { e.stopPropagation(); addPoi(+add.dataset.addpoi); }
+  const add = e.target.closest('[data-addpoi]'); if (add) { e.stopPropagation(); addPoi(+add.dataset.addpoi); return; }
+  const fav = e.target.closest('[data-favpoi]'); if (fav) { e.stopPropagation(); toggleFav(+fav.dataset.favpoi); }
 }, true); // fase di cattura: i popup di Leaflet bloccano la propagazione
 
 // ---------- diario e costi ----------
@@ -659,6 +759,11 @@ async function loadSettings() {
   f.elements.fuelPrice.value = s.fuelPrice;
   f.elements.durationFactor.value = s.durationFactor;
   f.elements.orsApiKey.value = '';
+  f.elements.openPlacesKey.value = '';
+  $('#opHint').innerHTML = s.openPlacesKeySet
+    ? '<span class="ok">✔</span> Chiave impostata: nelle Aree sosta puoi cercare anche su Overture.'
+    : `<span class="c-cyan">info</span> Aggiunge le aree sosta di Overture Maps (dati aperti), oltre a OpenStreetMap. Chiave gratuita, 10.000 ricerche al mese, su <a href="https://openplacesapi.com" target="_blank" rel="noopener">openplacesapi.com</a>.`;
+  renderPoiSources();
   $('#orsHint').innerHTML = s.orsApiKeySet
     ? '<span class="ok">✔</span> Chiave impostata: il percorso usa il profilo mezzo pesante con le dimensioni del camper.'
     : `<span class="c-cyan">info</span> Senza chiave il percorso usa OSRM (profilo auto) e ignora altezza e peso. Una chiave gratuita si ottiene su <a href="https://openrouteservice.org/dev/#/signup" target="_blank" rel="noopener">openrouteservice.org</a>.`;
@@ -669,11 +774,16 @@ $('#vehicleForm').addEventListener('submit', async e => {
   for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType']) v[k] = f.elements[k].value;
   const body = { vehicle: v, fuelPrice: f.elements.fuelPrice.value, durationFactor: f.elements.durationFactor.value };
   if (f.elements.orsApiKey.value.trim()) body.orsApiKey = f.elements.orsApiKey.value.trim();
+  if (f.elements.openPlacesKey.value.trim()) body.openPlacesKey = f.elements.openPlacesKey.value.trim();
   try {
     await api('/settings', { method: 'PUT', body });
     await loadSettings(); toast('Mezzo salvato');
     if (state.trip) { renderDiary(); if (body.orsApiKey) scheduleRoute(0, true); }
   } catch (err) { toast(err.message, true); }
+});
+$('#btnClearOp').addEventListener('click', async () => {
+  await api('/settings', { method: 'PUT', body: { openPlacesKey: '' } });
+  await loadSettings(); toast('Chiave Open Places rimossa');
 });
 $('#btnClearOrs').addEventListener('click', async () => {
   await api('/settings', { method: 'PUT', body: { orsApiKey: '' } });
@@ -735,6 +845,7 @@ function buildPrint() {
 // ---------- avvio ----------
 (async function boot() {
   try { await loadSettings(); } catch (e) { toast('Server non raggiungibile: ' + e.message, true); }
+  loadCollection();
   const id = location.hash.slice(1);
   if (id) openTrip(id); else showHome();
 })();

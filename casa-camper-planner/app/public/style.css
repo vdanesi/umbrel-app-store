@@ -288,6 +288,24 @@ details.notes[open] summary { margin-bottom: 4px; }
 .poi-tags { grid-column: 2 / 4; font-size: 12px; color: var(--fg-muted); }
 .poi-tags b { color: var(--accent-magenta); font-weight: 400; }
 
+/* fonti */
+.poi-sources { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.poi-sources label { flex-direction: row; align-items: center; gap: 6px; font: 13px var(--ui); color: var(--fg-default); }
+.poi-sources label.off { color: var(--fg-muted); }
+.src {
+  display: inline-block; padding: 0 4px; margin-left: 2px;
+  font: 700 10px/16px var(--mono); color: var(--prompt-ink); vertical-align: 1px;
+}
+.src-osm { background: var(--prompt-date); }
+.src-overture { background: var(--prompt-time); }
+.src-mine { background: var(--prompt-path); }
+.poi-actions { display: flex; gap: 2px; }
+.fav-on { color: var(--accent-yellow); }
+.poi-overture { box-shadow: 0 0 0 2px var(--prompt-time); }
+.poi-mine { box-shadow: 0 0 0 2px var(--prompt-path); }
+.coll-imports { display: flex; flex-direction: column; }
+.coll-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--bg-tab-new); font-size: 12px; }
+
 /* forms */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .span2 { grid-column: 1 / -1; }
