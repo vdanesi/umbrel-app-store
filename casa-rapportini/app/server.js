@@ -218,13 +218,20 @@ async function serveStatic(req, res, pathname) {
   const file = path.normalize(path.join(PUBLIC_DIR, p));
   if (!file.startsWith(PUBLIC_DIR + path.sep)) return fail(res, 403, 'Vietato');
   try {
-    const data = await fs.readFile(file);
+    let data = await fs.readFile(file);
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, {
+    // Dopo un aggiornamento il browser deve prendere subito i file nuovi:
+    // la pagina chiede gli script con "?v=<versione>" e niente resta in cache senza ricontrollo.
+    if (ext === '.html') data = Buffer.from(data.toString('utf8').replace(/(src|href)="([\w./-]+\.(?:js|css))"/g, `$1="$2?v=${VERSION}"`));
+    const etag = `"${VERSION}-${data.length}"`;
+    const headers = {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=300',
+      'Cache-Control': ext === '.html' || ext === '.js' || ext === '.css' ? 'no-cache' : 'public, max-age=3600',
+      'ETag': etag,
       'X-Content-Type-Options': 'nosniff'
-    });
+    };
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
+    res.writeHead(200, headers);
     res.end(req.method === 'HEAD' ? undefined : data);
   } catch {
     fail(res, 404, 'Non trovato');

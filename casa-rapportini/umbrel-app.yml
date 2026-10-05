@@ -4,7 +4,7 @@ name: Rapportini
 tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
 category: files
-version: "1.1.0"
+version: "1.1.1"
 port: 3444
 description: >-
   Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
@@ -36,10 +36,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Nuova sezione Moduli: domanda di congedo (Mod. 0319), lettera di incarico trasferta
-  (Mod. 0692) e giustificativo trasferta con rimborso km (Mod. 0693) per gli interventi
-  in reperibilità. Carica una volta i PDF vuoti in Impostazioni: l'app li compila con i
-  tuoi dati, conta le giornate di congedo e prende gli orari dai rapportini.
+  Corregge la pagina che dopo l'aggiornamento poteva restare con i file vecchi del browser
+  (ad esempio senza le righe per caricare i moduli in Impostazioni).
+  Contiene la sezione Moduli: congedo (0319), lettera di incarico (0692) e giustificativo
+  trasferta con rimborso km (0693).
 dependencies: []
 path: ""
 defaultUsername: ""
