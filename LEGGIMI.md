@@ -171,7 +171,7 @@ Stessa procedura di Scontrinaio, con lo stesso numero di versione in:
 Registro delle attività lavorative in ambito ferroviario che compila il **Rapporto giornaliero dell'agente (Mod. 0444)**. Un rapporto per ogni giorno, salvato sull'Umbrel in `data/rapporti/`.
 
 - Si installa da **Casa App Store → Rapportini** e si apre dall'icona, oppure su **http://umbrel.local:3444**.
-- Non ha account suoi: lo protegge la password di Umbrel. Non serve internet.
+- Non ha account suoi: lo protegge la password di Umbrel. Internet serve solo per calcolare i km del rimborso.
 - **Prima volta:** apri **Impostazioni** e inserisci agente, qualifica, CID, residenza di servizio, servizio abituale, unità e **inizio e fine turno**: è straordinario il lavoro fatto prima dell'inizio o dopo la fine (turno fino alle 16:48, lavoro fino alle 17:48 = 1:00). Il turno si può cambiare in ogni rapporto. Compileranno da soli ogni nuovo rapporto.
 - **Ogni giorno:** "+ Rapporto di oggi", poi i lavori con *dalle/alle*: ore, totale e straordinario si calcolano da soli. Si salva da solo a ogni modifica. "Copia dal giorno prima" riprende lavori e testata dell'ultimo rapporto.
 - **Stampa:** "Anteprima e stampa" → *Modulo completo* (su foglio bianco) oppure *Solo dati* (sul modulo prestampato). Nella finestra di stampa: A4 orizzontale, scala 100%, margini nessuno.
@@ -179,7 +179,7 @@ Registro delle attività lavorative in ambito ferroviario che compila il **Rappo
 - Il modulo ha 9 righe di lavori e 9 di anormalità, e 8 numeri per colonna nei moduli emessi: l'app non ne accetta di più. I testi lunghi vengono rimpiccioliti per entrare nella casella.
 - **Congedi e trasferte (scheda Moduli):** la prima volta carica i PDF vuoti dei moduli 0319, 0692 e 0693 in **Impostazioni → Moduli aziendali** (restano sull'Umbrel, non vanno su GitHub) e completa struttura, data di assunzione, luogo, recapito, auto ed €/km.
   - *Domanda di congedo (0319):* indichi dal/al e il tipo; le giornate lavorative (lun–ven, senza festivi) si contano da sole. Il PDF ha già compilate le parti del richiedente di domanda, esito e ricevuta.
-  - *Trasferta / intervento in reperibilità (0692 + 0693):* numero, destinazione e motivazione per la lettera di incarico; giornate con o senza timbratura (↺ prende orari e straordinario dal rapportino di quel giorno); viaggi con auto propria con importo km × €/km.
+  - *Trasferta / intervento in reperibilità (0692 + 0693):* numero, destinazione e motivazione per la lettera di incarico; giornate con o senza timbratura (↺ prende orari e straordinario dal rapportino di quel giorno); viaggi con auto propria: con "Ho usato l'auto propria" (attivo di default) l'app crea una riga per ogni giornata con itinerario andata e ritorno dal luogo delle Impostazioni e **calcola i km stradali** del percorso (OpenStreetMap: serve internet sull'Umbrel; i percorsi già calcolati restano salvati in `data/distanze.json`). Importo = km × €/km. I km si possono sempre correggere a mano.
   - "Apri PDF" lo apre per stamparlo, "Scarica" lo salva. "Duplica" crea la pratica successiva con il numero aumentato di uno.
 - **Riepilogo del mese** nella pagina principale, **esportazione CSV** (una riga per lavoro, si apre con Excel) e **backup** completo in Impostazioni.
 

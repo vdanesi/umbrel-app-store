@@ -21,13 +21,17 @@
   const dmy = iso => { const p = parts(iso); return p ? `${p.d}/${p.m}/${p.y}` : ''; };
   const dmyShort = iso => { const p = parts(iso); return p ? `${p.d}/${p.m}/${p.yy}` : ''; };
   const euro = n => (Number.isFinite(n) && n ? n.toFixed(2).replace('.', ',') : '');
-  const numIt = v => { const n = parseFloat(String(v ?? '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+  const numIt = v => {   // accetta 0,35 e 0.35
+    let t = String(v ?? '').trim();
+    if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(t); return Number.isFinite(n) ? n : 0;
+  };
 
   // Helvetica dei PDF usa la codifica WinAnsi: tolgo i caratteri che non può scrivere.
   const WIN_EXTRA = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
   const safe = s => String(s ?? '').replace(/[\r\n\t]+/g, ' ').split('').filter(c => c.charCodeAt(0) < 256 || WIN_EXTRA.includes(c)).join('');
 
-  async function fill(code, templateBytes, data) {
+  async function fill(code, templateBytes, data, opts = {}) {
     const { PDFDocument, StandardFonts, rgb } = root.PDFLib;
     const doc = await PDFDocument.load(templateBytes, { ignoreEncryption: true });
     const form = doc.getForm();
@@ -125,8 +129,8 @@
         set('Totale Straord/Flex' + k, g.totale, 7);
         set('Motivazione omessa timbratura' + sfx(i), g.motivo, 7);
       });
-      const viaggi = (D.viaggi || []).slice(0, 5);
-      if (viaggi.some(v => v.itinerario || v.km)) {
+      const viaggi = (D.viaggi || []).filter(v => v.data || v.itinerario || v.km).slice(0, 5);
+      if (D.autoPropria !== false && (viaggi.length || D.tipoAuto)) {
         const ekm = numIt(D.euroKm);
         set('€/km', D.tipoAuto, 9);                           // casella TIPO DI AUTO
         set('Coefficiente medio calcolato su tabelle', ekm ? String(D.euroKm).replace('.', ',') : '', 9);
@@ -144,6 +148,8 @@
     }
 
     form.updateFieldAppearances(font);
+    // il testo diventa parte della pagina: si vede nero e uguale in ogni visualizzatore e in stampa
+    if (opts.appiattisci !== false) { try { form.flatten(); } catch (e) { console.warn('Appiattimento non riuscito', e); } }
     return doc.save();
   }
 

@@ -52,12 +52,16 @@
   }
 
   async function makePdf(code) {
+    if (code === '0693' && cur.autoPropria !== false && cur.viaggi.some(v => v.itinerario && !v.km)) await kmMancanti(true);
     await flush();
     if (!modelli[code]) throw new Error(`Carica prima il modulo ${code} vuoto in Impostazioni → Moduli aziendali.`);
     await loadPdfLib();
     const res = await fetch('api/modelli/' + code);
     if (!res.ok) throw new Error(`Modulo ${code} non disponibile`);
-    const bytes = await ModuliPdf.fill(code, await res.arrayBuffer(), cur);
+    const s = A().getSettings();
+    const data = { ...cur, tipoAuto: cur.tipoAuto || s.tipoAuto, euroKm: cur.euroKm || s.euroKm };
+    if (data.tipo === 'trasferta' && data.autoPropria !== false && !data.viaggi.some(v => v.itinerario || v.km)) data.viaggi = viaggiDaGiornate();
+    const bytes = await ModuliPdf.fill(code, await res.arrayBuffer(), data);
     return new Blob([bytes], { type: 'application/pdf' });
   }
   function fileName(code) {
@@ -154,7 +158,7 @@
         giornate: [{ data: oggi, tipo: 'R', dalle: '', alle: '', totale: '' }], omesse: [],
         tipoAuto: s.tipoAuto, euroKm: s.euroKm,
         // riga di viaggio già pronta: andata e ritorno dalla residenza (si aggiorna con la destinazione)
-        viaggi: [{ data: oggi, itinerario: '', km: '', itAuto: true }]
+        autoPropria: true, viaggi: []
       });
     }
     cur = base;
@@ -281,11 +285,15 @@
                 g.totale = durata(g.dalle, g.alle); row.querySelector('[data-k=totale]').value = g.totale;
               }
               if (c.k === 'itinerario') g.itAuto = false;
+              if (c.k === 'km') g.kmAuto = false;
               if (c.k === 'km' || c.k === 'itinerario') aggiornaKm();
             }
           });
           l.dataset.f = c.k;
           l.querySelector('input').dataset.k = c.k;
+          if (c.k === 'itinerario') l.querySelector('input').addEventListener('change', async () => {
+            if (!g.km || g.kmAuto) { if (await calcolaKm(g, true)) { schedule(); mostraKm(); } }
+          });
           if (c.k === 'importo') { l.querySelector('input').readOnly = true; l.querySelector('input').classList.add('auto'); }
           row.appendChild(l);
         }
@@ -293,6 +301,11 @@
         if ('dalle' in g) {
           const b = document.createElement('button'); b.className = 'btn-icon'; b.type = 'button'; b.title = 'Prendi gli orari dal rapportino di quel giorno'; b.textContent = '↺';
           b.onclick = async () => { if (await daRapportino(g)) { draw(); schedule(); A().toast('Orari presi dal rapportino del ' + dmy(g.data)); } else A().toast('Nessun rapportino con orari per il ' + (dmy(g.data) || 'giorno indicato'), true); };
+          tools.appendChild(b);
+        }
+        if ('km' in g) {
+          const b = document.createElement('button'); b.className = 'btn-icon'; b.type = 'button'; b.title = 'Calcola i km stradali di questo itinerario'; b.textContent = 'km↻';
+          b.onclick = async () => { b.disabled = true; if (await calcolaKm(g)) { schedule(); mostraKm(); A().toast(`${g.itinerario}: ${g.km} km`); } b.disabled = false; };
           tools.appendChild(b);
         }
         const del = document.createElement('button'); del.className = 'btn-icon'; del.type = 'button'; del.title = 'Togli riga'; del.textContent = '✕';
@@ -311,7 +324,7 @@
     return wrap;
   }
 
-  const numIt = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+  const numIt = v => { let t = String(v ?? '').trim(); if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); const n = parseFloat(t); return Number.isFinite(n) ? n : 0; };
   function aggiornaKm() {
     if (cur?.tipo !== 'trasferta') return;
     const ekm = numIt(cur.euroKm);
@@ -321,7 +334,8 @@
     if (w) {
       const conViaggi = cur.viaggi.some(v => v.itinerario || numIt(v.km));
       let msg = '';
-      if (!conViaggi) msg = 'Rimborso km: nessun viaggio inserito, nel Mod. 0693 il riquadro VIAGGIO resterà vuoto. Aggiungi una riga in "Viaggio con auto propria" se hai usato l\'auto.';
+      if (cur.autoPropria === false) msg = '';
+      else if (!conViaggi) msg = 'Rimborso km: nessun viaggio inserito, nel Mod. 0693 il riquadro VIAGGIO resterà vuoto. Aggiungi una riga in "Viaggio con auto propria" se hai usato l\'auto.';
       else if (!km) msg = 'Rimborso km: manca il numero di km nei viaggi.';
       else if (!ekm) msg = 'Rimborso km: manca il coefficiente €/km, l\'importo resterà vuoto.';
       else if (!cur.tipoAuto) msg = 'Rimborso km: manca il tipo di auto.';
@@ -332,14 +346,72 @@
   }
 
   /** Itinerario proposto: luogo di partenza - destinazione - luogo di partenza. */
-  function itinerariAuto() {
+  let kmNoti = {};   // itinerario → km usati l'ultima volta
+  async function caricaKmNoti() {
+    kmNoti = {};
+    try {
+      const all = await A().api('pratiche');
+      // dalla più vecchia alla più recente: vince l'ultimo valore
+      for (const p of all.slice().reverse()) for (const v of p.viaggi || []) if (v.itinerario && v.km) kmNoti[v.itinerario.trim().toLowerCase()] = v.km;
+    } catch { /* niente suggerimenti */ }
+  }
+  function itinerarioProposto() {
     const s = A().getSettings();
     const base = s.luogo || s.residenza || '';
-    if (!cur.destinazione) return;
-    const it = base ? `${base} - ${cur.destinazione} - ${base}` : cur.destinazione;
-    const inputs = document.querySelectorAll('.g-viaggio [data-k=itinerario]');
-    cur.viaggi.forEach((v, i) => { if (v.itAuto) { v.itinerario = it; if (inputs[i]) inputs[i].value = it; } });
+    if (!cur.destinazione) return '';
+    return base ? `${base} - ${cur.destinazione} - ${base}` : cur.destinazione;
+  }
+  const kmPer = it => kmNoti[(it || '').trim().toLowerCase()] || '';
+
+  /** Km stradali dell'itinerario calcolati dal server (mappe OpenStreetMap). */
+  async function calcolaKm(v, silenzioso) {
+    if (!v.itinerario || !v.itinerario.trim()) { if (!silenzioso) A().toast("Scrivi prima l'itinerario, es. \"Brescia - Iseo - Brescia\".", true); return false; }
+    try {
+      const r = await A().api('distanza?itinerario=' + encodeURIComponent(v.itinerario));
+      v.km = String(r.km); v.kmAuto = true;
+      kmNoti[v.itinerario.trim().toLowerCase()] = v.km;
+      return true;
+    } catch (e) { if (!silenzioso) A().toast('Km non calcolati: ' + e.message, true); return false; }
+  }
+  function mostraKm() {
+    const kms = document.querySelectorAll('.g-viaggio [data-k=km]');
+    cur.viaggi.forEach((v, i) => { if (kms[i] && kms[i] !== document.activeElement) kms[i].value = v.km || ''; });
     aggiornaKm();
+  }
+  /** Completa i km mancanti (o calcolati in automatico) di tutte le righe. */
+  async function kmMancanti(silenzioso = true) {
+    let n = 0, err = 0;
+    const fatti = {};
+    for (const v of cur.viaggi) {
+      if (!v.itinerario || (v.km && !v.kmAuto)) continue;
+      const k = v.itinerario.trim().toLowerCase();
+      if (fatti[k]) { v.km = fatti[k]; v.kmAuto = true; n++; continue; }
+      if (await calcolaKm(v, true)) { fatti[k] = v.km; n++; } else err++;
+    }
+    if (n) { schedule(); mostraKm(); }
+    if (err && !silenzioso) A().toast('Per alcune righe i km non sono stati calcolati: controlla le località o inseriscili a mano.', true);
+    return n;
+  }
+  /** Una riga di viaggio per ogni giornata della trasferta (andata e ritorno). */
+  function viaggiDaGiornate() {
+    const it = itinerarioProposto();
+    const date = [...new Set([...cur.giornate, ...cur.omesse].map(g => g.data).filter(Boolean))].sort();
+    if (!date.length) date.push(cur.data || A().todayIso());
+    return date.slice(0, MAX_V).map(d => ({ data: d, itinerario: it, km: kmPer(it), itAuto: true, kmAuto: true }));
+  }
+  function itinerariAuto() {
+    const it = itinerarioProposto();
+    if (!it) return;
+    const its = document.querySelectorAll('.g-viaggio [data-k=itinerario]');
+    const kms = document.querySelectorAll('.g-viaggio [data-k=km]');
+    cur.viaggi.forEach((v, i) => {
+      if (!v.itAuto) return;
+      if (v.itinerario !== it && (!v.km || v.kmAuto || v.itAuto)) { v.km = kmPer(it); v.kmAuto = true; if (kms[i]) kms[i].value = v.km; }
+      v.itinerario = it; if (its[i]) its[i].value = it;
+    });
+    aggiornaKm();
+    clearTimeout(itinerariAuto.t);
+    itinerariAuto.t = setTimeout(() => kmMancanti(true), 1200);   // quando smetti di scrivere la destinazione
   }
 
   function renderTrasferta(root) {
@@ -382,15 +454,36 @@
           { k: 'motivo', label: 'Motivazione omessa timbratura', max: 160 }
         ], MAX_G, () => ({ data: cur.data || '', tipo: 'R', dalle: '', alle: '', totale: '', motivo: '' }), 'g-omessa')),
       section('Viaggio con auto propria (rimborso km)',
-        grid('g3',
+        (() => {
+          const l = document.createElement('label'); l.className = 'check';
+          const c = document.createElement('input'); c.type = 'checkbox'; c.checked = cur.autoPropria !== false;
+          c.onchange = () => {
+            cur.autoPropria = c.checked;
+            if (c.checked && !cur.viaggi.some(v => v.itinerario || v.km)) cur.viaggi.splice(0, cur.viaggi.length, ...viaggiDaGiornate());
+            schedule(); render();
+          };
+          l.append(c, ' Ho usato l\'auto propria: compila il riquadro VIAGGIO del Mod. 0693');
+          return l;
+        })(),
+        ...(cur.autoPropria === false ? [hint('Riquadro VIAGGIO lasciato vuoto.')] : [grid('g3',
           input('Tipo di auto', 'tipoAuto', { max: 120, onInput: aggiornaKm }),
           input('€/km (coefficiente ACI)', 'euroKm', { max: 12, inputmode: 'decimal', placeholder: 'es. 0,35', onInput: aggiornaKm })),
         tableRows(cur.viaggi, [
           { k: 'data', label: 'Data', type: 'date' }, { k: 'itinerario', label: 'Itinerario', max: 160 },
           { k: 'km', label: 'Km', inputmode: 'decimal', max: 8 }
-        ], MAX_V, () => ({ data: cur.data || '', itinerario: '', km: '' }), 'g-viaggio'),
+        ], MAX_V, () => { const it = itinerarioProposto(); const last = cur.viaggi.at(-1); return { data: last?.data || cur.data || '', itinerario: it, km: kmPer(it), itAuto: true }; }, 'g-viaggio'),
+        (() => { const d = document.createElement('div'); d.className = 'row-actions';
+          d.appendChild(btn('↺ Una riga per ogni giornata', '', () => { cur.viaggi.splice(0, cur.viaggi.length, ...viaggiDaGiornate()); schedule(); render(); kmMancanti(false); }));
+          d.appendChild(btn('Calcola i km', '', async e => {
+            const b = e.currentTarget; b.disabled = true;
+            cur.viaggi.forEach(v => { if (v.kmAuto) v.km = ''; });
+            const n = await kmMancanti(false);
+            if (n) A().toast(`Km calcolati per ${n} ${n === 1 ? 'riga' : 'righe'}.`);
+            b.disabled = false;
+          }));
+          return d; })(),
         kmBox,
-        hint("Solo per pronto intervento in linea quando non è possibile usare il mezzo aziendale. L'importo di ogni riga è km × €/km.")),
+        hint("Solo per pronto intervento in linea quando non è possibile usare il mezzo aziendale. Itinerario proposto: andata e ritorno dal luogo delle Impostazioni. I km si calcolano da soli sul percorso stradale (serve internet sull'Umbrel) e si possono correggere a mano. Importo = km × €/km.")])),
       section('Stampa',
         grid('g3', input('Data del giustificativo', 'dataGiustificativo', { type: 'date' })),
         (() => { const w = document.createElement('p'); w.className = 'warn-box'; w.id = 'kmWarn'; w.hidden = true; return w; })(),
@@ -417,7 +510,11 @@
       if (!cur.tipoAuto && s.tipoAuto) cur.tipoAuto = s.tipoAuto;
       if (!cur.euroKm && s.euroKm) cur.euroKm = s.euroKm;
     }
-    await loadModelli();
+    await Promise.all([loadModelli(), caricaKmNoti()]);
+    if (cur.tipo === 'trasferta' && cur.autoPropria !== false && !cur.viaggi.some(v => v.itinerario || v.km)) {
+      cur.viaggi.splice(0, cur.viaggi.length, ...viaggiDaGiornate());   // pratiche create prima: preparo le righe
+    }
+    if (cur.tipo === 'trasferta' && cur.autoPropria !== false) setTimeout(() => kmMancanti(true), 50);
     A().show('praticaView');
     $('tabRep').hidden = false;
     render();

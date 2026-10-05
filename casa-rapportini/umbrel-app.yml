@@ -4,7 +4,7 @@ name: Rapportini
 tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
 category: files
-version: "1.1.2"
+version: "1.2.0"
 port: 3444
 description: >-
   Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
@@ -27,7 +27,8 @@ description: >-
 
 
   Riepilogo mensile di giorni, ore e straordinari, esportazione CSV e backup.
-  I dati restano sul tuo Umbrel.
+  I dati restano sul tuo Umbrel. Solo il calcolo dei km del rimborso usa i servizi
+  pubblici di OpenStreetMap.
 developer: VC Solutions
 website: https://github.com/vdanesi/umbrel-app-store
 submitter: VC Solutions
@@ -36,10 +37,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Mod. 0693: ogni nuova trasferta ha già una riga di viaggio con itinerario andata e
-  ritorno verso la destinazione; tipo di auto ed €/km vengono presi dalle impostazioni e un
-  avviso segnala se il riquadro VIAGGIO resterebbe vuoto. Script sempre aggiornati dopo
-  un update.
+  Mod. 0693, riquadro VIAGGIO compilato in automatico: con "Ho usato l'auto propria"
+  l'app crea una riga per ogni giornata con itinerario andata e ritorno e calcola i km
+  stradali del percorso (servizi OpenStreetMap, serve internet sull'Umbrel), poi importo
+  e totale. I PDF escono con il testo già stampato, uguale in ogni visualizzatore.
 dependencies: []
 path: ""
 defaultUsername: ""

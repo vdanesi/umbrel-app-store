@@ -15,6 +15,9 @@ const SETTINGS_FILE = path.join(DATA_DIR, 'impostazioni.json');
 const PRAT_DIR = path.join(DATA_DIR, 'pratiche');     // domande di congedo e trasferte
 const MOD_DIR = path.join(DATA_DIR, 'modelli');       // PDF vuoti dei moduli aziendali (caricati dall'utente)
 const MODELLI = ['0319', '0692', '0693'];
+const DIST_FILE = path.join(DATA_DIR, 'distanze.json');   // cache di località e percorsi già calcolati
+const NOMINATIM_URL = process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org';
+const OSRM_URL = process.env.OSRM_URL || 'https://router.project-osrm.org';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const VERSION = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version;
 
@@ -185,6 +188,61 @@ function readRaw(req, limit = 8 * 1024 * 1024) {
   });
 }
 
+// ---------- distanze stradali (rimborso km) ----------
+
+let distCache = null;
+async function loadDist() {
+  if (!distCache) distCache = await readJson(DIST_FILE, { luoghi: {}, percorsi: {} });
+  distCache.luoghi ||= {}; distCache.percorsi ||= {};
+  return distCache;
+}
+async function fetchJsonExt(url, timeoutMs = 20000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': `Rapportini/${VERSION} (self-hosted Umbrel app)`, 'Accept': 'application/json', 'Accept-Language': 'it' } });
+    if (!res.ok) throw new Error(`servizio mappe: errore ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('servizio mappe non raggiungibile (tempo scaduto)');
+    if (/fetch failed|ENOTFOUND|ECONNREFUSED|EAI_AGAIN/.test(String(e.message) + String(e.cause?.code))) throw new Error("servizio mappe non raggiungibile: l'Umbrel è collegato a internet?");
+    throw e;
+  } finally { clearTimeout(t); }
+}
+let lastNominatim = 0;
+async function geocode(nome) {
+  const key = nome.trim().toLowerCase();
+  const c = await loadDist();
+  if (c.luoghi[key]) return c.luoghi[key];
+  const wait = 1100 - (Date.now() - lastNominatim);   // regola di Nominatim: al massimo 1 richiesta al secondo
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  lastNominatim = Date.now();
+  const url = `${NOMINATIM_URL}/search?format=jsonv2&limit=1&countrycodes=it&q=${encodeURIComponent(nome)}`;
+  const r = await fetchJsonExt(url);
+  if (!Array.isArray(r) || !r.length) throw Object.assign(new Error(`Località non trovata: "${nome}"`), { status: 404 });
+  const g = { lat: Number(r[0].lat), lon: Number(r[0].lon), nome: str(r[0].display_name, 200) };
+  c.luoghi[key] = g;
+  await writeJsonAtomic(DIST_FILE, c);
+  return g;
+}
+/** Km stradali lungo le tappe "A - B - C" (andata e ritorno se l'itinerario lo indica). */
+async function distanza(itinerario) {
+  const tappe = itinerario.split(/\s+[-–—>]+\s+|\s*→\s*/).map(t => t.trim()).filter(Boolean).slice(0, 10);
+  if (tappe.length < 2) throw Object.assign(new Error('Scrivi l\'itinerario con almeno due località separate da " - ", es. "Brescia - Iseo - Brescia"'), { status: 400 });
+  const key = tappe.map(t => t.toLowerCase()).join(' | ');
+  const c = await loadDist();
+  if (c.percorsi[key]) return { km: c.percorsi[key], tappe, cache: true };
+  const pts = [];
+  for (const t of tappe) pts.push(await geocode(t));
+  const coords = pts.map(p => `${p.lon.toFixed(6)},${p.lat.toFixed(6)}`).join(';');
+  const r = await fetchJsonExt(`${OSRM_URL}/route/v1/driving/${coords}?overview=false`);
+  if (r.code !== 'Ok' || !r.routes?.length) throw new Error('Percorso stradale non trovato');
+  const km = Math.round(r.routes[0].distance / 1000);
+  c.percorsi[key] = km;
+  await writeJsonAtomic(DIST_FILE, c);
+  return { km, tappe, cache: false };
+}
+
 // ---------- HTTP ----------
 
 const MIME = {
@@ -319,6 +377,12 @@ async function api(req, res, url) {
       try { await fs.unlink(pratFile(id)); } catch (e) { if (e.code !== 'ENOENT') throw e; }
       return send(res, 200, { ok: true });
     }
+  }
+
+  if (p === '/api/distanza' && m === 'GET') {
+    const it = str(url.searchParams.get('itinerario') || '', 300);
+    try { return send(res, 200, await distanza(it)); }
+    catch (e) { return fail(res, e.status || 502, e.message); }
   }
 
   // ---- modelli PDF ----
