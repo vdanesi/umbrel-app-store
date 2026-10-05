@@ -352,3 +352,24 @@ label.check { flex-direction: row; align-items: center; gap: 8px; font-size: 13p
 @media (max-width: 560px) {
   .tab-new span { display: none; }
 }
+
+/* ---------- account e amministrazione ---------- */
+.tab-user span { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-box summary { cursor: pointer; color: var(--accent-cyan); font: 13px var(--ui); margin: 6px 0; }
+.pw-box form { margin-top: 8px; }
+.admin-box { border-color: var(--accent-yellow); }
+.users { display: flex; flex-direction: column; border-top: 1px solid var(--bg-tab-new); margin-top: 12px; }
+.user-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--bg-tab-new); }
+.user-row .u-name { font-weight: 700; color: var(--accent-green); }
+.user-row .u-name .badge { margin-left: 6px; }
+.user-row .u-meta { color: var(--fg-muted); font-size: 12px; }
+.user-row .u-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.user-row .u-actions .btn { min-height: 30px; padding: 4px 10px; font-size: 12px; }
+.b-admin { background: var(--accent-yellow); }
+.b-reset { background: var(--accent-magenta); }
+#tempPwBox code { font: 700 16px var(--mono); color: var(--fg-default); background: var(--bg-tabbar); padding: 2px 8px; user-select: all; }
+code { font-family: var(--mono); color: var(--accent-cyan); }
+@media (max-width: 560px) {
+  .user-row { grid-template-columns: 1fr; }
+  .user-row .u-actions { justify-content: flex-start; }
+}

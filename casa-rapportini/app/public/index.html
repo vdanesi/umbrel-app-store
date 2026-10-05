@@ -25,6 +25,7 @@
   <span class="save-status" id="saveStatus"></span>
   <button class="tab tab-new" id="tabModuli" title="Congedi e trasferte">▤ <span>Moduli</span></button>
   <button class="tab tab-new" id="tabSettings" title="Impostazioni">⚙ <span>Impostazioni</span></button>
+  <button class="tab tab-new tab-user" id="tabUser" title="Account">◉ <span id="userName">—</span></button>
 </header>
 
 <!-- ======= ELENCO ======= -->
@@ -189,6 +190,31 @@
   <div class="inner">
     <h1>Impostazioni</h1>
 
+    <section class="box" data-nosave id="secAccount">
+      <h3><span class="c-cyan">#</span> Account <span class="muted small" id="accNome"></span></h3>
+      <p class="hint">I tuoi rapporti, pratiche e impostazioni sono visibili solo a te.</p>
+      <details class="pw-box">
+        <summary>Cambia password</summary>
+        <form id="fPw" class="form-grid g3" autocomplete="off">
+          <label>Password attuale <input type="password" id="pwOld" autocomplete="current-password" required></label>
+          <label>Nuova password <input type="password" id="pwNew" autocomplete="new-password" minlength="8" required></label>
+          <label>Ripeti la nuova <input type="password" id="pwNew2" autocomplete="new-password" minlength="8" required></label>
+          <div class="span2 row-actions" style="margin:0"><button class="btn btn-primary" type="submit">Salva la nuova password</button></div>
+        </form>
+        <p class="hint">Dopo il cambio, gli altri dispositivi dovranno accedere di nuovo.</p>
+      </details>
+      <div class="row-actions"><button class="btn btn-danger" id="btnEsci" type="button">Esci</button></div>
+    </section>
+
+    <section class="box admin-box" data-nosave id="secAdmin" hidden>
+      <h3><span class="c-yellow">#</span> Amministrazione</h3>
+      <label class="check"><input type="checkbox" id="regAperte"> Consenti nuove registrazioni</label>
+      <p class="hint">Link diretto per registrarsi: <code id="regLink"></code></p>
+      <div class="users" id="usersList"></div>
+      <div class="warn-box" id="tempPwBox" hidden></div>
+      <p class="hint">"Reset password" crea una password temporanea da comunicare all'utente: al primo accesso dovrà sceglierne una nuova. "Elimina" cancella l'account e tutti i suoi dati.</p>
+    </section>
+
     <section class="box">
       <h3><span class="c-cyan">#</span> I tuoi dati</h3>
       <p class="hint">Compilano da soli la testata di ogni nuovo rapporto.</p>
@@ -269,6 +295,7 @@
 <script src="modulo.js"></script>
 <script src="moduli-pdf.js"></script>
 <script src="pratiche.js"></script>
+<script src="account.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

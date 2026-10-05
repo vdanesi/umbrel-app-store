@@ -6,11 +6,12 @@ services:
       # Format: <app-id>_<service-name>_1
       APP_HOST: casa-rapportini_web_1
       APP_PORT: 3444
-      # Rapportini non ha un login suo: resta attiva la password di Umbrel
+      # Rapportini ha account suoi con login: Umbrel non chiede anche la sua password
+      PROXY_AUTH_ADD: "false"
 
   web:
     # Built by .github/workflows/rapportini.yml. Change the tag together with "version" in umbrel-app.yml.
-    image: ghcr.io/vdanesi/rapportini:1.2.0
+    image: ghcr.io/vdanesi/rapportini:2.0.0
     user: "1000:1000"
     init: true
     restart: on-failure

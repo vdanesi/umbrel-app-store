@@ -171,7 +171,14 @@ Stessa procedura di Scontrinaio, con lo stesso numero di versione in:
 Registro delle attività lavorative in ambito ferroviario che compila il **Rapporto giornaliero dell'agente (Mod. 0444)**. Un rapporto per ogni giorno, salvato sull'Umbrel in `data/rapporti/`.
 
 - Si installa da **Casa App Store → Rapportini** e si apre dall'icona, oppure su **http://umbrel.local:3444**.
-- Non ha account suoi: lo protegge la password di Umbrel. Internet serve solo per calcolare i km del rimborso.
+- **Account personali** (dalla versione 2.0): chi apre l'app vede la pagina di **accesso** con le schede *Accedi* e *Registrati*. Ogni account vede solo i propri rapporti, pratiche e impostazioni. Umbrel non chiede anche la sua password (`PROXY_AUTH_ADD: "false"` nel `docker-compose.yml`).
+  - **Primo avvio:** il primo account creato è l'**amministratore** e riceve i rapporti e le pratiche già salvati. Crealo subito dopo l'aggiornamento.
+  - **Registrazione:** aperta a tutti finché l'amministratore non la chiude da **Impostazioni → Amministrazione**. Link diretto: `http://umbrel.local:3444/accesso?modo=registrati`.
+  - **Password dimenticata:** l'amministratore preme **Reset password** accanto all'utente, ottiene una password temporanea da comunicargli e l'utente al primo accesso deve sceglierne una nuova. Il reset sblocca anche i tentativi sbagliati.
+  - L'amministratore può anche **nominare altri amministratori** ed **eliminare account** (con tutti i loro dati). Deve restare sempre almeno un amministratore.
+  - Password di almeno 8 caratteri, salvate cifrate (scrypt). Dopo 5 tentativi sbagliati l'accesso per quel nome si blocca per 15 minuti. "Resta connesso" dura 30 giorni, altrimenti la sessione finisce chiudendo il browser (al massimo 12 ore).
+  - I PDF vuoti dei moduli aziendali e i km già calcolati sono **in comune**: li carica l'amministratore.
+- Internet serve solo per calcolare i km del rimborso.
 - **Prima volta:** apri **Impostazioni** e inserisci agente, qualifica, CID, residenza di servizio, servizio abituale, unità e **inizio e fine turno**: è straordinario il lavoro fatto prima dell'inizio o dopo la fine (turno fino alle 16:48, lavoro fino alle 17:48 = 1:00). Il turno si può cambiare in ogni rapporto. Compileranno da soli ogni nuovo rapporto.
 - **Ogni giorno:** "+ Rapporto di oggi", poi i lavori con *dalle/alle*: ore, totale e straordinario si calcolano da soli. Si salva da solo a ogni modifica. "Copia dal giorno prima" riprende lavori e testata dell'ultimo rapporto.
 - **Stampa:** "Anteprima e stampa" → *Modulo completo* (su foglio bianco) oppure *Solo dati* (sul modulo prestampato). Nella finestra di stampa: A4 orizzontale, scala 100%, margini nessuno.
@@ -181,7 +188,7 @@ Registro delle attività lavorative in ambito ferroviario che compila il **Rappo
   - *Domanda di congedo (0319):* indichi dal/al e il tipo; le giornate lavorative (lun–ven, senza festivi) si contano da sole. Il PDF ha già compilate le parti del richiedente di domanda, esito e ricevuta.
   - *Trasferta / intervento in reperibilità (0692 + 0693):* numero, destinazione e motivazione per la lettera di incarico; giornate con o senza timbratura (↺ prende orari e straordinario dal rapportino di quel giorno); viaggi con auto propria: con "Ho usato l'auto propria" (attivo di default) l'app crea una riga per ogni giornata con itinerario andata e ritorno dal luogo delle Impostazioni e **calcola i km stradali** del percorso (OpenStreetMap: serve internet sull'Umbrel; i percorsi già calcolati restano salvati in `data/distanze.json`). Importo = km × €/km. I km si possono sempre correggere a mano.
   - "Apri PDF" lo apre per stamparlo, "Scarica" lo salva. "Duplica" crea la pratica successiva con il numero aumentato di uno.
-- **Riepilogo del mese** nella pagina principale, **esportazione CSV** (una riga per lavoro, si apre con Excel) e **backup** completo in Impostazioni.
+- **Riepilogo del mese** nella pagina principale, **esportazione CSV** (una riga per lavoro, si apre con Excel) e **backup** in Impostazioni (ognuno scarica il backup dei propri dati).
 
 ### Solo la prima volta: rendi pubblica l'immagine
 Dopo la prima costruzione riuscita in **Actions** ("Immagine Docker Rapportini"), apri **Packages → rapportini → Package settings → Change visibility → Public**. L'immagine contiene solo il codice, nessun tuo rapporto.

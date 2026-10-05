@@ -107,6 +107,7 @@
     const missing = Object.entries(modelli).filter(([, v]) => !v).map(([k]) => k);
     $('pratWarn').hidden = !missing.length;
     $('pratWarnList').textContent = missing.join(', ');
+    if (!A().getSettings()?.utente?.admin) $('pratWarn').textContent = `Mancano i PDF vuoti dei moduli ${missing.join(', ')}: chiedi all'amministratore di caricarli in Impostazioni.`;
     list.innerHTML = '';
     if (!items.length) list.innerHTML = '<div class="empty">Nessuna domanda o trasferta. Creane una con i pulsanti qui sopra.</div>';
     for (const p of items) {
@@ -548,7 +549,8 @@
         } catch (e) { A().toast(e.message, true); }
       };
       lab.appendChild(f);
-      row.append(t, lab);
+      if (A().getSettings()?.utente?.admin) row.append(t, lab);
+      else { const h = document.createElement('small'); h.className = 'muted'; h.textContent = modelli[c] ? '' : "lo carica l'amministratore"; row.append(t, h); }
       box.appendChild(row);
     }
   }

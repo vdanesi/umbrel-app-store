@@ -1,8 +1,10 @@
 // Rapportini — server per Umbrel (Node.js senza dipendenze)
-// Salva un rapporto giornaliero (Mod. 0444) per ogni data in DATA_DIR/rapporti/AAAA-MM-GG.json
-// e le impostazioni dell'agente in DATA_DIR/impostazioni.json.
+// Account personali: ogni utente ha i suoi dati in DATA_DIR/utenti/<id>/
+//   impostazioni.json, rapporti/AAAA-MM-GG.json, pratiche/<id>.json
+// In comune: modelli/ (PDF vuoti dei moduli, gestiti dall'amministratore) e distanze.json.
 
 import http from 'node:http';
+import crypto from 'node:crypto';
 import { promises as fs, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,9 +12,12 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3444);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-const REP_DIR = path.join(DATA_DIR, 'rapporti');
-const SETTINGS_FILE = path.join(DATA_DIR, 'impostazioni.json');
-const PRAT_DIR = path.join(DATA_DIR, 'pratiche');     // domande di congedo e trasferte
+const USERS_DIR = path.join(DATA_DIR, 'utenti');
+const USERS_FILE = path.join(DATA_DIR, 'utenti.json');
+const SESS_FILE = path.join(DATA_DIR, 'sessioni.json');
+const COOKIE = 'rapportini_sessione';
+const SESSION_DAYS = 30, SESSION_HOURS_SHORT = 12;
+const NAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 const MOD_DIR = path.join(DATA_DIR, 'modelli');       // PDF vuoti dei moduli aziendali (caricati dall'utente)
 const MODELLI = ['0319', '0692', '0693'];
 const DIST_FILE = path.join(DATA_DIR, 'distanze.json');   // cache di località e percorsi già calcolati
@@ -43,7 +48,12 @@ const num = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n :
 const ora = v => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : '');
 const durata = v => (typeof v === 'string' && /^\d{1,3}:[0-5]\d$/.test(v) ? v : '');
 const validDate = d => typeof d === 'string' && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(d);
-const repFile = d => path.join(REP_DIR, `${d}.json`);
+/** Cartelle dell'utente (U). */
+function userCtx(uid) {
+  const dir = path.join(USERS_DIR, uid);
+  return { uid, dir, repDir: path.join(dir, 'rapporti'), pratDir: path.join(dir, 'pratiche'), settingsFile: path.join(dir, 'impostazioni.json') };
+}
+const repFile = (U, d) => path.join(U.repDir, `${d}.json`);
 
 async function readJson(file, fallback) {
   try { return JSON.parse(await fs.readFile(file, 'utf8')); }
@@ -55,8 +65,8 @@ async function writeJsonAtomic(file, data) {
   await fs.rename(tmp, file);
 }
 
-async function loadSettings() {
-  const s = await readJson(SETTINGS_FILE, {});
+async function loadSettings(U) {
+  const s = await readJson(U.settingsFile, {});
   return { ...DEFAULT_SETTINGS, ...s, stampa: { ...DEFAULT_SETTINGS.stampa, ...(s.stampa || {}) } };
 }
 
@@ -127,12 +137,12 @@ function summary(r) {
   };
 }
 
-async function listReports() {
+async function listReports(U) {
   let files = [];
-  try { files = await fs.readdir(REP_DIR); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  try { files = await fs.readdir(U.repDir); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   const out = [];
   for (const f of files.filter(f => /^\d{4}-\d\d-\d\d\.json$/.test(f)).sort()) {
-    try { out.push(await readJson(path.join(REP_DIR, f), null)); } catch { /* file rovinato: lo salto */ }
+    try { out.push(await readJson(path.join(U.repDir, f), null)); } catch { /* file rovinato: lo salto */ }
   }
   return out.filter(Boolean);
 }
@@ -140,7 +150,7 @@ async function listReports() {
 // ---------- pratiche (congedi e trasferte) ----------
 
 const validPid = id => typeof id === 'string' && /^[a-z0-9-]{8,64}$/i.test(id);
-const pratFile = id => path.join(PRAT_DIR, `${id}.json`);
+const pratFile = (U, id) => path.join(U.pratDir, `${id}.json`);
 
 /** Copia "pulita" di dati qualsiasi: solo testo, numeri, sì/no, liste e oggetti piccoli. */
 function cleanAny(v, depth = 0) {
@@ -165,12 +175,12 @@ function sanitizePratica(p, id, existing) {
     aggiornato: new Date().toISOString()
   };
 }
-async function listPratiche() {
+async function listPratiche(U) {
   let files = [];
-  try { files = await fs.readdir(PRAT_DIR); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  try { files = await fs.readdir(U.pratDir); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   const out = [];
   for (const f of files.filter(f => f.endsWith('.json'))) {
-    try { const p = await readJson(path.join(PRAT_DIR, f), null); if (p) out.push(p); } catch { /* salto */ }
+    try { const p = await readJson(path.join(U.pratDir, f), null); if (p) out.push(p); } catch { /* salto */ }
   }
   return out.sort((a, b) => String(b.creato).localeCompare(String(a.creato)));
 }
@@ -243,6 +253,200 @@ async function distanza(itinerario) {
   return { km, tappe, cache: false };
 }
 
+// ---------- account ----------
+
+let users = [];                        // {id, nome, hash, salt, admin, creato, cambioPassword, ultimoAccesso}
+let accSettings = { registrazioniAperte: true };
+const sessions = new Map();            // sha256(token) -> {uid, scade, creata}
+
+const saveUsers = () => writeJsonAtomic(USERS_FILE, { versione: 1, utenti: users, impostazioni: accSettings });
+let sessTimer = null;
+const saveSessions = () => { clearTimeout(sessTimer); sessTimer = setTimeout(() => writeJsonAtomic(SESS_FILE, { sessioni: [...sessions.entries()].map(([h, x]) => ({ h, ...x })) }).catch(console.error), 200); };
+
+function scrypt(password, salt) {
+  return new Promise((ok, ko) => crypto.scrypt(password, salt, 64, { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }, (e, k) => (e ? ko(e) : ok(k))));
+}
+async function hashPassword(pw) {
+  const salt = crypto.randomBytes(16);
+  return { salt: salt.toString('base64'), hash: (await scrypt(pw, salt)).toString('base64') };
+}
+const DUMMY = { salt: crypto.randomBytes(16).toString('base64'), hash: crypto.randomBytes(64).toString('base64') };
+async function checkPassword(user, pw) {
+  const u = user || DUMMY;   // stesso lavoro anche per nomi inesistenti: nessun indizio dai tempi di risposta
+  const k = await scrypt(String(pw), Buffer.from(u.salt, 'base64'));
+  return crypto.timingSafeEqual(k, Buffer.from(u.hash, 'base64')) && !!user;
+}
+const validPassword = pw => typeof pw === 'string' && pw.length >= 8 && pw.length <= 200;
+const sha = t => crypto.createHash('sha256').update(t).digest('hex');
+/** Password temporanea leggibile (senza caratteri che si confondono). */
+function tempPassword() {
+  const abc = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const b = crypto.randomBytes(12);
+  return [...b].map(x => abc[x % abc.length]).join('').replace(/(.{4})(?=.)/g, '$1-');
+}
+
+// dietro Cloudflare Tunnel o un altro proxy https il browser usa https anche se a noi arriva http
+function isHttps(req) {
+  if (String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https') return true;
+  try { return JSON.parse(req.headers['cf-visitor'] || '{}').scheme === 'https'; } catch { return false; }
+}
+const cookieAttrs = req => 'HttpOnly; SameSite=Lax; Path=/' + (isHttps(req) ? '; Secure' : '');
+function clientIp(req) {
+  const cf = String(req.headers['cf-connecting-ip'] || '').trim();
+  if (cf) return cf;
+  return String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '';
+}
+function newSession(req, res, uid, ricorda) {
+  const token = crypto.randomBytes(32).toString('base64url');
+  const scade = Date.now() + (ricorda ? SESSION_DAYS * 864e5 : SESSION_HOURS_SHORT * 36e5);
+  sessions.set(sha(token), { uid, scade, creata: Date.now() });
+  saveSessions();
+  // senza "Resta connesso" il cookie non ha durata: il browser lo dimentica quando viene chiuso
+  res.setHeader('Set-Cookie', `${COOKIE}=${token}; ${cookieAttrs(req)}` + (ricorda ? `; Max-Age=${SESSION_DAYS * 86400}` : ''));
+}
+const clearCookie = (req, res) => res.setHeader('Set-Cookie', `${COOKIE}=; ${cookieAttrs(req)}; Max-Age=0`);
+function tokenOf(req) {
+  const m = String(req.headers.cookie || '').match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([^;]+)'));
+  return m ? m[1] : null;
+}
+function currentUser(req) {
+  const t = tokenOf(req); if (!t) return null;
+  const x = sessions.get(sha(t));
+  if (!x) return null;
+  if (x.scade < Date.now()) { sessions.delete(sha(t)); saveSessions(); return null; }
+  return users.find(u => u.id === x.uid) || null;
+}
+function closeSessionsOf(uid, exceptHash) { for (const [h, x] of sessions) if (x.uid === uid && h !== exceptHash) sessions.delete(h); saveSessions(); }
+const publicUser = u => u && { id: u.id, nome: u.nome, admin: !!u.admin, cambioPassword: !!u.cambioPassword };
+
+// tentativi di accesso: 5 errori per nome+indirizzo, 30 per indirizzo, 20 per nome → 15 minuti di attesa
+const fails = new Map();
+const isLocked = key => { const f = fails.get(key); return f && f.until > Date.now() ? Math.ceil((f.until - Date.now()) / 60000) : 0; };
+function noteFail(key, limit) {
+  const f = fails.get(key) || { n: 0, until: 0 };
+  f.n++; if (f.n >= limit) { f.until = Date.now() + 15 * 60e3; f.n = 0; }
+  fails.set(key, f);
+}
+
+/** I dati della versione senza account (1.x) passano al primo utente creato. */
+async function adoptLegacyData(U) {
+  await fs.mkdir(U.dir, { recursive: true });
+  for (const [from, to] of [['rapporti', U.repDir], ['pratiche', U.pratDir], ['impostazioni.json', U.settingsFile]]) {
+    const src = path.join(DATA_DIR, from);
+    try { await fs.rename(src, to); console.log(`Dati esistenti (${from}) assegnati al primo account`); }
+    catch (e) { if (e.code !== 'ENOENT') console.error('Spostamento dati non riuscito:', from, e.message); }
+  }
+}
+async function contaFile(dir) { try { return (await fs.readdir(dir)).filter(f => f.endsWith('.json')).length; } catch { return 0; } }
+
+async function accountApi(req, res, url) {
+  const p = url.pathname, m = req.method;
+  if (p === '/api/stato' && m === 'GET') {
+    return send(res, 200, { versione: VERSION, utente: publicUser(currentUser(req)), primoAvvio: users.length === 0, registrazioniAperte: users.length === 0 || accSettings.registrazioniAperte });
+  }
+  if (p === '/api/registrati' && m === 'POST') {
+    const b = await readBody(req, 64 * 1024);
+    const nome = String(b.nome || '').trim().toLowerCase();
+    const first = users.length === 0;
+    if (!first && !accSettings.registrazioniAperte) return fail(res, 403, "Le registrazioni sono chiuse. Chiedi all'amministratore di aprirle.");
+    if (!NAME_RE.test(nome)) return fail(res, 400, 'Il nome utente deve avere da 3 a 32 caratteri: lettere minuscole, numeri, punto, trattino, trattino basso.');
+    if (!validPassword(b.password)) return fail(res, 400, 'La password deve avere almeno 8 caratteri.');
+    if (users.some(u => u.nome === nome)) return fail(res, 409, 'Questo nome utente esiste già.');
+    const u = { id: crypto.randomUUID(), nome, ...(await hashPassword(b.password)), admin: first, creato: new Date().toISOString(), cambioPassword: false };
+    if ((first && users.length) || users.some(x => x.nome === nome)) return fail(res, 409, "Questo nome utente esiste già, oppure l'amministratore è appena stato creato. Riprova.");
+    users.push(u); await saveUsers();
+    const U = userCtx(u.id);
+    if (first) await adoptLegacyData(U);
+    await fs.mkdir(U.repDir, { recursive: true });
+    newSession(req, res, u.id, !!b.ricorda);
+    console.log(`Nuovo account: ${nome}${first ? ' (amministratore)' : ''}`);
+    return send(res, 200, { utente: publicUser(u) });
+  }
+  if (p === '/api/accedi' && m === 'POST') {
+    const b = await readBody(req, 64 * 1024);
+    const nome = String(b.nome || '').trim().toLowerCase();
+    const ip = clientIp(req), key = ip + '|' + nome, ipKey = ip + '|*', nameKey = '*|' + nome;
+    const wait = isLocked(key) || isLocked(ipKey) || isLocked(nameKey);
+    if (wait) return fail(res, 429, `Troppi tentativi. Riprova tra ${wait} minut${wait === 1 ? 'o' : 'i'}.`);
+    const u = users.find(x => x.nome === nome);
+    if (!(await checkPassword(u, b.password || ''))) {
+      noteFail(key, 5); noteFail(ipKey, 30); noteFail(nameKey, 20);
+      return fail(res, 401, 'Nome utente o password non corretti.');
+    }
+    fails.delete(key);
+    u.ultimoAccesso = new Date().toISOString(); saveUsers().catch(console.error);
+    newSession(req, res, u.id, !!b.ricorda);
+    return send(res, 200, { utente: publicUser(u) });
+  }
+  if (p === '/api/esci' && m === 'POST') {
+    const t = tokenOf(req); if (t) { sessions.delete(sha(t)); saveSessions(); }
+    clearCookie(req, res);
+    return send(res, 200, { ok: true });
+  }
+  if (p === '/api/password' && m === 'POST') {
+    const me = currentUser(req);
+    if (!me) return fail(res, 401, 'Accedi per continuare.');
+    const b = await readBody(req, 64 * 1024);
+    if (!(await checkPassword(me, b.attuale || ''))) return fail(res, 400, 'La password attuale non è corretta.');
+    if (!validPassword(b.nuova)) return fail(res, 400, 'La nuova password deve avere almeno 8 caratteri.');
+    if (b.nuova === b.attuale) return fail(res, 400, 'La nuova password deve essere diversa da quella attuale.');
+    Object.assign(me, await hashPassword(b.nuova), { cambioPassword: false }); await saveUsers();
+    closeSessionsOf(me.id);          // esce dagli altri dispositivi
+    newSession(req, res, me.id, false);
+    return send(res, 200, { utente: publicUser(me) });
+  }
+  return null;
+}
+
+async function adminApi(req, res, url, me) {
+  const p = url.pathname, m = req.method;
+  if (!me.admin) return fail(res, 403, "Solo l'amministratore può farlo.");
+  if (p === '/api/admin/utenti' && m === 'GET') {
+    const out = [];
+    for (const u of users) {
+      const U = userCtx(u.id);
+      out.push({ ...publicUser(u), creato: u.creato, ultimoAccesso: u.ultimoAccesso || '', rapporti: await contaFile(U.repDir), pratiche: await contaFile(U.pratDir) });
+    }
+    return send(res, 200, { utenti: out, impostazioni: accSettings });
+  }
+  if (p === '/api/admin/impostazioni' && m === 'POST') {
+    const b = await readBody(req, 64 * 1024);
+    accSettings.registrazioniAperte = !!b.registrazioniAperte; await saveUsers();
+    return send(res, 200, { impostazioni: accSettings });
+  }
+  const mm = /^\/api\/admin\/utenti\/([A-Za-z0-9-]{1,80})(?:\/(reset|admin))?$/.exec(p);
+  if (mm) {
+    const u = users.find(x => x.id === mm[1]);
+    if (!u) return fail(res, 404, 'Utente non trovato.');
+    if (mm[2] === 'reset' && m === 'POST') {
+      const temp = tempPassword();
+      Object.assign(u, await hashPassword(temp), { cambioPassword: true });
+      await saveUsers();
+      closeSessionsOf(u.id);
+      fails.forEach((_, k) => { if (k.endsWith('|' + u.nome)) fails.delete(k); });   // sblocca i tentativi
+      console.log(`Password azzerata dall'amministratore per: ${u.nome}`);
+      return send(res, 200, { nome: u.nome, passwordTemporanea: temp });
+    }
+    if (mm[2] === 'admin' && m === 'POST') {
+      const b = await readBody(req, 64 * 1024);
+      const val = !!b.admin;
+      if (!val && u.admin && users.filter(x => x.admin).length === 1) return fail(res, 400, 'Deve restare almeno un amministratore.');
+      u.admin = val; await saveUsers();
+      return send(res, 200, { utente: publicUser(u) });
+    }
+    if (!mm[2] && m === 'DELETE') {
+      if (u.id === me.id) return fail(res, 400, 'Non puoi eliminare il tuo account mentre lo usi.');
+      if (u.admin && users.filter(x => x.admin).length === 1) return fail(res, 400, 'Deve restare almeno un amministratore.');
+      users = users.filter(x => x.id !== u.id); await saveUsers();
+      closeSessionsOf(u.id);
+      await fs.rm(userCtx(u.id).dir, { recursive: true, force: true });
+      console.log(`Account eliminato: ${u.nome}`);
+      return send(res, 200, { ok: true });
+    }
+  }
+  return fail(res, 404, 'Non trovato');
+}
+
 // ---------- HTTP ----------
 
 const MIME = {
@@ -306,25 +510,37 @@ async function api(req, res, url) {
 
   if (p === '/api/health') return send(res, 200, { ok: true, versione: VERSION });
 
+  const acc = await accountApi(req, res, url);
+  if (acc !== null) return acc;
+
+  // ---- da qui in poi serve un account ----
+  const me = currentUser(req);
+  if (!me) return send(res, 401, { errore: 'Accedi per continuare.', accesso: true });
+  if (me.cambioPassword) return send(res, 403, { errore: 'Devi impostare una nuova password.', cambioPassword: true });
+  if (p.startsWith('/api/admin/')) return adminApi(req, res, url, me);
+  const U = userCtx(me.id);
+
   if (p === '/api/impostazioni') {
-    if (m === 'GET') return send(res, 200, { ...(await loadSettings()), versione: VERSION });
+    const extra = { versione: VERSION, utente: publicUser(me) };
+    if (m === 'GET') return send(res, 200, { ...(await loadSettings(U)), ...extra });
     if (m === 'PUT') {
       const s = sanitizeSettings(await readBody(req));
-      await writeJsonAtomic(SETTINGS_FILE, s);
-      return send(res, 200, { ...s, versione: VERSION });
+      await fs.mkdir(U.dir, { recursive: true });
+      await writeJsonAtomic(U.settingsFile, s);
+      return send(res, 200, { ...s, ...extra });
     }
   }
 
   if (p === '/api/rapporti' && m === 'GET') {
     const mese = url.searchParams.get('mese');
-    let all = await listReports();
+    let all = await listReports(U);
     if (mese && /^\d{4}-\d\d$/.test(mese)) all = all.filter(r => r.data.startsWith(mese));
     return send(res, 200, all.map(summary));
   }
 
   // suggerimenti per i campi: luoghi, descrizioni, località, servizi già usati
   if (p === '/api/suggerimenti' && m === 'GET') {
-    const all = await listReports();
+    const all = await listReports(U);
     const count = new Map();
     const add = (k, v) => { if (!v) return; const key = k + '\u0000' + v; count.set(key, (count.get(key) || 0) + 1); };
     for (const r of all) {
@@ -344,37 +560,37 @@ async function api(req, res, url) {
     const d = mm[1];
     if (!validDate(d)) return fail(res, 400, 'Data non valida');
     if (m === 'GET') {
-      const r = await readJson(repFile(d), null);
+      const r = await readJson(repFile(U, d), null);
       return r ? send(res, 200, r) : fail(res, 404, 'Nessun rapporto per questa data');
     }
     if (m === 'PUT') {
       const r = sanitizeReport(await readBody(req), d);
-      await fs.mkdir(REP_DIR, { recursive: true });
-      await writeJsonAtomic(repFile(d), r);
+      await fs.mkdir(U.repDir, { recursive: true });
+      await writeJsonAtomic(repFile(U, d), r);
       return send(res, 200, r);
     }
     if (m === 'DELETE') {
-      try { await fs.unlink(repFile(d)); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+      try { await fs.unlink(repFile(U, d)); } catch (e) { if (e.code !== 'ENOENT') throw e; }
       return send(res, 200, { ok: true });
     }
   }
 
   // ---- pratiche ----
-  if (p === '/api/pratiche' && m === 'GET') return send(res, 200, await listPratiche());
+  if (p === '/api/pratiche' && m === 'GET') return send(res, 200, await listPratiche(U));
   const pm = /^\/api\/pratiche\/([^/]+)$/.exec(p);
   if (pm) {
     const id = pm[1];
     if (!validPid(id)) return fail(res, 400, 'Identificativo non valido');
-    if (m === 'GET') { const x = await readJson(pratFile(id), null); return x ? send(res, 200, x) : fail(res, 404, 'Pratica non trovata'); }
+    if (m === 'GET') { const x = await readJson(pratFile(U, id), null); return x ? send(res, 200, x) : fail(res, 404, 'Pratica non trovata'); }
     if (m === 'PUT') {
-      const existing = await readJson(pratFile(id), null);
+      const existing = await readJson(pratFile(U, id), null);
       const x = sanitizePratica(await readBody(req), id, existing);
-      await fs.mkdir(PRAT_DIR, { recursive: true });
-      await writeJsonAtomic(pratFile(id), x);
+      await fs.mkdir(U.pratDir, { recursive: true });
+      await writeJsonAtomic(pratFile(U, id), x);
       return send(res, 200, x);
     }
     if (m === 'DELETE') {
-      try { await fs.unlink(pratFile(id)); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+      try { await fs.unlink(pratFile(U, id)); } catch (e) { if (e.code !== 'ENOENT') throw e; }
       return send(res, 200, { ok: true });
     }
   }
@@ -394,6 +610,7 @@ async function api(req, res, url) {
       try { const b = await fs.readFile(file); return send(res, 200, b, 'application/pdf'); }
       catch { return fail(res, 404, `Il modulo ${mm2[1]} non è ancora stato caricato`); }
     }
+    if ((m === 'PUT' || m === 'DELETE') && !me.admin) return fail(res, 403, "I moduli vuoti li carica l'amministratore.");
     if (m === 'PUT') {
       const b = await readRaw(req);
       if (b.subarray(0, 5).toString('latin1') !== '%PDF-') return fail(res, 400, 'Il file non è un PDF');
@@ -411,17 +628,17 @@ async function api(req, res, url) {
   // rapporto precedente più vicino (per "copia dal giorno prima")
   const prev = /^\/api\/precedente\/(\d{4}-\d\d-\d\d)$/.exec(p);
   if (prev && m === 'GET') {
-    const all = (await listReports()).filter(r => r.data < prev[1]);
+    const all = (await listReports(U)).filter(r => r.data < prev[1]);
     return all.length ? send(res, 200, all.at(-1)) : fail(res, 404, 'Nessun rapporto precedente');
   }
 
   if (p === '/api/backup' && m === 'GET') {
     const body = JSON.stringify({ app: 'rapportini', versione: VERSION, esportato: new Date().toISOString(),
-      impostazioni: await loadSettings(), rapporti: await listReports(), pratiche: await listPratiche(),
+      impostazioni: await loadSettings(), rapporti: await listReports(U), pratiche: await listPratiche(U),
       modelli: Object.fromEntries(await Promise.all(MODELLI.map(async c => {
         try { return [c, (await fs.readFile(path.join(MOD_DIR, c + '.pdf'))).toString('base64')]; } catch { return [c, null]; }
       }))) }, null, 2);
-    const nome = `rapportini-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const nome = `rapportini-${me.nome}-backup-${new Date().toISOString().slice(0, 10)}.json`;
     return send(res, 200, body, 'application/json; charset=utf-8', { 'Content-Disposition': `attachment; filename="${nome}"` });
   }
 
@@ -429,27 +646,27 @@ async function api(req, res, url) {
     const b = await readBody(req);
     if (b?.app !== 'rapportini' || !Array.isArray(b.rapporti)) return fail(res, 400, 'Questo file non è un backup di Rapportini');
     const sovrascrivi = url.searchParams.get('sovrascrivi') === '1';
-    await fs.mkdir(REP_DIR, { recursive: true });
+    await fs.mkdir(U.repDir, { recursive: true });
     let importati = 0, saltati = 0;
     for (const r of b.rapporti) {
       if (!validDate(r?.data)) { saltati++; continue; }
-      const exists = await readJson(repFile(r.data), null);
+      const exists = await readJson(repFile(U, r.data), null);
       if (exists && !sovrascrivi) { saltati++; continue; }
       const clean = sanitizeReport(r, r.data);
       if (r.aggiornato) clean.aggiornato = str(r.aggiornato, 40);
-      await writeJsonAtomic(repFile(r.data), clean);
+      await writeJsonAtomic(repFile(U, r.data), clean);
       importati++;
     }
     if (Array.isArray(b.pratiche)) {
-      await fs.mkdir(PRAT_DIR, { recursive: true });
+      await fs.mkdir(U.pratDir, { recursive: true });
       for (const x of b.pratiche) {
         if (!validPid(x?.id)) continue;
-        const exists = await readJson(pratFile(x.id), null);
+        const exists = await readJson(pratFile(U, x.id), null);
         if (exists && !sovrascrivi) continue;
-        await writeJsonAtomic(pratFile(x.id), { ...sanitizePratica(x, x.id, exists || { creato: x.creato }), aggiornato: str(x.aggiornato, 40) || new Date().toISOString() });
+        await writeJsonAtomic(pratFile(U, x.id), { ...sanitizePratica(x, x.id, exists || { creato: x.creato }), aggiornato: str(x.aggiornato, 40) || new Date().toISOString() });
       }
     }
-    if (b.modelli && typeof b.modelli === 'object') {
+    if (me.admin && b.modelli && typeof b.modelli === 'object') {
       await fs.mkdir(MOD_DIR, { recursive: true });
       for (const c of MODELLI) {
         if (typeof b.modelli[c] !== 'string') continue;
@@ -460,8 +677,8 @@ async function api(req, res, url) {
         if (!has || sovrascrivi) await fs.writeFile(file, buf);
       }
     }
-    if (b.impostazioni && (sovrascrivi || !(await readJson(SETTINGS_FILE, null)))) {
-      await writeJsonAtomic(SETTINGS_FILE, sanitizeSettings(b.impostazioni));
+    if (b.impostazioni && (sovrascrivi || !(await readJson(U.settingsFile, null)))) {
+      await writeJsonAtomic(U.settingsFile, sanitizeSettings(b.impostazioni));
     }
     return send(res, 200, { importati, saltati });
   }
@@ -474,13 +691,39 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
     if (req.method !== 'GET' && req.method !== 'HEAD') return fail(res, 405, 'Metodo non consentito');
-    return await serveStatic(req, res, url.pathname);
+    // l'app si apre solo con un account; tutti gli altri vedono la pagina di accesso
+    const u = currentUser(req);
+    const p = url.pathname;
+    if (p === '/' || p === '/index.html') {
+      if (!u || u.cambioPassword) return send(res, 302, '', 'text/plain', { Location: '/accesso' });
+      return await serveStatic(req, res, '/index.html');
+    }
+    if (p === '/accesso' || p === '/accesso.html') {
+      if (u && !u.cambioPassword) return send(res, 302, '', 'text/plain', { Location: '/' });
+      return await serveStatic(req, res, '/accesso.html');
+    }
+    return await serveStatic(req, res, p);
   } catch (e) {
     console.error(e);
     if (!res.headersSent) fail(res, e.status || 500, e.status ? e.message : 'Errore del server');
   }
 });
 
-await fs.mkdir(REP_DIR, { recursive: true });
+async function loadAccounts() {
+  const f = await readJson(USERS_FILE, null);
+  users = Array.isArray(f?.utenti) ? f.utenti : [];
+  accSettings = { registrazioniAperte: true, ...(f?.impostazioni || {}) };
+  const sf = await readJson(SESS_FILE, { sessioni: [] });
+  const now = Date.now();
+  for (const x of sf.sessioni || []) if (x.h && x.scade > now && users.some(u => u.id === x.uid)) sessions.set(x.h, { uid: x.uid, scade: x.scade, creata: x.creata });
+}
+await fs.mkdir(USERS_DIR, { recursive: true });
+await loadAccounts();
+setInterval(() => {   // pulizia sessioni scadute e tentativi vecchi
+  const now = Date.now(); let ch = false;
+  for (const [h, x] of sessions) if (x.scade < now) { sessions.delete(h); ch = true; }
+  if (ch) saveSessions();
+  for (const [k, f] of fails) if (f.until < now && !f.n) fails.delete(k);
+}, 3600e3).unref();
 server.listen(PORT, () => console.log(`Rapportini ${VERSION} in ascolto sulla porta ${PORT}, dati in ${DATA_DIR}`));
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => server.close(() => process.exit(0)));

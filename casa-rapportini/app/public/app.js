@@ -49,6 +49,7 @@
       headers: { 'X-Rapportini': '1', ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(opts.headers || {}) }
     });
     let body = null; try { body = await res.json(); } catch { /* nessun corpo */ }
+    if (res.status === 401 || (res.status === 403 && body?.cambioPassword)) { location.replace('accesso'); throw new Error(body?.errore || 'Accedi per continuare'); }
     if (!res.ok) { const e = new Error(body?.errore || `Errore ${res.status}`); e.status = res.status; throw e; }
     return body;
   }
@@ -71,7 +72,7 @@
       await Pratiche.route(h);
       if ((m = /^r\/(\d{4}-\d\d-\d\d)\/stampa$/.exec(h))) { await openReport(m[1]); openPreview(); }
       else if ((m = /^r\/(\d{4}-\d\d-\d\d)$/.exec(h))) { await openReport(m[1]); show('editView'); }
-      else if (h === 'impostazioni') { await flushSave(); fillSettings(); show('settingsView'); Pratiche.renderModelliSettings(); }
+      else if (h === 'impostazioni') { await flushSave(); fillSettings(); show('settingsView'); Pratiche.renderModelliSettings(); Account.render(); }
       else { await flushSave(); rep = null; show('homeView'); loadMonth(); }
     } catch (e) { toast(e.message, true); }
   }
@@ -492,7 +493,7 @@
   }
   function bindSettings() {
     $('settingsView').addEventListener('input', e => {
-      if (e.target.type === 'file') return;
+      if (e.target.type === 'file' || e.target.closest('[data-nosave]')) return;
       readSettings();
       status('modificato…');
       clearTimeout(settingsTimer);
@@ -550,8 +551,10 @@
       getSettings: () => settings
     };
     Pratiche.init();
+    Account.init();
     try { settings = await api('impostazioni'); }
     catch (e) { toast('Server non raggiungibile: ' + e.message, true); return; }
+    Account.header();
     loadSuggestions();
     window.addEventListener('hashchange', route);
     await route();
