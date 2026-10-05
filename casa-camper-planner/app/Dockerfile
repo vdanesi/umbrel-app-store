@@ -1,3 +1,4 @@
+# Camper Planner: immagine per umbrelOS (amd64 e arm64), costruita da GitHub Actions.
 FROM node:22-alpine
 
 WORKDIR /app
