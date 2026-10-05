@@ -152,7 +152,9 @@
         numero, data: oggi, richiedente: s.agente, cid: s.cid, qualifica: s.qualifica, struttura: s.struttura || s.unita,
         destinazione: '', motivazione: 'Intervento in reperibilità', dataGiustificativo: oggi,
         giornate: [{ data: oggi, tipo: 'R', dalle: '', alle: '', totale: '' }], omesse: [],
-        tipoAuto: s.tipoAuto, euroKm: s.euroKm, viaggi: []
+        tipoAuto: s.tipoAuto, euroKm: s.euroKm,
+        // riga di viaggio già pronta: andata e ritorno dalla residenza (si aggiorna con la destinazione)
+        viaggi: [{ data: oggi, itinerario: '', km: '', itAuto: true }]
       });
     }
     cur = base;
@@ -278,6 +280,7 @@
               if ((c.k === 'dalle' || c.k === 'alle') && 'totale' in g) {
                 g.totale = durata(g.dalle, g.alle); row.querySelector('[data-k=totale]').value = g.totale;
               }
+              if (c.k === 'itinerario') g.itAuto = false;
               if (c.k === 'km' || c.k === 'itinerario') aggiornaKm();
             }
           });
@@ -314,8 +317,29 @@
     const ekm = numIt(cur.euroKm);
     let km = 0, tot = 0;
     for (const v of cur.viaggi) { const k = numIt(v.km); km += k; tot += Math.round(k * ekm * 100) / 100; }
+    const w = $('kmWarn');
+    if (w) {
+      const conViaggi = cur.viaggi.some(v => v.itinerario || numIt(v.km));
+      let msg = '';
+      if (!conViaggi) msg = 'Rimborso km: nessun viaggio inserito, nel Mod. 0693 il riquadro VIAGGIO resterà vuoto. Aggiungi una riga in "Viaggio con auto propria" se hai usato l\'auto.';
+      else if (!km) msg = 'Rimborso km: manca il numero di km nei viaggi.';
+      else if (!ekm) msg = 'Rimborso km: manca il coefficiente €/km, l\'importo resterà vuoto.';
+      else if (!cur.tipoAuto) msg = 'Rimborso km: manca il tipo di auto.';
+      w.textContent = msg; w.hidden = !msg;
+    }
     const el = $('kmTot');
     if (el) el.textContent = `${String(km).replace('.', ',')} km × ${ekm ? String(cur.euroKm).replace('.', ',') : '—'} €/km = € ${tot.toFixed(2).replace('.', ',')}`;
+  }
+
+  /** Itinerario proposto: luogo di partenza - destinazione - luogo di partenza. */
+  function itinerariAuto() {
+    const s = A().getSettings();
+    const base = s.luogo || s.residenza || '';
+    if (!cur.destinazione) return;
+    const it = base ? `${base} - ${cur.destinazione} - ${base}` : cur.destinazione;
+    const inputs = document.querySelectorAll('.g-viaggio [data-k=itinerario]');
+    cur.viaggi.forEach((v, i) => { if (v.itAuto) { v.itinerario = it; if (inputs[i]) inputs[i].value = it; } });
+    aggiornaKm();
   }
 
   function renderTrasferta(root) {
@@ -337,7 +361,7 @@
       section('Lettera di incarico (Mod. 0692)',
         grid('g3',
           input('Trasferta N°', 'numero', { max: 30 }), input('Data', 'data', { type: 'date' }),
-          input('Incaricato a recarsi a', 'destinazione', { max: 120, list: 'dlLuogo' })),
+          input('Incaricato a recarsi a', 'destinazione', { max: 120, list: 'dlLuogo', onInput: itinerariAuto })),
         grid('', input('Motivazione della trasferta', 'motivazione', { max: 200, span: true, list: 'dlMotivazione' })),
         grid('g3',
           input('Il richiedente', 'richiedente', { max: 120 }), input('C.I.D. N.', 'cid', { max: 40, inputmode: 'numeric' }),
@@ -359,7 +383,7 @@
         ], MAX_G, () => ({ data: cur.data || '', tipo: 'R', dalle: '', alle: '', totale: '', motivo: '' }), 'g-omessa')),
       section('Viaggio con auto propria (rimborso km)',
         grid('g3',
-          input('Tipo di auto', 'tipoAuto', { max: 120 }),
+          input('Tipo di auto', 'tipoAuto', { max: 120, onInput: aggiornaKm }),
           input('€/km (coefficiente ACI)', 'euroKm', { max: 12, inputmode: 'decimal', placeholder: 'es. 0,35', onInput: aggiornaKm })),
         tableRows(cur.viaggi, [
           { k: 'data', label: 'Data', type: 'date' }, { k: 'itinerario', label: 'Itinerario', max: 160 },
@@ -369,6 +393,7 @@
         hint("Solo per pronto intervento in linea quando non è possibile usare il mezzo aziendale. L'importo di ogni riga è km × €/km.")),
       section('Stampa',
         grid('g3', input('Data del giustificativo', 'dataGiustificativo', { type: 'date' })),
+        (() => { const w = document.createElement('p'); w.className = 'warn-box'; w.id = 'kmWarn'; w.hidden = true; return w; })(),
         pdfButtons(['0692', '0693']))
     );
     aggiornaKm();
@@ -386,7 +411,12 @@
   async function openPratica(id) {
     await flush();
     if (!cur || cur.id !== id) cur = await A().api('pratiche/' + id);
-    if (cur.tipo === 'trasferta') { cur.giornate ||= []; cur.omesse ||= []; cur.viaggi ||= []; }
+    if (cur.tipo === 'trasferta') {
+      cur.giornate ||= []; cur.omesse ||= []; cur.viaggi ||= [];
+      const s = A().getSettings();   // auto ed €/km mancanti: li prendo dalle impostazioni
+      if (!cur.tipoAuto && s.tipoAuto) cur.tipoAuto = s.tipoAuto;
+      if (!cur.euroKm && s.euroKm) cur.euroKm = s.euroKm;
+    }
     await loadModelli();
     A().show('praticaView');
     $('tabRep').hidden = false;
