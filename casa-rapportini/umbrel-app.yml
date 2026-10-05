@@ -1,0 +1,39 @@
+manifestVersion: 1
+id: casa-rapportini
+name: Rapportini
+tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
+icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
+category: files
+version: "1.0.0"
+port: 3444
+description: >-
+  Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
+  il "Rapporto giornaliero dell'agente" (Mod. 0444).
+
+
+  Inserisci i tuoi dati una volta sola: agente, qualifica, CID, residenza di servizio
+  e unità compaiono in ogni nuovo rapporto. Per ogni lavoro indichi luogo, treni,
+  descrizione, sigilli e orario: le ore, il totale e lo straordinario si calcolano da soli.
+  Luoghi e descrizioni già usati vengono suggeriti, e puoi copiare i lavori del giorno prima.
+
+
+  Registra anormalità, osservazioni e materiali, i moduli emessi (0229, 0452 e un terzo
+  codice), trasferte e surrogazioni. Stampa il modulo completo su foglio bianco oppure
+  solo i dati sul modulo prestampato, con calibrazione della posizione.
+
+
+  Riepilogo mensile di giorni, ore e straordinari, esportazione CSV e backup.
+  I dati restano sul tuo Umbrel.
+developer: VC Solutions
+website: https://github.com/vdanesi/umbrel-app-store
+submitter: VC Solutions
+submission: https://github.com/vdanesi/umbrel-app-store
+repo: https://github.com/vdanesi/umbrel-app-store
+support: https://github.com/vdanesi/umbrel-app-store/issues
+gallery: []
+releaseNotes: >-
+  Prima versione.
+dependencies: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""

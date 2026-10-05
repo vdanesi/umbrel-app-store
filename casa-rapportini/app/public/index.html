@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141414">
+<title>Rapportini</title>
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="tabbar">
+  <button class="tab tab-home" id="tabHome" title="Elenco dei rapporti">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1.5 1 7.5h2V14h4v-4h2v4h4V7.5h2z" fill="#ececec"/><path d="M8 1.5 1 7.5h2.2L8 3.4l4.8 4.1H15z" fill="var(--icon-home)"/><rect x="7" y="10" width="2" height="4" fill="var(--icon-home)"/></svg>
+    <span>Rapporti</span>
+  </button>
+  <div class="tab tab-active" id="tabRep" hidden>
+    <span class="tab-num">2.</span> <span id="tabRepName">Rapporto</span>
+    <button class="tab-close" id="tabRepClose" title="Chiudi">×</button>
+  </div>
+  <div class="tabbar-spacer"></div>
+  <span class="save-status" id="saveStatus"></span>
+  <button class="tab tab-new" id="tabSettings" title="Impostazioni">⚙ <span>Impostazioni</span></button>
+</header>
+
+<!-- ======= ELENCO ======= -->
+<main id="homeView" class="view home">
+  <div class="inner">
+    <div class="welcome">
+      <div class="logo-plaque"><img src="img/vc-solutions-logo.jpg" alt="VC Solutions" width="96" height="96"></div>
+      <div>
+        <p class="banner"><span class="c-green">• Rapportini •</span> <span class="c-yellow">(rapporto giornaliero dell'agente · Mod. 0444)</span></p>
+        <p>► Registra i <span class="c-magenta">lavori</span> della giornata: ore, totale e <span class="c-magenta">straordinario</span> si calcolano da soli.</p>
+        <p>► Stampa il <span class="c-magenta">modulo</span> già compilato, o solo i dati sul <span class="c-magenta">prestampato</span>.</p>
+        <p class="muted">► <span class="c-cyan">info</span> i dati restano sul tuo Umbrel.</p>
+      </div>
+    </div>
+
+    <div class="home-actions">
+      <button class="btn btn-primary" id="btnToday">+ Rapporto di oggi</button>
+      <label class="btn btn-date">Apri un altro giorno <input type="date" id="openDate"></label>
+    </div>
+
+    <div class="month-nav">
+      <button class="btn-icon" id="monthPrev" title="Mese precedente">◄</button>
+      <h2 id="monthTitle">—</h2>
+      <button class="btn-icon" id="monthNext" title="Mese successivo">►</button>
+    </div>
+    <div class="prompt-line" aria-hidden="true">
+      <span class="seg seg-date" id="plDays">—</span><span class="seg seg-time" id="plHours">—</span><span class="seg seg-path" id="plExtra">—</span><span class="cursor"></span>
+    </div>
+
+    <div id="repList" class="rep-list"></div>
+
+    <dl class="stats" id="monthStats"></dl>
+    <div class="row-actions">
+      <button class="btn" id="btnCsv">Esporta il mese in CSV</button>
+    </div>
+  </div>
+</main>
+
+<!-- ======= RAPPORTO ======= -->
+<main id="editView" class="view edit" hidden>
+  <div class="inner">
+    <div class="edit-head">
+      <h1 id="editTitle">Rapporto</h1>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="btnPreview">Anteprima e stampa</button>
+        <button class="btn" id="btnCopyPrev" title="Copia lavori e servizio dall'ultimo rapporto">Copia dal giorno prima</button>
+        <button class="btn btn-danger" id="btnDelete">Elimina</button>
+      </div>
+    </div>
+
+    <section class="box">
+      <h3><span class="c-cyan">#</span> Testata</h3>
+      <div class="form-grid g3">
+        <label>Agente <input id="hAgente" maxlength="120" autocomplete="name"></label>
+        <label>Qualifica <input id="hQualifica" maxlength="80"></label>
+        <label>CID <input id="hCid" maxlength="40" inputmode="numeric"></label>
+        <label>Rapporto del giorno <input type="date" id="hData"></label>
+        <label>Residenza di servizio <input id="hResidenza" maxlength="120"></label>
+        <label>Servizio <input id="hServizio" maxlength="120" list="dlServizio"></label>
+        <label>Unità <input id="hUnita" maxlength="120"></label>
+      </div>
+    </section>
+
+    <section class="box">
+      <h3><span class="c-cyan">#</span> Lavori <span class="muted small" id="lavCount"></span></h3>
+      <div id="lavori" class="rows"></div>
+      <div class="row-actions">
+        <button class="btn" id="btnAddLav">+ Aggiungi lavoro</button>
+      </div>
+    </section>
+
+    <section class="box">
+      <h3><span class="c-cyan">#</span> Anormalità · osservazioni · materiali <span class="muted small" id="anoCount"></span></h3>
+      <div id="anomalie" class="rows"></div>
+      <div class="row-actions">
+        <button class="btn" id="btnAddAno">+ Aggiungi riga</button>
+      </div>
+    </section>
+
+    <div class="two-col">
+      <section class="box">
+        <h3><span class="c-cyan">#</span> Moduli emessi</h3>
+        <div class="moduli" id="moduli"></div>
+        <p class="hint">Fino a 8 numeri per colonna. Il codice della terza colonna si imposta qui o nelle impostazioni.</p>
+      </section>
+
+      <section class="box">
+        <h3><span class="c-cyan">#</span> Riepilogo</h3>
+        <div class="riep">
+          <label>Totale ore <input id="rTotale" readonly class="auto" title="Somma delle ore dei lavori"></label>
+          <label>Ore straordinario
+            <input id="rStraord" placeholder="0:00" pattern="\d{1,3}:[0-5]\d">
+          </label>
+          <label class="check"><input type="checkbox" id="rStraordMan"> Inserisco io lo straordinario</label>
+          <p class="hint" id="straordHint"></p>
+          <label>Trasferte <input id="rTrasferte" maxlength="40"></label>
+          <label>Surrogazioni <input id="rSurrogazioni" maxlength="40"></label>
+        </div>
+      </section>
+    </div>
+
+    <section class="box">
+      <h3><span class="c-cyan">#</span> Note personali <span class="muted small">(non vanno sul modulo)</span></h3>
+      <textarea id="note" rows="3" maxlength="4000"></textarea>
+    </section>
+  </div>
+</main>
+
+<!-- ======= ANTEPRIMA ======= -->
+<main id="previewView" class="view preview" hidden>
+  <div class="preview-bar">
+    <button class="btn" id="btnBackEdit">◄ Torna al rapporto</button>
+    <div class="seg-switch" role="radiogroup" aria-label="Tipo di stampa">
+      <button class="sw active" data-mode="full" role="radio" aria-checked="true">Modulo completo</button>
+      <button class="sw" data-mode="overlay" role="radio" aria-checked="false">Solo dati (prestampato)</button>
+    </div>
+    <button class="btn btn-primary" id="btnPrint">Stampa</button>
+  </div>
+  <p class="hint preview-hint" id="previewHint"></p>
+  <div class="sheet-wrap" id="sheetWrap"><div class="sheet-scale" id="sheetScale"></div></div>
+</main>
+
+<!-- ======= IMPOSTAZIONI ======= -->
+<main id="settingsView" class="view settings" hidden>
+  <div class="inner">
+    <h1>Impostazioni</h1>
+
+    <section class="box">
+      <h3><span class="c-cyan">#</span> I tuoi dati</h3>
+      <p class="hint">Compilano da soli la testata di ogni nuovo rapporto.</p>
+      <div class="form-grid g3">
+        <label>Agente (cognome e nome) <input id="sAgente" maxlength="120"></label>
+        <label>Qualifica <input id="sQualifica" maxlength="80"></label>
+        <label>CID <input id="sCid" maxlength="40" inputmode="numeric"></label>
+        <label>Residenza di servizio <input id="sResidenza" maxlength="120"></label>
+        <label>Servizio abituale <input id="sServizio" maxlength="120"></label>
+        <label>Unità <input id="sUnita" maxlength="120"></label>
+      </div>
+    </section>
+
+    <section class="box">
+      <h3><span class="c-cyan">#</span> Orario e moduli</h3>
+      <div class="form-grid g3">
+        <label>Orario ordinario giornaliero <input id="sOrario" placeholder="8:00" pattern="\d{1,2}:[0-5]\d"></label>
+        <label>Codice 3ª colonna moduli emessi <input id="sCodice3" maxlength="12" placeholder="es. 0230"></label>
+      </div>
+      <p class="hint">Le ore oltre l'orario ordinario diventano straordinario (puoi sempre correggerlo a mano nel rapporto).</p>
+    </section>
+
+    <section class="box">
+      <h3><span class="c-cyan">#</span> Stampa sul modulo prestampato</h3>
+      <p class="hint">Stampa il foglio di prova su carta bianca, sovrapponilo al modulo in controluce e sposta il testo finché le crocette cadono sugli angoli delle tabelle. Valori in millimetri: X positivo sposta a destra, Y positivo sposta in basso.</p>
+      <div class="form-grid g3">
+        <label>Spostamento X (mm) <input type="number" id="sOffX" step="0.5" min="-30" max="30"></label>
+        <label>Spostamento Y (mm) <input type="number" id="sOffY" step="0.5" min="-30" max="30"></label>
+        <label>Scala (%) <input type="number" id="sScala" step="0.5" min="80" max="120"></label>
+      </div>
+      <div class="row-actions">
+        <button class="btn" id="btnTestPrint">Stampa foglio di prova</button>
+      </div>
+      <p class="hint">Nella finestra di stampa scegli <b>A4 orizzontale</b>, scala <b>100%</b> (non "adatta alla pagina") e margini <b>nessuno</b>.</p>
+    </section>
+
+    <section class="box">
+      <h3><span class="c-cyan">#</span> Backup</h3>
+      <div class="row-actions">
+        <a class="btn" href="api/backup" download>Scarica backup completo (.json)</a>
+        <label class="btn">Ripristina da backup<input type="file" id="restoreFile" accept=".json,application/json" hidden></label>
+      </div>
+      <p class="hint">Il ripristino aggiunge i rapporti mancanti; ti chiede prima se sovrascrivere quelli già presenti.</p>
+    </section>
+
+    <p class="muted small" id="versionInfo"></p>
+  </div>
+</main>
+
+<datalist id="dlServizio"></datalist>
+<datalist id="dlLuogo"></datalist>
+<datalist id="dlDescrizione"></datalist>
+<datalist id="dlLocalita"></datalist>
+<datalist id="dlAnomalia"></datalist>
+
+<!-- area di stampa: contiene il modulo durante la stampa -->
+<div id="printArea" class="print-area"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="modulo.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

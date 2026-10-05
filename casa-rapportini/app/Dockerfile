@@ -1,0 +1,13 @@
+# Rapportini: immagine per umbrelOS (amd64 e arm64), costruita da GitHub Actions.
+FROM node:22-alpine
+WORKDIR /app
+COPY package.json server.js ./
+COPY public ./public
+ENV NODE_ENV=production PORT=3444 DATA_DIR=/data
+# l'utente "node" ha UID 1000, lo stesso che Umbrel usa per i dati delle app
+RUN mkdir -p /data && chown node:node /data
+USER node
+EXPOSE 3444
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+  CMD wget -qO- http://127.0.0.1:3444/api/health || exit 1
+CMD ["node", "server.js"]

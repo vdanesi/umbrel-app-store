@@ -1,6 +1,6 @@
 # Scontrinaio per Umbrel
 
-Questa cartella è un **app store personale per umbrelOS** con due app: Scontrinaio e Camper Planner (vedi la sezione in fondo).
+Questa cartella è un **app store personale per umbrelOS** con tre app: Scontrinaio, Camper Planner e Rapportini (vedi le sezioni in fondo).
 Una volta aggiunto a Umbrel, Scontrinaio si installa e si apre come le altre app.
 Spese e foto sono salvate sull'Umbrel e le vedi da tutti i tuoi dispositivi.
 
@@ -16,6 +16,8 @@ casa-scontrinaio/
   data/                           ← dati sull'Umbrel (resta vuota nel repository)
 .github/workflows/camper-planner.yml ← GitHub costruisce l'immagine di Camper Planner
 casa-camper-planner/              ← stessa struttura: umbrel-app.yml, docker-compose.yml, app/, data/
+.github/workflows/rapportini.yml   ← GitHub costruisce l'immagine di Rapportini
+casa-rapportini/                  ← stessa struttura: umbrel-app.yml, docker-compose.yml, app/, data/
 ```
 
 **Perché serve l'immagine Docker.** Quando aggiorna un'app, Umbrel copia solo `docker-compose.yml`, `umbrel-app.yml` e pochi altri file di configurazione, mai il codice. Il codice viaggia quindi dentro un'immagine Docker che GitHub costruisce da solo, per Umbrel Home (x86) e Raspberry Pi (ARM), a ogni modifica.
@@ -155,3 +157,27 @@ Stessa procedura di Scontrinaio, con lo stesso numero di versione in:
 - `casa-camper-planner/docker-compose.yml` → `image: ghcr.io/vdanesi/camper-planner:<versione>`
 - `casa-camper-planner/app/package.json` → `version` (è la versione mostrata da `/api/health`)
 
+
+---
+
+# Rapportini
+
+Registro delle attività lavorative in ambito ferroviario che compila il **Rapporto giornaliero dell'agente (Mod. 0444)**. Un rapporto per ogni giorno, salvato sull'Umbrel in `data/rapporti/`.
+
+- Si installa da **Casa App Store → Rapportini** e si apre dall'icona, oppure su **http://umbrel.local:3444**.
+- Non ha account suoi: lo protegge la password di Umbrel. Non serve internet.
+- **Prima volta:** apri **Impostazioni** e inserisci agente, qualifica, CID, residenza di servizio, servizio abituale, unità e orario ordinario (per il calcolo dello straordinario). Compileranno da soli ogni nuovo rapporto.
+- **Ogni giorno:** "+ Rapporto di oggi", poi i lavori con *dalle/alle*: ore, totale e straordinario si calcolano da soli. Si salva da solo a ogni modifica. "Copia dal giorno prima" riprende lavori e testata dell'ultimo rapporto.
+- **Stampa:** "Anteprima e stampa" → *Modulo completo* (su foglio bianco) oppure *Solo dati* (sul modulo prestampato). Nella finestra di stampa: A4 orizzontale, scala 100%, margini nessuno.
+- **Calibrare il prestampato:** Impostazioni → "Stampa foglio di prova", sovrapponi il foglio al modulo in controluce e correggi Spostamento X/Y e Scala finché le crocette rosse cadono sugli angoli delle tabelle.
+- Il modulo ha 9 righe di lavori e 9 di anormalità, e 8 numeri per colonna nei moduli emessi: l'app non ne accetta di più. I testi lunghi vengono rimpiccioliti per entrare nella casella.
+- **Riepilogo del mese** nella pagina principale, **esportazione CSV** (una riga per lavoro, si apre con Excel) e **backup** completo in Impostazioni.
+
+### Solo la prima volta: rendi pubblica l'immagine
+Dopo la prima costruzione riuscita in **Actions** ("Immagine Docker Rapportini"), apri **Packages → rapportini → Package settings → Change visibility → Public**. L'immagine contiene solo il codice, nessun tuo rapporto.
+
+### Aggiornare Rapportini
+Stessa procedura di Scontrinaio, con lo stesso numero di versione in:
+- `casa-rapportini/umbrel-app.yml` → `version`
+- `casa-rapportini/docker-compose.yml` → `image: ghcr.io/vdanesi/rapportini:<versione>`
+- `casa-rapportini/app/package.json` → `version` (è la versione mostrata da `/api/health`)

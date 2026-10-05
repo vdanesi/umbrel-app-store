@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="#1c1c1c"/>
+  <!-- binari powerline -->
+  <path d="M0 206h92l14 14-14 14H0z" fill="#1296be"/>
+  <path d="M92 206h84l14 14-14 14H92l14-14z" fill="#0eb16c"/>
+  <path d="M176 206h80v28h-80l14-14z" fill="#bebe12"/>
+  <!-- foglio del rapporto -->
+  <rect x="58" y="34" width="140" height="156" fill="#ececec"/>
+  <rect x="98" y="24" width="60" height="22" rx="4" fill="#c8c8c8"/>
+  <rect x="106" y="30" width="44" height="10" fill="#1c1c1c"/>
+  <rect x="74" y="62" width="108" height="8" fill="#1c1c1c"/>
+  <rect x="74" y="82" width="52" height="6" fill="#545454"/><rect x="134" y="82" width="48" height="6" fill="#ff4dff"/>
+  <rect x="74" y="98" width="52" height="6" fill="#545454"/><rect x="134" y="98" width="48" height="6" fill="#ff4dff"/>
+  <rect x="74" y="114" width="52" height="6" fill="#545454"/><rect x="134" y="114" width="48" height="6" fill="#ff4dff"/>
+  <!-- binario -->
+  <rect x="74" y="150" width="108" height="5" fill="#1c1c1c"/>
+  <rect x="74" y="168" width="108" height="5" fill="#1c1c1c"/>
+  <rect x="80" y="144" width="7" height="35" fill="#3ab1ef"/>
+  <rect x="102" y="144" width="7" height="35" fill="#3ab1ef"/>
+  <rect x="124" y="144" width="7" height="35" fill="#3ab1ef"/>
+  <rect x="146" y="144" width="7" height="35" fill="#3ab1ef"/>
+  <rect x="168" y="144" width="7" height="35" fill="#3ab1ef"/>
+  <!-- spunta -->
+  <path d="M178 176l14 14 32-36" fill="none" stroke="#18ed93" stroke-width="12" stroke-linecap="square"/>
+</svg>

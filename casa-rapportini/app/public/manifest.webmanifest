@@ -1,0 +1,16 @@
+{
+  "name": "Rapportini",
+  "short_name": "Rapportini",
+  "description": "Rapporto giornaliero dell'agente (Mod. 0444)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1c1c1c",
+  "theme_color": "#141414",
+  "lang": "it",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
