@@ -7,7 +7,7 @@ services:
       APP_PORT: 8080
 
   web:
-    image: ghcr.io/vdanesi/vc-solutions-dashboard:1.6.1
+    image: ghcr.io/vdanesi/vc-solutions-dashboard:1.6.2
     init: true
     restart: on-failure
     environment:
@@ -17,7 +17,7 @@ services:
       - collector
 
   collector:
-    image: ghcr.io/vdanesi/vc-solutions-collector:1.6.1
+    image: ghcr.io/vdanesi/vc-solutions-collector:1.6.2
     init: true
     restart: on-failure
     environment:
