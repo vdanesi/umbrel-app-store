@@ -83,6 +83,24 @@
     } catch (e) { if (w) w.close(); A().toast(e.message, true); }
   }
 
+  /** PDF da un modulo aziendale con dati qualsiasi (usato anche dal rapporto giornaliero). */
+  async function pdfDaModulo(code, data, opts, download, nome) {
+    const w = download ? null : window.open('', '_blank');
+    try {
+      await loadModelli();
+      if (!modelli[code]) throw new Error(`Il modulo ${code} vuoto non è ancora stato caricato: ` + (A().getSettings()?.utente?.admin ? 'caricalo in Impostazioni → Moduli aziendali.' : "chiedi all'amministratore di caricarlo."));
+      await loadPdfLib();
+      const res = await fetch('api/modelli/' + code);
+      if (!res.ok) throw new Error(`Modulo ${code} non disponibile`);
+      const bytes = await ModuliPdf.fill(code, await res.arrayBuffer(), data, opts || {});
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      if (w) w.location.href = url;
+      else { const a = document.createElement('a'); a.href = url; a.download = nome || `Mod.${code}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) { if (w) w.close(); A().toast(e.message, true); }
+  }
+  async function haModello(code) { await loadModelli(); return !!modelli[code]; }
+
   // ---------- salvataggio ----------
   function schedule() {
     A().status('modificato…');
@@ -593,5 +611,5 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
   }
 
-  window.Pratiche = { init, route, renderModelliSettings, flush };
+  window.Pratiche = { init, route, renderModelliSettings, flush, pdfDaModulo, haModello };
 })();

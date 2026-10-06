@@ -70,7 +70,10 @@
     <div class="edit-head">
       <h1 id="editTitle">Rapporto</h1>
       <div class="row-actions">
-        <button class="btn btn-primary" id="btnPreview">Anteprima e stampa</button>
+        <button class="btn btn-primary" id="btnPdf0444" title="Modulo ufficiale compilato, da stampare su A4">PDF Mod. 0444</button>
+        <button class="btn" id="btnPdf0444Dl" title="Salva il PDF del Mod. 0444">Scarica PDF</button>
+        <button class="btn" id="btnCopertina" title="Copertina del blocchetto con i tuoi dati">Copertina</button>
+        <button class="btn" id="btnPreview" title="Solo i dati, da stampare sul blocchetto cartaceo prestampato">Stampa su prestampato</button>
         <button class="btn" id="btnCopyPrev" title="Copia lavori e servizio dall'ultimo rapporto">Copia dal giorno prima</button>
         <button class="btn btn-danger" id="btnDelete">Elimina</button>
       </div>
@@ -254,7 +257,7 @@
     </section>
 
     <section class="box">
-      <h3><span class="c-cyan">#</span> Moduli aziendali (congedi e trasferte)</h3>
+      <h3><span class="c-cyan">#</span> Moduli aziendali (PDF da compilare)</h3>
       <p class="hint">Carica una volta i PDF vuoti dei moduli: restano solo sul tuo Umbrel e l'app li compila con i tuoi dati.</p>
       <div id="modelliList" class="modelli-list"></div>
       <div class="form-grid g3" style="margin-top:14px">

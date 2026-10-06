@@ -7,6 +7,7 @@
   'use strict';
 
   const MODELLI = {
+    '0444': { titolo: "Rapporto giornaliero dell'agente", file: 'Mod. 0444' },
     '0319': { titolo: 'Domanda di congedo', file: 'Mod. 0319' },
     '0692': { titolo: 'Lettera di incarico trasferta', file: 'Mod. 0692' },
     '0693': { titolo: 'Giustificativo trasferta', file: 'Mod. 0693' }
@@ -53,6 +54,50 @@
     const text = (s, x, y, size = 9, f = font) => { if (s) page.drawText(safe(s), { x, y, size, font: f, color: ink }); };
 
     const D = data || {};
+    /** Corpo del carattere che fa stare il testo nella casella (larghezza in punti). */
+    const fit = (t, w, max = 7.5, min = 4.5) => { let z = max; const tt = safe(t); while (z > min && font.widthOfTextAtSize(tt, z) > w - 3) z -= 0.25; return z; };
+    const widthOf = name => { try { return form.getTextField(name).acroField.getWidgets()[0].getRectangle().width; } catch { return 100; } };
+    const setFit = (name, value, max = 7.5, align) => {
+      set(name, value, fit(value, widthOf(name), max));
+      if (align != null) { try { form.getTextField(name).setAlignment(align); } catch { /* ignoro */ } }
+    };
+    const { TextAlignment: TA } = root.PDFLib;
+
+    if (code === '0444') {
+      const h = D.testata || {};
+      // pagina 1: copertina del blocchetto
+      setFit('DELLAGENTE', h.agente, 10); setFit('CID', h.cid, 10); setFit('QUALIFICA', h.qualifica, 10);
+      setFit('SERVIZIO', h.servizio, 10); setFit('UNITÀ', h.unita, 10);
+      // pagina 2: rapporto del giorno
+      setFit('AGENTE', h.agente, 8); setFit('QUALIFICA_2', h.qualifica, 8); setFit('CID_2', h.cid, 8);
+      setFit('RAPPORTO DEL GIORNO', dmy(D.data), 8);
+      setFit('RESIDENZA DI SERVIZIO', h.residenza, 8); setFit('SERVIZIO_2', h.servizio, 8); setFit('UNITÀ_2', h.unita, 8);
+      (D.lavori || []).slice(0, 9).forEach((l, i) => {
+        const r = 'Row' + (i + 1);
+        setFit('luogo di lavoro' + r, l.luogo, 7.5, TA.Left); setFit('treni usufr N' + r, l.treni, 6.5);
+        setFit('DESCRIZIONE DEL LAVORO' + r, l.descrizione, 7.5, TA.Left); setFit('sigilli tolti' + r, l.sigilli, 6.5);
+        setFit('dalle' + r, l.dalle, 6.5); setFit('alle' + r, l.alle, 6.5); setFit('ORE' + r, l.ore, 6.5);
+      });
+      (D.anomalie || []).slice(0, 9).forEach((a, i) => {
+        const r = 'Row' + (i + 1);
+        setFit('località' + r, a.localita, 7.5, TA.Left); setFit('ANORMALITÀ OSSERVAZIONI MATERIALI' + r, a.testo, 7.5, TA.Left);
+      });
+      const mo = D.moduli || {};
+      const k1 = i => 'N0' + (i + 1), k2 = i => '0452N' + (i ? '_' + (i + 1) : ''), k3 = i => 'N' + (i ? '_' + (i + 1) : '');
+      (mo.m0229 || []).slice(0, 8).forEach((n, i) => setFit(k1(i), n, 6.5, TA.Right));
+      (mo.m0452 || []).slice(0, 8).forEach((n, i) => setFit(k2(i), n, 6.5));
+      (mo.m3 || []).slice(0, 8).forEach((n, i) => setFit(k3(i), n, 6.5));
+      if (mo.codice3) {   // intestazione della terza colonna ("....." sul modulo)
+        const p2 = doc.getPages()[1];
+        p2.drawRectangle({ x: 479, y: 185, width: 20, height: 9, color: rgb(1, 1, 1) });
+        const t = safe(mo.codice3), z = fit(t, 22, 6.5);
+        p2.drawText(t, { x: 489 - font.widthOfTextAtSize(t, z) / 2, y: 187.5, size: z, font: bold, color: ink });
+      }
+      const rr = D.riepilogo || {};
+      setFit('totale ore', rr.totaleOre, 7, TA.Center); setFit('ore straord', rr.oreStraord, 7, TA.Center);
+      setFit('trasferte', rr.trasferte, 7, TA.Center); setFit('surrogazioni', rr.surrogazioni, 7, TA.Center);
+    }
+
     if (code === '0319') {
       const anno = D.anno || (parts(D.dal) || parts(D.dataDomanda) || {}).y || '';
       const dd = parts(D.dataDomanda);
@@ -150,6 +195,11 @@
     form.updateFieldAppearances(font);
     // il testo diventa parte della pagina: si vede nero e uguale in ogni visualizzatore e in stampa
     if (opts.appiattisci !== false) { try { form.flatten(); } catch (e) { console.warn('Appiattimento non riuscito', e); } }
+    // Mod. 0444: di solito serve solo la pagina del rapporto; la copertina del blocchetto è facoltativa
+    if (code === '0444' && doc.getPageCount() > 1) {
+      if (opts.soloCopertina) doc.removePage(1);
+      else if (!opts.copertina) doc.removePage(0);
+    }
     return doc.save();
   }
 

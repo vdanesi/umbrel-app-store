@@ -4,7 +4,7 @@ name: Rapportini
 tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
 category: files
-version: "2.0.0"
+version: "2.1.0"
 port: 3444
 description: >-
   Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
@@ -38,12 +38,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Account personali: pagina di accesso e registrazione, ogni utente vede solo i propri
-  rapporti, pratiche e impostazioni. Il primo account creato è l'amministratore e riceve
-  i dati già salvati. L'amministratore può aprire o chiudere le registrazioni, azzerare
-  la password di un utente (password temporanea da cambiare al primo accesso), nominare
-  altri amministratori ed eliminare account. Umbrel non chiede più la sua password per
-  questa app.
+  Il rapporto giornaliero ora compila il Mod. 0444 ufficiale in PDF, come gli altri
+  moduli: l'amministratore carica una volta il PDF vuoto in Impostazioni e ogni rapporto
+  ha i pulsanti "PDF Mod. 0444", "Scarica PDF" e "Copertina" del blocchetto. Resta la
+  stampa dei soli dati sul blocchetto prestampato.
 dependencies: []
 path: ""
 defaultUsername: ""

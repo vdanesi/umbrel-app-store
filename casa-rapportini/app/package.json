@@ -1,6 +1,6 @@
 {
   "name": "rapportini",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Rapporto giornaliero dell'agente (Mod. 0444), self-hosted per Umbrel",
   "main": "server.js",
   "type": "module",

@@ -19,7 +19,7 @@ const COOKIE = 'rapportini_sessione';
 const SESSION_DAYS = 30, SESSION_HOURS_SHORT = 12;
 const NAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 const MOD_DIR = path.join(DATA_DIR, 'modelli');       // PDF vuoti dei moduli aziendali (caricati dall'utente)
-const MODELLI = ['0319', '0692', '0693'];
+const MODELLI = ['0444', '0319', '0692', '0693'];
 const DIST_FILE = path.join(DATA_DIR, 'distanze.json');   // cache di località e percorsi già calcolati
 const NOMINATIM_URL = process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org';
 const OSRM_URL = process.env.OSRM_URL || 'https://router.project-osrm.org';

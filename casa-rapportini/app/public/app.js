@@ -427,6 +427,20 @@
       toast('Copiati i lavori del ' + p.data.split('-').reverse().join('/'));
     };
     $('btnPreview').onclick = async () => { await flushSave(); go('#/r/' + rep.data + '/stampa'); };
+    const pdf0444 = async (download, opts) => {
+      await flushSave();
+      const data = JSON.parse(JSON.stringify(rep));
+      data.lavori = data.lavori.filter(l => Object.values(l).some(Boolean));
+      const st = settings || {};   // testata vuota (rapporti vecchi): uso i dati delle impostazioni
+      for (const [k, sk] of [['agente', 'agente'], ['qualifica', 'qualifica'], ['cid', 'cid'], ['residenza', 'residenza'], ['servizio', 'servizio'], ['unita', 'unita']]) {
+        if (!data.testata[k]) data.testata[k] = st[sk] || '';
+      }
+      const nome = opts?.soloCopertina ? 'Mod.0444 copertina.pdf' : `Mod.0444 rapporto ${rep.data}.pdf`;
+      await Pratiche.pdfDaModulo('0444', data, opts, download, nome);
+    };
+    $('btnPdf0444').onclick = () => pdf0444(false);
+    $('btnPdf0444Dl').onclick = () => pdf0444(true);
+    $('btnCopertina').onclick = () => pdf0444(false, { soloCopertina: true });
   }
 
   // ---------- anteprima e stampa ----------
