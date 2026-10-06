@@ -2,6 +2,7 @@ manifestVersion: 1
 id: casa-vc-solutions
 name: VC Solutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
+icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
 version: "1.4.0"
 port: 3959
