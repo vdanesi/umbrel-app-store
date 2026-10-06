@@ -3,19 +3,18 @@ id: casa-vc-solutions
 name: VC Solutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 category: files
-version: "1.3.1"
+version: "1.4.0"
 port: 3959
 description: >-
   Dashboard personale VC Solutions dedicata a IT, Homelab, Networking e Camper.
 
 
-  La sezione IT & Homelab raccoglie host, servizi, container, stato infrastruttura
-  e indicatori CPU, RAM e storage. La struttura è pronta per integrare metriche reali
-  dei server nelle versioni successive.
+  Include monitoraggio live dell'host Umbrel tramite VC Solutions Collector,
+  inventario Docker e la nuova sezione Network, con interfaccia VC Solutions UI v1.0.
 
 
-  Include inoltre le basi per progetti, Camper Planner, viaggi, POI e download,
-  con interfaccia responsive VC Solutions UI.
+  La struttura è predisposta per le successive integrazioni ICMP, SNMP, CasaOS,
+  progetti, Camper Planner, viaggi, POI e download.
 developer: VC Solutions
 website: https://github.com/vdanesi/vc-solutions-dashboard
 submitter: VC Solutions
@@ -24,9 +23,9 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Collegamento live Dashboard-Collector completato. La pagina Homelab mostra ora
-  CPU, RAM, storage, uptime e inventario/stato dei container reali dell'host Umbrel,
-  con refresh automatico ogni 10 secondi.
+  Versione 1.4.0: nuova sezione Network in VC Solutions UI v1.0,
+  Dashboard e Collector allineati alla stessa release e correzione del Collector
+  con Docker CLI per l'inventario reale dei container.
 dependencies: []
 path: ""
 defaultUsername: ""
