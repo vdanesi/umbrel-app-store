@@ -4,14 +4,14 @@ name: VC Solutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.5.0"
+version: "1.6.0"
 port: 3959
 description: >-
   Dashboard personale VC Solutions dedicata a IT, Homelab, Networking e Camper.
 
 
   Include monitoraggio live dell'host Umbrel tramite VC Solutions Collector,
-  inventario Docker e la nuova sezione Network, con interfaccia VC Solutions UI v1.0.
+  inventario Docker e Network Live con controllo ICMP, latenza e stato dei nodi.
 
 
   La struttura è predisposta per le successive integrazioni ICMP, SNMP, CasaOS,
