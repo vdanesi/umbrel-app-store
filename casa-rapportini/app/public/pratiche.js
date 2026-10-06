@@ -61,7 +61,7 @@
     const s = A().getSettings();
     const data = { ...cur, tipoAuto: cur.tipoAuto || s.tipoAuto, euroKm: cur.euroKm || s.euroKm };
     if (data.tipo === 'trasferta' && data.autoPropria !== false && !data.viaggi.some(v => v.itinerario || v.km)) data.viaggi = viaggiDaGiornate();
-    const bytes = await ModuliPdf.fill(code, await res.arrayBuffer(), data);
+    const bytes = await ModuliPdf.fill(code, await res.arrayBuffer(), data, { appiattisci: cur.pdfModificabile === false });
     return new Blob([bytes], { type: 'application/pdf' });
   }
   function fileName(code) {
@@ -160,7 +160,7 @@
     const base = { id: uid(), tipo };
     if (tipo === 'congedo') {
       Object.assign(base, {
-        anno: oggi.slice(0, 4), servizio: s.servizio, unita: s.unita, nome: s.agente, qualifica: s.qualifica,
+        anno: '', campi: {}, servizio: s.servizio, unita: s.unita, nome: s.agente, qualifica: s.qualifica,
         residenza: s.residenza, assunto: s.assunto, cid: s.cid, motivo: '', giornate: '', giornateManuale: false,
         dal: '', al: '', luogo: s.luogo || s.residenza, dataDomanda: oggi, recapito: s.recapito
       });
@@ -236,31 +236,88 @@
     if (h) h.textContent = `${c.lav} lavorativi (lun–ven, senza festivi) su ${c.cal} di calendario.` + (cur.giornateManuale ? ' Valore inserito a mano.' : '');
   }
 
+  /** Domanda di congedo: una casella per ogni campo del Mod. 0319, raggruppate come sul modulo. */
   function renderCongedo(root) {
-    const gi = input('Giornate N.', 'giornate', { inputmode: 'numeric', max: 6, onInput: i => { cur.giornateManuale = i.value.trim() !== ''; aggiornaGiorni(); }, hintId: 'hintGiorni' });
-    gi.querySelector('input').id = 'inGiornate';
-    root.append(
-      section('Periodo',
-        grid('g3',
-          input('Dal', 'dal', { type: 'date', onInput: aggiornaGiorni }),
-          input('Al', 'al', { type: 'date', onInput: aggiornaGiorni }),
-          gi),
-        grid('',
-          input('Tipo di congedo / note (riga sotto la residenza)', 'motivo', { max: 120, list: 'dlMotivoCongedo', placeholder: 'es. Ferie', span: true }))),
-      section('Richiedente',
-        grid('g3',
-          input('Cognome e nome', 'nome', { max: 120 }), input('Qualifica', 'qualifica', { max: 80 }), input('C.I.D.', 'cid', { max: 40, inputmode: 'numeric' }),
-          input('Residenza', 'residenza', { max: 120 }), input('Assunto in servizio il', 'assunto', { type: 'date' }), input('Anno di concessione', 'anno', { max: 4, inputmode: 'numeric' }),
-          input('Servizio', 'servizio', { max: 120 }), input('Unità organizzativa', 'unita', { max: 120 }))),
-      section('Firma della domanda',
-        grid('g3',
-          input('Luogo (", lì")', 'luogo', { max: 60 }), input('Data della domanda', 'dataDomanda', { type: 'date' }),
-          input("Recapito durante l'assenza", 'recapito', { max: 120 })),
-        hint('Parere del capo, decisione del responsabile ed esito restano vuoti: li compilano loro.')),
-      section('Stampa', pdfButtons(['0319']),
-        hint('Il PDF contiene le tre parti del modulo (domanda, esito, ricevuta) con i tuoi dati già scritti. Stampalo su A4 al 100%.'))
-    );
+    cur.campi ||= {};
+    const M = ModuliPdf;
+    const derivati = [];   // caselle con valore proposto: si aggiornano quando cambiano i dati principali
+    const aggiornaDerivati = () => derivati.forEach(({ c, i, r }) => {
+      const man = cur.campi[c.f] != null;
+      if (!man && i !== document.activeElement) i.value = M.valore0319(c, cur);
+      i.classList.toggle('auto', !man && !!c.def);
+      r.hidden = !man || !c.def;
+    });
+
+    function casella(c) {
+      if (c.key === 'giornate') {
+        const gi = input(c.label, 'giornate', { inputmode: 'numeric', max: 6, hintId: 'hintGiorni',
+          onInput: i => { cur.giornateManuale = i.value.trim() !== ''; aggiornaGiorni(); aggiornaDerivati(); } });
+        gi.querySelector('input').id = 'inGiornate';
+        return gi;
+      }
+      if (c.key) {
+        const opts = { max: 120, onInput: () => { if (c.key === 'dal' || c.key === 'al') aggiornaGiorni(); aggiornaDerivati(); } };
+        if (c.data || c.key === 'dataDomanda') opts.type = 'date';
+        if (c.key === 'motivo') opts.list = 'dlMotivoCongedo';
+        if (c.key === 'anno') { opts.max = 4; opts.inputmode = 'numeric'; }
+        if (c.key === 'cid') opts.inputmode = 'numeric';
+        if (c.largo) opts.span = true;
+        return input(c.label, c.key, opts);
+      }
+      // campo proprio del modulo (valore scritto a mano o proposto)
+      const l = document.createElement('label');
+      if (c.largo) l.className = 'span2';
+      const head = document.createElement('span'); head.className = 'lbl-row'; head.append(c.label);
+      const r = document.createElement('button'); r.type = 'button'; r.className = 'btn-icon mini'; r.textContent = '↺'; r.title = 'Torna al valore proposto';
+      head.appendChild(r);
+      const i = document.createElement('input'); i.maxLength = 200; i.value = M.valore0319(c, cur);
+      i.addEventListener('input', () => { cur.campi[c.f] = i.value; aggiornaDerivati(); schedule(); });
+      r.onclick = () => { delete cur.campi[c.f]; aggiornaDerivati(); schedule(); };
+      l.append(head, i);
+      derivati.push({ c, i, r });
+      return l;
+    }
+
+    // dati principali che non sono un campo del modulo ma ne generano altri
+    const extra = {
+      firma: [input('Data della domanda', 'dataDomanda', { type: 'date', onInput: aggiornaDerivati })]
+    };
+    for (const [sez, titolo, aperta] of M.SEZIONI_0319) {
+      const campi = M.CAMPI_0319.filter(c => c.sez === sez);
+      const g = grid('g3', ...(extra[sez] || []), ...campi.map(casella));
+      const azioni = [];
+      if (sez === 'ricevuta') {
+        azioni.push(btn('Compila con i miei dati', '', () => {
+          for (const c of campi) if (c.ric) cur.campi[c.f] = c.ric(cur);
+          schedule(); render();
+        }));
+      }
+      const pieno = campi.some(c => !c.key && cur.campi[c.f]);
+      if (aperta) {
+        root.append(section(titolo, g, ...(azioni.length ? [(() => { const d = document.createElement('div'); d.className = 'row-actions'; d.append(...azioni); return d; })()] : [])));
+      } else {
+        const d = document.createElement('details'); d.className = 'box sez-0319'; d.open = pieno;
+        const sm = document.createElement('summary'); sm.innerHTML = '<span class="c-cyan">#</span> '; sm.append(titolo);
+        const nota = document.createElement('span'); nota.className = 'muted small'; nota.textContent = sez === 'ricevuta' ? '  (di solito la compila il capo)' : '  (la compila chi decide)';
+        sm.appendChild(nota);
+        d.append(sm, g);
+        if (azioni.length) { const ra = document.createElement('div'); ra.className = 'row-actions'; ra.append(...azioni); d.appendChild(ra); }
+        root.append(d);
+      }
+    }
+    root.append(section('Stampa', modificabile(), pdfButtons(['0319']),
+      hint('Il PDF contiene domanda, esito e ricevuta. Le caselle con ↺ hanno un valore proposto dai tuoi dati: puoi scriverci sopra e tornare al valore proposto con ↺.')));
     aggiornaGiorni();
+    aggiornaDerivati();
+  }
+
+  /** Scelta: PDF con i campi ancora compilabili, oppure testo fisso nella pagina. */
+  function modificabile() {
+    const l = document.createElement('label'); l.className = 'check';
+    const c = document.createElement('input'); c.type = 'checkbox'; c.checked = cur.pdfModificabile !== false;
+    c.onchange = () => { cur.pdfModificabile = c.checked; schedule(); };
+    l.append(c, ' PDF con i campi ancora compilabili (modificabile dopo con un lettore PDF)');
+    return l;
   }
 
   // ---- trasferta ----
@@ -506,6 +563,7 @@
       section('Stampa',
         grid('g3', input('Data del giustificativo', 'dataGiustificativo', { type: 'date' })),
         (() => { const w = document.createElement('p'); w.className = 'warn-box'; w.id = 'kmWarn'; w.hidden = true; return w; })(),
+        modificabile(),
         pdfButtons(['0692', '0693']))
     );
     aggiornaKm();
@@ -604,7 +662,7 @@
         copy.data = oggi; copy.dataGiustificativo = oggi;
         copy.giornate = [{ data: oggi, tipo: 'R', dalle: '', alle: '', totale: '' }]; copy.omesse = [];
         copy.viaggi = copy.viaggi.map(v => ({ ...v, data: oggi }));
-      } else { copy.dal = ''; copy.al = ''; copy.giornate = ''; copy.giornateManuale = false; copy.dataDomanda = oggi; }
+      } else { copy.dal = ''; copy.al = ''; copy.giornate = ''; copy.giornateManuale = false; copy.dataDomanda = oggi; copy.campi = {}; }
       cur = copy; await save();
       A().go('#/m/' + cur.id); A().toast('Copia creata: controlla date e numero.');
     };

@@ -373,3 +373,9 @@ code { font-family: var(--mono); color: var(--accent-cyan); }
   .user-row { grid-template-columns: 1fr; }
   .user-row .u-actions { justify-content: flex-start; }
 }
+
+/* Mod. 0319: sezioni del modulo */
+details.sez-0319 > summary { cursor: pointer; font: 700 14px/20px var(--mono); margin-bottom: 4px; }
+details.sez-0319[open] > summary { margin-bottom: 10px; }
+.lbl-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.btn-icon.mini { font-size: 12px; line-height: 16px; padding: 0 4px; }

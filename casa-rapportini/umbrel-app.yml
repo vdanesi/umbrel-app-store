@@ -4,7 +4,7 @@ name: Rapportini
 tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
 category: files
-version: "2.1.0"
+version: "2.2.0"
 port: 3444
 description: >-
   Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
@@ -38,10 +38,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Il rapporto giornaliero ora compila il Mod. 0444 ufficiale in PDF, come gli altri
-  moduli: l'amministratore carica una volta il PDF vuoto in Impostazioni e ogni rapporto
-  ha i pulsanti "PDF Mod. 0444", "Scarica PDF" e "Copertina" del blocchetto. Resta la
-  stampa dei soli dati sul blocchetto prestampato.
+  Domanda di congedo (Mod. 0319) con tutti i campi del modulo, ognuno modificabile:
+  domanda, firma, parere del capo, decisione del responsabile, esito e ricevuta. I campi
+  dell'esito sono proposti dai tuoi dati ma si possono riscrivere. I PDF di congedi e
+  trasferte possono restare compilabili per modificarli dopo con un lettore PDF.
 dependencies: []
 path: ""
 defaultUsername: ""

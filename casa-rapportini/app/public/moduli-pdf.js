@@ -32,6 +32,83 @@
   const WIN_EXTRA = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
   const safe = s => String(s ?? '').replace(/[\r\n\t]+/g, ' ').split('').filter(c => c.charCodeAt(0) < 256 || WIN_EXTRA.includes(c)).join('');
 
+  // ---------- Mod. 0319: tutti i campi del modulo ----------
+  const dmyDash = iso => { const p = parts(iso); return p ? `${p.d}-${p.m}-${p.y}` : ''; };
+  const ggmm = iso => { const p = parts(iso); return p ? `${p.d}-${p.m}-` : ''; };
+  const aa = iso => { const p = parts(iso); return p ? p.yy : ''; };
+  /* sez: dove sta nel modulo · key: dato principale della pratica · def: valore proposto (modificabile)
+     data: il dato principale è una data (AAAA-MM-GG) da scrivere come gg-mm-aaaa */
+  const CAMPI_0319 = [
+    // DOMANDA DI CONGEDO — da compilare a cura del richiedente
+    { sez: 'dom', f: 'SERVIZIO_1', label: 'Servizio', key: 'servizio' },
+    { sez: 'dom', f: 'UNITÀ ORGANIZZATIVA', label: 'Unità organizzativa', key: 'unita', size: 8 },
+    { sez: 'dom', f: 'ANNO_CONCESSIONE', label: 'Concessione anno (casella grigia)', key: 'anno' },
+    { sez: 'dom', f: 'Cognome e nome_1', label: 'Cognome e nome', key: 'nome' },
+    { sez: 'dom', f: 'qualiﬁca', label: 'Qualifica', key: 'qualifica' },
+    { sez: 'dom', f: 'aznediser', label: 'Residenza', key: 'residenza' },
+    { sez: 'dom', f: 'lioizivresniotnussa', label: 'Assunto in servizio il', key: 'assunto', data: true, size: 8.5 },
+    { sez: 'dom', f: 'D', label: 'C.I.D.', key: 'cid' },
+    { sez: 'dom', f: 'Giornate N', label: 'Riga libera (es. tipo di congedo)', key: 'motivo', largo: true },
+    { sez: 'dom', f: 'lad_3', label: 'Giornate N.', key: 'giornate' },
+    { sez: 'dom', f: 'lad_4', label: 'Dal', key: 'dal', data: true },
+    { sez: 'dom', f: 'la_2', label: 'Al', key: 'al', data: true },
+    // firma della domanda
+    { sez: 'firma', f: 'ìl,_4', label: 'Luogo (", lì")', key: 'luogo', size: 8.5 },
+    { sez: 'firma', f: 'ìl,_5', label: 'Data (gg-mm-)', def: D => ggmm(D.dataDomanda), allinea: 'destra' },
+    { sez: 'firma', f: 'ANNO', label: 'Anno dopo "20"', def: D => aa(D.dataDomanda) },
+    { sez: 'firma', f: 'IL RICHIEDENTE', label: 'Il richiedente (nome sulla riga della firma)', def: D => D.nome || '' },
+    { sez: 'firma', f: 'Campo di testo0', label: "Recapito durante l'assenza", key: 'recapito', size: 8.5 },
+    // parere del capo immediato
+    { sez: 'capo', f: 'Campo di testo5', label: 'Parere del capo immediato — riga 1' },
+    { sez: 'capo', f: 'parere del Capo immediato', label: 'Parere del capo immediato — riga 2' },
+    // decisione o parere del responsabile (sulla domanda)
+    { sez: 'resp', f: 'Campo di testo1', label: 'Decisione o parere — riga 1' },
+    { sez: 'resp', f: 'Campo di testo2', label: 'Decisione o parere — riga 2' },
+    { sez: 'resp', f: 'Campo di testo3', label: 'Luogo (", lì")' },
+    { sez: 'resp', f: 'Campo di testo4', label: 'Data' },
+    // ESITO DOMANDA DI CONGEDO — parte del richiedente
+    { sez: 'esito', f: 'SERVIZIO_2', label: 'Servizio', def: D => D.servizio || '' },
+    { sez: 'esito', f: 'Cognome e nome', label: 'Cognome e nome', def: D => D.nome || '' },
+    { sez: 'esito', f: 'qualifica', label: 'Qualifica', def: D => D.qualifica || '' },
+    { sez: 'esito', f: 'residenza', label: 'Residenza', def: D => D.residenza || '' },
+    { sez: 'esito', f: 'lad', label: 'Giornate N.', def: D => D.giornate || '' },
+    { sez: 'esito', f: 'lad_1', label: 'Dal', def: D => dmyDash(D.dal) },
+    { sez: 'esito', f: 'la', label: 'Al', def: D => dmyDash(D.al) },
+    // esito — decisione del responsabile
+    { sez: 'decisione', f: 'issecnocinroiG', label: 'Giorni concessi' },
+    { sez: 'decisione', f: 'lad_2', label: 'Dal' },
+    { sez: 'decisione', f: 'la_1', label: 'Al' },
+    { sez: 'decisione', f: 'issecnocinroiG_1', label: 'Riga libera', largo: true },
+    { sez: 'decisione', f: 'ìl,', label: 'Luogo (", lì")' },
+    { sez: 'decisione', f: 'ìl,_1', label: 'Data' },
+    { sez: 'decisione', f: 'IL RESPONSABILE', label: 'Il responsabile' },
+    // RICEVUTA DOMANDA DI CONGEDO
+    { sez: 'ricevuta', f: 'SERVIZIO', label: 'Servizio', ric: D => D.servizio || '' },
+    { sez: 'ricevuta', f: 'L’agente', label: "L'agente", ric: D => D.nome || '' },
+    { sez: 'ricevuta', f: 'qualiﬁca_1', label: 'Qualifica', ric: D => D.qualifica || '' },
+    { sez: 'ricevuta', f: 'atadniotatneserpah', label: 'Ha presentato in data', ric: D => dmyDash(D.dataDomanda) },
+    { sez: 'ricevuta', f: 'domanda per la concessione', label: 'Domanda per la concessione di giorni', ric: D => D.giornate || '' },
+    { sez: 'ricevuta', f: 'ìl,_2', label: 'Luogo (", lì")' },
+    { sez: 'ricevuta', f: 'ìl,_3', label: 'Data' },
+    { sez: 'ricevuta', f: 'IL CAPO DIRETTO', label: 'Il capo diretto' }
+  ];
+  const SEZIONI_0319 = [
+    ['dom', 'Domanda di congedo — dati del richiedente', true],
+    ['firma', 'Domanda — luogo, data e firma', true],
+    ['capo', 'Parere del capo immediato', false],
+    ['resp', 'Decisione o parere del responsabile', false],
+    ['esito', 'Esito domanda — dati del richiedente', true],
+    ['decisione', 'Esito — decisione del responsabile', false],
+    ['ricevuta', 'Ricevuta domanda di congedo', false]
+  ];
+  /** Valore di un campo: dato principale, valore scritto a mano, oppure quello proposto. */
+  function valore0319(c, D) {
+    if (c.key) { const v = D[c.key] ?? ''; return c.data ? dmyDash(v) : String(v); }
+    const man = D.campi?.[c.f];
+    if (man != null) return String(man);
+    return c.def ? c.def(D) : '';
+  }
+
   async function fill(code, templateBytes, data, opts = {}) {
     const { PDFDocument, StandardFonts, rgb } = root.PDFLib;
     const doc = await PDFDocument.load(templateBytes, { ignoreEncryption: true });
@@ -99,42 +176,14 @@
     }
 
     if (code === '0319') {
-      const anno = D.anno || (parts(D.dal) || parts(D.dataDomanda) || {}).y || '';
-      const dd = parts(D.dataDomanda);
-      // ---- domanda ----
-      text(anno, 349, 750.5, 10, bold);                       // casella "concessione ANNO"
-      set('SERVIZIO_1', D.servizio);
-      set('UNITÀ ORGANIZZATIVA', D.unita, 8);
-      set('Cognome e nome_1', D.nome);
-      set('qualiﬁca', D.qualifica);
-      set('aznediser', D.residenza);                          // residenza
-      set('lioizivresniotnussa', dmy(D.assunto), 8.5);        // assunto in servizio il
-      set('D', D.cid);                                        // C.I.D.
-      set('Giornate N', D.motivo);                            // riga libera sotto la residenza
-      set('lad_3', D.giornate);                               // Giornate N.
-      set('lad_4', dmy(D.dal));
-      set('la_2', dmy(D.al));
-      set('ìl,_4', D.luogo, 8.5);                             // luogo, lì
-      if (dd) {                                               // ", lì gg/mm/ 20aa": il "20" è già stampato
-        set('ìl,_5', `${dd.d}/${dd.m}/`);
-        try { form.getTextField('ìl,_5').setAlignment(root.PDFLib.TextAlignment.Right); } catch { /* ignoro */ }
-        text(dd.yy, 223, 644.6, 9);
+      for (const c of CAMPI_0319) {
+        if (c.f === 'ANNO_CONCESSIONE') continue;
+        const v = valore0319(c, D);
+        if (c.f === 'ANNO' && !form.getFields().some(x => x.getName() === 'ANNO')) { text(v, 223, 644.6, 9); continue; }   // modulo originale: niente campo, lo scrivo dopo il "20"
+        set(c.f, v, fit(v, widthOf(c.f), c.size || 9));
+        if (c.allinea === 'destra') { try { form.getTextField(c.f).setAlignment(root.PDFLib.TextAlignment.Right); } catch { /* ignoro */ } }
       }
-      set('Campo di testo0', D.recapito, 8.5);               // recapito durante l'assenza
-      // ---- esito: parte del richiedente ----
-      set('SERVIZIO_2', D.servizio);
-      set('Cognome e nome', D.nome);
-      set('qualifica', D.qualifica);
-      set('residenza', D.residenza);
-      set('lad', D.giornate);
-      set('lad_1', dmy(D.dal));
-      set('la', dmy(D.al));
-      // ---- ricevuta (la firma il capo diretto, i dati sono del richiedente) ----
-      set('SERVIZIO', D.servizio);
-      set('L’agente', D.nome);
-      set('qualiﬁca_1', D.qualifica);
-      set('atadniotatneserpah', dmy(D.dataDomanda));          // ha presentato in data
-      set('domanda per la concessione', D.giornate);          // ... di giorni
+      text(safe(D.anno || ''), 349, 750.5, 10, bold);           // casella grigia "concessione ANNO"
     }
 
     if (code === '0692') {
@@ -203,5 +252,5 @@
     return doc.save();
   }
 
-  root.ModuliPdf = { MODELLI, fill, dmy };
+  root.ModuliPdf = { MODELLI, fill, dmy, CAMPI_0319, SEZIONI_0319, valore0319 };
 })(typeof window !== 'undefined' ? window : globalThis);

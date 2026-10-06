@@ -11,7 +11,7 @@ services:
 
   web:
     # Built by .github/workflows/rapportini.yml. Change the tag together with "version" in umbrel-app.yml.
-    image: ghcr.io/vdanesi/rapportini:2.1.0
+    image: ghcr.io/vdanesi/rapportini:2.2.0
     user: "1000:1000"
     init: true
     restart: on-failure
