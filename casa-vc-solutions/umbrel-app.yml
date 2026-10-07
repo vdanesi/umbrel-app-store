@@ -1,16 +1,16 @@
 manifestVersion: 1
 id: casa-vc-solutions
-name: VC Solutions
+name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.16.0"
+version: "1.16.1"
 port: 3959
 description: >-
-  Dashboard personale VC Solutions dedicata a IT, Homelab, Networking e Camper.
+  Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
 
 
-  Include monitoraggio live dell'host Umbrel tramite VC Solutions Collector,
+  Include monitoraggio live dell'host Umbrel tramite Dvsolutions Collector,
   inventario Docker e Network Live con controlli ICMP e HTTPS, latenza, stato HTTP e stato dei nodi.
 
 
@@ -23,19 +23,17 @@ description: >-
   CasaOS mantiene il solo controllo di raggiungibilità HTTPS.
   Il menu PROJECTS permette
   di configurare e aprire Camper Planner, RailFiber Manager e App per Scontrini.
-developer: VC Solutions
+developer: Dvsolutions
 website: https://github.com/vdanesi/vc-solutions-dashboard
-submitter: VC Solutions
+submitter: Dvsolutions
 submission: https://github.com/vdanesi/umbrel-app-store
 repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.16.0: riepilogo con dati reali dell'host Umbrel, Docker, controlli
-  di rete e inventario LAN, oltre ai conteggi di viaggi, tappe e POI salvati.
-  Aggiornamento automatico e orari delle fonti; dati assenti o troppo vecchi
-  vengono indicati come non disponibili. I dettagli richiedono il login e
-  vengono rimossi alla scadenza della sessione. CasaOS resta un controllo HTTPS.
+  Versione 1.16.1: nome corretto Dvsolutions nell'intestazione, nella sidebar,
+  nel login, nei prompt e nella barra inferiore della dashboard. Aggiornati
+  anche il nome nello store Umbrel e le iniziali dell'icona.
 
 dependencies: []
 path: ""
