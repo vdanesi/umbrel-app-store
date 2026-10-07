@@ -4,7 +4,7 @@ name: VC Solutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.14.0"
+version: "1.15.0"
 port: 3959
 description: >-
   Dashboard personale VC Solutions dedicata a IT, Homelab, Networking e Camper.
@@ -18,7 +18,9 @@ description: >-
   SNMP dei dispositivi. Le sezioni Camper e Viaggi gestiscono scheda del mezzo,
   itinerari, tappe, pernottamenti, budget e spese con salvataggio persistente.
   Include una raccolta POI con categorie, coordinate, note, ricerca e mappa
-  OpenStreetMap. Sono previste le successive integrazioni CasaOS e download.
+  OpenStreetMap. I POI possono diventare tappe dei viaggi, con coordinate e note
+  conservate. La mappa dell'itinerario mostra le tappe numerate e riordinabili.
+  Sono previste le successive integrazioni CasaOS e download.
   Il menu PROJECTS permette
   di configurare e aprire Camper Planner, RailFiber Manager e App per Scontrini.
 developer: VC Solutions
@@ -29,12 +31,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.14.0: sezione POI con raccolta personale e mappa OpenStreetMap.
-  Salva luoghi con nome, categoria, coordinate e note. Ricerca e filtri per
-  categoria, modifica ed eliminazione con conferma. Clicca sulla mappa per
-  compilare le coordinate o centra un luogo dall'elenco. POI persistenti,
-  accesso protetto e controllo dei conflitti tra schede. Camper e Viaggi
-  restano conservati. Le mappe richiedono una connessione a Internet.
+  Versione 1.15.0: aggiungi i POI salvati come tappe dei viaggi. Nome, coordinate
+  e note vengono copiati e conservati nell'itinerario. Mappa del viaggio con tappe
+  numerate e linee indicative; riordino con frecce e coordinate modificabili.
+  Le tappe senza posizione restano nell'elenco. Compatibilità con i viaggi
+  esistenti e controllo dei conflitti tra schede. Il percorso stradale automatico
+  sarà disponibile in un aggiornamento successivo.
 
 dependencies: []
 path: ""
