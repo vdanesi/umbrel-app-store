@@ -4,7 +4,7 @@ name: VC Solutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.12.0"
+version: "1.13.0"
 port: 3959
 description: >-
   Dashboard personale VC Solutions dedicata a IT, Homelab, Networking e Camper.
@@ -15,8 +15,9 @@ description: >-
 
 
   Include inventario LAN con scansione in background, ricerca, filtri e dettagli
-  SNMP dei dispositivi. La struttura è predisposta per le successive integrazioni
-  CasaOS, funzioni Camper, viaggi, POI e download. Il menu PROJECTS permette
+  SNMP dei dispositivi. Le sezioni Camper e Viaggi gestiscono scheda del mezzo,
+  itinerari, tappe, pernottamenti, budget e spese con salvataggio persistente.
+  Sono previste le successive integrazioni CasaOS, POI e download. Il menu PROJECTS permette
   di configurare e aprire Camper Planner, RailFiber Manager e App per Scontrini.
 developer: VC Solutions
 website: https://github.com/vdanesi/vc-solutions-dashboard
@@ -26,10 +27,11 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.12.0: menu PROJECTS operativo per Camper Planner, RailFiber Manager
-  e App per Scontrini. Campi modificabili per indirizzo HTTP/HTTPS, versione
-  registrata e stato manuale. Collegamenti configurati apribili in una nuova
-  scheda. Impostazioni e account conservati nel volume persistente Umbrel.
+  Versione 1.13.0: sezioni CAMPER e VIAGGI operative direttamente nella dashboard.
+  Scheda del mezzo con dimensioni, massa, consumo e note. Gestione itinerari con
+  date, destinazione, tappe, notti, budget e spese per categoria. Totali automatici,
+  salvataggio persistente e controllo dei conflitti tra schede. Accesso protetto
+  dall'account esistente. Nessuna sincronizzazione con Camper Planner.
 
 dependencies: []
 path: ""
