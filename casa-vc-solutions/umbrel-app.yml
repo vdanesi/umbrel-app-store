@@ -4,7 +4,7 @@ name: VC Solutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.10.4"
+version: "1.11.0"
 port: 3959
 description: >-
   Dashboard personale VC Solutions dedicata a IT, Homelab, Networking e Camper.
@@ -14,8 +14,9 @@ description: >-
   inventario Docker e Network Live con controlli ICMP e HTTPS, latenza, stato HTTP e stato dei nodi.
 
 
-  La struttura è predisposta per le successive integrazioni ICMP, SNMP, CasaOS,
-  progetti, Camper Planner, viaggi, POI e download.
+  Include inventario LAN con scansione in background, ricerca, filtri e dettagli
+  SNMP dei dispositivi. La struttura è predisposta per le successive integrazioni
+  CasaOS, progetti, Camper Planner, viaggi, POI e download.
 developer: VC Solutions
 website: https://github.com/vdanesi/vc-solutions-dashboard
 submitter: VC Solutions
@@ -24,9 +25,10 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.10.4: corretto il cambio pagina dopo il login per IT & HOMELAB e NETWORK.
-  Aggiornata la versione visualizzata dalla dashboard e dal collector.
-  L'account amministratore esistente resta salvato localmente su Umbrel.
+  Versione 1.11.0: inventario LAN con scansione in background e avanzamento visibile,
+  pulsante SCAN LAN, ricerca e filtri SNMP. Rileva dispositivi che rispondono a
+  ICMP o SNMP v2c e mostra nome, descrizione, posizione e uptime SNMP quando
+  disponibili. Subnet invariata: 192.168.3.0/24. Account amministratore conservato.
 
 dependencies: []
 path: ""
