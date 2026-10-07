@@ -4,7 +4,7 @@ name: VC Solutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.9.2"
+version: "1.10.0"
 port: 3959
 description: >-
   Dashboard personale VC Solutions dedicata a IT, Homelab, Networking e Camper.
@@ -24,9 +24,10 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.9.2: corretta la cache del frontend con asset CSS/JS versionati e
-  intestazioni no-store, garantendo la visualizzazione immediata dei dati aggiornati
-  del Network Discovery.
+  Versione 1.10.0: Dashboard pubblica e aree riservate protette da autenticazione.
+  Al primo accesso a un menu protetto viene creato l'account amministratore;
+  password e hash non vengono salvati nel repository GitHub e i dati di accesso
+  restano persistenti localmente su Umbrel.
 
 dependencies: []
 path: ""
