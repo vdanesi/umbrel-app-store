@@ -24,6 +24,7 @@
   <div class="tabbar-spacer"></div>
   <span class="save-status" id="saveStatus"></span>
   <button class="tab tab-new" id="tabModuli" title="Congedi e trasferte">▤ <span>Moduli</span></button>
+  <button class="tab tab-new" id="tabMigrazione" title="Generatore migrazione PL">⇄ <span>Migrazione PL</span></button>
   <button class="tab tab-new" id="tabSettings" title="Impostazioni">⚙ <span>Impostazioni</span></button>
   <button class="tab tab-new tab-user" id="tabUser" title="Account">◉ <span id="userName">—</span></button>
 </header>
@@ -174,6 +175,70 @@
   </div>
 </main>
 
+<!-- ======= GENERATORE MIGRAZIONE PL ======= -->
+<main id="migrazioneView" class="view migrazione" hidden>
+  <div class="inner">
+    <h1>Generatore migrazione PL</h1>
+    <p class="muted">► <span class="c-magenta">Cisco</span> · <span class="c-magenta">Extreme</span> · checklist <span class="c-magenta">MikroTik</span></p>
+    <div class="warn-box" id="mgKeyInfo" hidden>Chiave OSPF non ancora impostata: inseriscila qui sotto in <b>Modelli (amministratore)</b>, resterà solo sull'Umbrel.</div>
+
+    <section class="box">
+      <div class="form-grid mg-grid">
+        <label class="mg-in mg-x">Porta Cisco X <input id="mgX" inputmode="numeric" placeholder="es. 28" autocomplete="off"></label>
+        <label class="mg-in mg-loop">Loopback / Router-ID <input id="mgLoop" inputmode="decimal" placeholder="es. 10.255.255.78" autocomplete="off"></label>
+        <label class="mg-in mg-ptp">IP PTP Extreme <input id="mgPtp" inputmode="decimal" placeholder="es. 192.168.241.190" autocomplete="off"></label>
+        <label class="mg-in mg-tag">TAG tratta <input id="mgTag" inputmode="numeric" placeholder="es. 101" autocomplete="off"></label>
+        <label class="span2">Nota per lo storico (facoltativa) <input id="mgNota" maxlength="200" placeholder="es. PL km 23+400 Pilzone" autocomplete="off"></label>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="mgGo">Genera configurazione</button>
+        <button class="btn" id="mgClear">Pulisci</button>
+      </div>
+      <div class="msg-err" id="mgMsg" hidden></div>
+    </section>
+
+    <div id="mgOut" hidden>
+      <section class="box mg-sec">
+        <div class="mg-head"><h3><span class="c-cyan">#</span> CISCO</h3>
+          <div class="row-actions"><button class="btn" id="mgCopyCisco">Copia</button><button class="btn" id="mgDlCisco">Scarica TXT</button></div></div>
+        <pre class="mg-pre" id="mgCisco"></pre>
+      </section>
+      <section class="box mg-sec">
+        <div class="mg-head"><h3><span class="c-cyan">#</span> EXTREME</h3>
+          <div class="row-actions"><button class="btn" id="mgCopyExtreme">Copia</button><button class="btn" id="mgDlExtreme">Scarica TXT</button></div></div>
+        <div class="warn-box" id="mgKeyWarn" hidden>Chiave OSPF non impostata: nella configurazione resta <code>{{CHIAVE_OSPF}}</code>. Chiedi all'amministratore di inserirla.</div>
+        <pre class="mg-pre" id="mgExtreme"></pre>
+      </section>
+      <section class="box mg-sec">
+        <h3><span class="c-cyan">#</span> MIKROTIK — Checklist operativa</h3>
+        <div id="mgCheck" class="mg-check"></div>
+      </section>
+    </div>
+
+    <section class="box" id="mgStoricoBox" hidden>
+      <h3><span class="c-cyan">#</span> Storico <span class="muted small">(tocca una riga per ricaricare e rigenerare)</span></h3>
+      <div id="mgStorico" class="mg-storico"></div>
+    </section>
+
+    <details class="box sez-0319" id="mgAdmin" hidden>
+      <summary><span class="c-yellow">#</span> Modelli (amministratore)</summary>
+      <p class="hint">Segnaposto: <code>{{X}}</code> porta Cisco, <code>{{LOOPBACK}}</code>, <code>{{PTP}}</code>, <code>{{TAG}}</code>, <code>{{CHIAVE_OSPF}}</code>. Nella checklist le righe che iniziano con <code>!</code> diventano avvisi.</p>
+      <div class="form-grid">
+        <label class="span2">Chiave OSPF (digest-key) · <span id="mgKeyState"></span>
+          <span class="mg-key"><input type="password" id="mgKey" maxlength="200" autocomplete="off"><button class="btn" type="button" id="mgKeyShow">Mostra</button></span>
+          <span class="hint">Resta solo sull'Umbrel (non va su GitHub) ed è visibile agli utenti che generano la configurazione.</span></label>
+        <label class="span2">Modello Cisco <textarea id="mgTplCisco" rows="7" spellcheck="false"></textarea></label>
+        <label class="span2">Modello Extreme <textarea id="mgTplExtreme" rows="16" spellcheck="false"></textarea></label>
+        <label class="span2">Checklist MikroTik <textarea id="mgTplCheck" rows="6" spellcheck="false"></textarea></label>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="mgSaveTpl">Salva modelli</button>
+        <button class="btn" id="mgResetTpl">Ripristina modelli originali</button>
+      </div>
+    </details>
+  </div>
+</main>
+
 <!-- ======= ANTEPRIMA ======= -->
 <main id="previewView" class="view preview" hidden>
   <div class="preview-bar">
@@ -299,6 +364,7 @@
 <script src="moduli-pdf.js"></script>
 <script src="pratiche.js"></script>
 <script src="account.js"></script>
+<script src="migrazione.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

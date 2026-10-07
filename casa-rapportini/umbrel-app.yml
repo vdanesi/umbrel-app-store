@@ -4,7 +4,7 @@ name: Rapportini
 tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
 category: files
-version: "2.2.0"
+version: "2.3.0"
 port: 3444
 description: >-
   Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
@@ -26,6 +26,9 @@ description: >-
   la lettera di incarico (Mod. 0692) e il giustificativo trasferta con rimborso km (Mod. 0693).
 
 
+  Generatore della configurazione per la migrazione dei PL (Cisco, Extreme, checklist MikroTik).
+
+
   Riepilogo mensile di giorni, ore e straordinari, esportazione CSV e backup.
   Ogni persona ha il suo account e vede solo i propri dati; un amministratore gestisce
   utenti e reset delle password. I dati restano sul tuo Umbrel. Solo il calcolo dei km del rimborso usa i servizi
@@ -38,10 +41,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Domanda di congedo (Mod. 0319) con tutti i campi del modulo, ognuno modificabile:
-  domanda, firma, parere del capo, decisione del responsabile, esito e ricevuta. I campi
-  dell'esito sono proposti dai tuoi dati ma si possono riscrivere. I PDF di congedi e
-  trasferte possono restare compilabili per modificarli dopo con un lettore PDF.
+  Nuova scheda "Migrazione PL": genera la configurazione Cisco ed Extreme e mostra la
+  checklist MikroTik partendo da porta, loopback, IP PTP e tag della tratta, con copia,
+  download TXT e storico personale. La chiave OSPF la inserisce l'amministratore e resta
+  solo sull'Umbrel; l'amministratore può anche modificare i modelli.
 dependencies: []
 path: ""
 defaultUsername: ""

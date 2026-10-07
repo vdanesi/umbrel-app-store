@@ -20,7 +20,8 @@ const SESSION_DAYS = 30, SESSION_HOURS_SHORT = 12;
 const NAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 const MOD_DIR = path.join(DATA_DIR, 'modelli');       // PDF vuoti dei moduli aziendali (caricati dall'utente)
 const MODELLI = ['0444', '0319', '0692', '0693'];
-const DIST_FILE = path.join(DATA_DIR, 'distanze.json');   // cache di località e percorsi già calcolati
+const DIST_FILE = path.join(DATA_DIR, 'distanze.json');
+const MIGR_FILE = path.join(DATA_DIR, 'migrazione.json');  // modelli di configurazione PL e chiave OSPF (in comune)   // cache di località e percorsi già calcolati
 const NOMINATIM_URL = process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org';
 const OSRM_URL = process.env.OSRM_URL || 'https://router.project-osrm.org';
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -251,6 +252,85 @@ async function distanza(itinerario) {
   c.percorsi[key] = km;
   await writeJsonAtomic(DIST_FILE, c);
   return { km, tappe, cache: false };
+}
+
+// ---------- generatore migrazione PL ----------
+// Segnaposto: {{X}} porta Cisco, {{LOOPBACK}} loopback/router-id, {{PTP}} IP PTP Extreme,
+// {{TAG}} tag tratta, {{CHIAVE_OSPF}} chiave digest OSPF (salvata solo sull'Umbrel, mai nel codice).
+const MIGR_DEFAULT = {
+  cisco: 'Enable\nConf t\ninterface GigabitEthernet1/{{X}}\nip ospf lls disable\ndo write mem\n\n(RICORDARSI DI SALVARE)',
+  extreme: [
+    'Creazione Loopback', '', 'interface loopback 2', 'ip address 2 {{LOOPBACK}} 255.255.255.255 vrf circolazione', 'Exit', '',
+    'Abilitazione OSPF Globale su VRF circolazione', '', 'router vrf circolazione', 'ip ospf', 'ip ospf router-id {{LOOPBACK}}',
+    'ip ospf area 0.0.0.10', 'ip ospf as-boundary-router enable', 'ip ospf admin-state', 'exit', '',
+    'Creazione PTP con cisco e abilitazione OSPF', '', 'vlan create 4010 name PTP_OSPF type port-mstprstp 0', 'vlan members add 4010 1/28',
+    'interface vlan 4010', 'vrf circolazione', 'ip address {{PTP}} 255.255.255.252', 'ip ospf area 0.0.0.10', 'ip ospf network p2p',
+    'ip ospf hello-interval 1', 'ip ospf dead-interval 3', 'ip ospf enable', 'ip ospf authentication-type message-digest',
+    'ip ospf digest-key 1 key {{CHIAVE_OSPF}}', 'ip ospf authentication-type message-digest primary-digest-key 1', 'Exit', '',
+    'Redistribuzione delle rotte OSPF nel ISIS', '', 'router ospf enable', 'router vrf circolazione', 'ip ospf redistribute direct',
+    'ip ospf redistribute direct enable', 'exit', 'ip ospf apply redistribute direct vrf circolazione', '',
+    'Comandi per evitare Loop di rotte + redistribuzione', '', 'enable', 'configure terminal', 'router vrf circolazione',
+    'route-map "tag-ospf-PL" 1', 'permit', 'enable', 'set metric {{TAG}}', 'set metric-type-isis external', 'exit',
+    'route-map "isis-non-tag-ospf_PL" 1', 'no permit', 'enable', 'match metric-type-isis external', 'match metric {{TAG}}', 'exit',
+    'route-map "isis-non-tag-ospf_PL" 2', 'permit', 'enable', 'exit', 'route-map "peer-tag" 1', 'permit', 'enable',
+    'match metric-type-isis external', 'match metric {{TAG}}', 'set ip-preference 130', 'exit', 'ip ospf redistribute isis',
+    'ip ospf redistribute isis route-map "isis-non-tag-ospf_PL"', 'ip ospf redistribute isis enable', 'isis redistribute ospf',
+    'isis redistribute ospf route-map "tag-ospf-PL"', 'isis redistribute ospf enable', 'no ip alternative-route',
+    'ip route preference protocol isis-external {{TAG}}', 'isis accept route-map "peer-tag"', 'exit',
+    'ip ospf apply redistribute isis vrf circolazione', 'isis apply redistribute ospf vrf circolazione', 'isis apply accept vrf circolazione',
+    'end', 'save config'
+  ].join('\n'),
+  // righe che iniziano con "!" diventano avvisi in evidenza
+  checklist: [
+    '! UTILIZZARE SAFE MODE e USARE LA X ROSSA NON IL MENO!!!!!',
+    'Disattivare port ethX quella verso il primo PL (7 o 8 di solito)',
+    'Disattivare nel menu IP addresses ip relativo alla porta',
+    'Disabilitare in routing OSPF → TAB Network la net di riferimento; la si capisce dal tab IP addresses',
+    '! DISABILITARE IL SAFE MODE'
+  ].join('\n')
+};
+async function loadMigr() {
+  const m = await readJson(MIGR_FILE, {});
+  return { cisco: m.cisco ?? MIGR_DEFAULT.cisco, extreme: m.extreme ?? MIGR_DEFAULT.extreme, checklist: m.checklist ?? MIGR_DEFAULT.checklist, chiave: m.chiave || '' };
+}
+const storicoFile = U => path.join(U.dir, 'migrazioni.json');
+
+async function migrApi(req, res, url, me, U) {
+  const p = url.pathname, m = req.method;
+  if (p === '/api/migrazione' && m === 'GET') {
+    const x = await loadMigr();
+    return send(res, 200, { ...x, chiaveImpostata: !!x.chiave, predefiniti: { cisco: MIGR_DEFAULT.cisco, extreme: MIGR_DEFAULT.extreme, checklist: MIGR_DEFAULT.checklist } });
+  }
+  if (p === '/api/migrazione' && m === 'PUT') {
+    if (!me.admin) return fail(res, 403, "I modelli li modifica l'amministratore.");
+    const b = await readBody(req, 256 * 1024);
+    const cur = await loadMigr();
+    const nuovo = {
+      cisco: typeof b.cisco === 'string' ? b.cisco.slice(0, 20000) : cur.cisco,
+      extreme: typeof b.extreme === 'string' ? b.extreme.slice(0, 50000) : cur.extreme,
+      checklist: typeof b.checklist === 'string' ? b.checklist.slice(0, 10000) : cur.checklist,
+      chiave: typeof b.chiave === 'string' ? b.chiave.slice(0, 200) : cur.chiave
+    };
+    await writeJsonAtomic(MIGR_FILE, nuovo);
+    return send(res, 200, { ...nuovo, chiaveImpostata: !!nuovo.chiave });
+  }
+  if (p === '/api/migrazione/storico' && m === 'GET') return send(res, 200, await readJson(storicoFile(U), []));
+  if (p === '/api/migrazione/storico' && m === 'POST') {
+    const b = await readBody(req, 64 * 1024);
+    const voce = { id: crypto.randomUUID(), quando: new Date().toISOString(), x: str(b.x, 10), loop: str(b.loop, 40), ptp: str(b.ptp, 40), tag: str(b.tag, 10), nota: str(b.nota, 200) };
+    const list = (await readJson(storicoFile(U), [])).filter(v => !(v.x === voce.x && v.loop === voce.loop && v.ptp === voce.ptp && v.tag === voce.tag && v.nota === voce.nota));
+    list.unshift(voce);
+    await fs.mkdir(U.dir, { recursive: true });
+    await writeJsonAtomic(storicoFile(U), list.slice(0, 100));
+    return send(res, 200, list.slice(0, 100));
+  }
+  const sm = /^\/api\/migrazione\/storico\/([a-z0-9-]{8,64})$/i.exec(p);
+  if (sm && m === 'DELETE') {
+    const list = (await readJson(storicoFile(U), [])).filter(v => v.id !== sm[1]);
+    await writeJsonAtomic(storicoFile(U), list);
+    return send(res, 200, list);
+  }
+  return null;
 }
 
 // ---------- account ----------
@@ -600,6 +680,8 @@ async function api(req, res, url) {
     try { return send(res, 200, await distanza(it)); }
     catch (e) { return fail(res, e.status || 502, e.message); }
   }
+
+  if (p.startsWith('/api/migrazione')) { const r = await migrApi(req, res, url, me, U); if (r !== null) return r; }
 
   // ---- modelli PDF ----
   if (p === '/api/modelli' && m === 'GET') return send(res, 200, await modelliPresenti());

@@ -379,3 +379,29 @@ details.sez-0319 > summary { cursor: pointer; font: 700 14px/20px var(--mono); m
 details.sez-0319[open] > summary { margin-bottom: 10px; }
 .lbl-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .btn-icon.mini { font-size: 12px; line-height: 16px; padding: 0 4px; }
+
+/* ---------- generatore migrazione PL ---------- */
+.mg-grid { grid-template-columns: repeat(4, 1fr); }
+.mg-in { border-left: 4px solid var(--fg-muted); padding-left: 10px; }
+.mg-loop { border-left-color: var(--accent-yellow); }
+.mg-ptp { border-left-color: var(--accent-cyan); }
+.mg-tag { border-left-color: var(--accent-magenta); }
+.msg-err { color: var(--status-error); font: 600 13px/18px var(--ui); margin-top: 10px; }
+.mg-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.mg-head h3 { margin: 0; }
+.mg-head .row-actions { margin: 0; }
+.mg-pre { margin: 0; padding: 14px; background: var(--bg-tabbar); border: 1px solid var(--bg-tab-new); color: var(--accent-green);
+  font: 13px/19px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 60vh; overflow: auto; }
+.mg-check ol { margin: 8px 0; padding-left: 22px; line-height: 22px; }
+.mg-warn { background: var(--accent-yellow); color: var(--prompt-ink); font: 700 13px/18px var(--ui); padding: 8px 12px; margin: 8px 0; }
+.mg-storico { display: flex; flex-direction: column; border-top: 1px solid var(--bg-tab-new); }
+.mg-row { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--bg-tab-new); }
+.mg-load { flex: 1; text-align: left; background: none; border: 0; padding: 8px 4px; cursor: pointer; color: var(--fg-default); font: 13px/18px var(--mono); }
+.mg-load:hover { background: var(--bg-tab-active); }
+.mg-when { color: var(--accent-cyan); }
+.mg-vals { color: var(--accent-green); }
+.mg-key { display: flex; gap: 6px; }
+.mg-key input { flex: 1; }
+.migrazione textarea { font: 12px/17px var(--mono); }
+@media (max-width: 900px) { .mg-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .mg-grid { grid-template-columns: 1fr; } }

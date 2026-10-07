@@ -55,12 +55,13 @@
   }
 
   // ---------- viste ----------
-  const VIEWS = ['homeView', 'editView', 'previewView', 'settingsView', 'praticheView', 'praticaView'];
+  const VIEWS = ['homeView', 'editView', 'previewView', 'settingsView', 'praticheView', 'praticaView', 'migrazioneView'];
   function show(view) {
     VIEWS.forEach(v => { $(v).hidden = v !== view; });
     $('tabRep').hidden = !(view === 'editView' || view === 'previewView');
     $('tabSettings').classList.toggle('on', view === 'settingsView');
     $('tabModuli').classList.toggle('on', view === 'praticheView' || view === 'praticaView');
+    $('tabMigrazione').classList.toggle('on', view === 'migrazioneView');
     window.scrollTo(0, 0);
   }
 
@@ -69,6 +70,7 @@
     let m;
     try {
       if (h === 'moduli' || h.startsWith('m/')) { await flushSave(); rep = null; await Pratiche.route(h); return; }
+      if (h === 'migrazione') { await flushSave(); rep = null; await Pratiche.route(h); await Migrazione.show(); return; }
       await Pratiche.route(h);
       if ((m = /^r\/(\d{4}-\d\d-\d\d)\/stampa$/.exec(h))) { await openReport(m[1]); openPreview(); }
       else if ((m = /^r\/(\d{4}-\d\d-\d\d)$/.exec(h))) { await openReport(m[1]); show('editView'); }
@@ -566,6 +568,7 @@
     };
     Pratiche.init();
     Account.init();
+    Migrazione.init();
     try { settings = await api('impostazioni'); }
     catch (e) { toast('Server non raggiungibile: ' + e.message, true); return; }
     Account.header();
