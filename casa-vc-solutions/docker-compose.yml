@@ -7,7 +7,7 @@ services:
       APP_PORT: 8080
 
   web:
-    image: ghcr.io/vdanesi/vc-solutions-dashboard:1.7.0
+    image: ghcr.io/vdanesi/vc-solutions-dashboard:1.8.0
     init: true
     restart: on-failure
     environment:
@@ -17,13 +17,15 @@ services:
       - collector
 
   collector:
-    image: ghcr.io/vdanesi/vc-solutions-collector:1.7.0
+    image: ghcr.io/vdanesi/vc-solutions-collector:1.8.0
     init: true
     restart: on-failure
     environment:
       PORT: 8090
       HOST_ROOT: /host
       NETWORK_TARGETS: "INTERNET / WAN|ICMP|1.1.1.1|UPLINK;CASAOS|HTTPS|https://dash.dvso.net/|REMOTE DOCKER HOST"
+      DISCOVERY_SUBNETS: "192.168.3.0/24"
+      DISCOVERY_TTL: "60000"
     volumes:
       - /:/host:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
