@@ -4,7 +4,7 @@ name: VC Solutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.7.0"
+version: "1.8.0"
 port: 3959
 description: >-
   Dashboard personale VC Solutions dedicata a IT, Homelab, Networking e Camper.
@@ -24,9 +24,9 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.7.0: Network Live supporta target ICMP e HTTP/HTTPS. CasaOS remoto
-  viene monitorato tramite https://dash.dvso.net/ con codice HTTP e latenza,
-  mantenendo la 1.6.2 come precedente baseline stabile.
+  Versione 1.8.0: aggiunto Network Discovery ICMP sulla LAN configurata, inventario
+  degli host rilevati con IP e latenza, cache di 60 secondi e indicatori versione
+  dinamici. Base predisposta per l'identificazione SNMP.
 
 dependencies: []
 path: ""
