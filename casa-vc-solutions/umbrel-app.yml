@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.16.1"
+version: "1.16.2"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -31,9 +31,8 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.16.1: nome corretto Dvsolutions nell'intestazione, nella sidebar,
-  nel login, nei prompt e nella barra inferiore della dashboard. Aggiornati
-  anche il nome nello store Umbrel e le iniziali dell'icona.
+  Versione 1.16.2: rimossa la voce Camper Planner dal menu laterale e
+  aggiornata la numerazione delle voci successive.
 
 dependencies: []
 path: ""
