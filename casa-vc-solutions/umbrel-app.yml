@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.16.2"
+version: "1.17.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -31,8 +31,11 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.16.2: rimossa la voce Camper Planner dal menu laterale e
-  aggiornata la numerazione delle voci successive.
+  Versione 1.17.0: sezione RailFiber con riepilogo reale di siti, rack, cassetti,
+  porte, collegamenti e segnalazioni. Mappa siti e collegamenti registrati.
+  Integrazione configurabile con chiave di sola lettura generata da RailFiber
+  Manager 1.3.0. Dettagli protetti dal login; errori o chiavi revocate rimuovono
+  i valori precedenti. Riepilogo fibra anche nella dashboard principale.
 
 dependencies: []
 path: ""
