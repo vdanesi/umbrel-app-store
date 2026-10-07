@@ -26,6 +26,7 @@ services:
       NETWORK_TARGETS: "INTERNET / WAN|ICMP|1.1.1.1|UPLINK;CASAOS|HTTPS|https://dash.dvso.net/|REMOTE DOCKER HOST"
       DISCOVERY_SUBNETS: "192.168.3.0/24"
       DISCOVERY_TTL: "60000"
+      SNMP_COMMUNITY: "public"
     volumes:
       - /:/host:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
