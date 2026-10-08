@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.17.0"
+version: "1.18.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -21,8 +21,9 @@ description: >-
   OpenStreetMap. I POI possono diventare tappe dei viaggi, con coordinate e note
   conservate. La mappa dell'itinerario mostra le tappe numerate e riordinabili.
   CasaOS mantiene il solo controllo di raggiungibilità HTTPS.
-  Il menu PROJECTS permette
-  di configurare e aprire Camper Planner, RailFiber Manager e App per Scontrini.
+  RailFiber è un modulo interno con siti, rack, cassetti, porte, collegamenti,
+  mappa interattiva e schede PDF. Il menu PROJECTS apre RailFiber e permette
+  di configurare Camper Planner e App per Scontrini.
 developer: Dvsolutions
 website: https://github.com/vdanesi/vc-solutions-dashboard
 submitter: Dvsolutions
@@ -31,11 +32,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.17.0: sezione RailFiber con riepilogo reale di siti, rack, cassetti,
-  porte, collegamenti e segnalazioni. Mappa siti e collegamenti registrati.
-  Integrazione configurabile con chiave di sola lettura generata da RailFiber
-  Manager 1.3.0. Dettagli protetti dal login; errori o chiavi revocate rimuovono
-  i valori precedenti. Riepilogo fibra anche nella dashboard principale.
+  Versione 1.18.0: RailFiber ricreato come modulo interno, protetto dal login
+  Dvsolutions e senza chiavi API. Gestione di siti, rack, cassetti e porte,
+  collegamenti reciproci, stati e controlli di coerenza. Un clic sul sito in
+  mappa apre la sua scheda; dalla scheda si ritorna alla mappa. PDF dei cassetti
+  ed esportazione JSON dell'archivio. Il nuovo archivio parte vuoto e non
+  modifica l'app RailFiber Manager esterna né i suoi dati.
 
 dependencies: []
 path: ""
