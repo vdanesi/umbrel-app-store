@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.18.0"
+version: "1.19.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -32,12 +32,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.18.0: RailFiber ricreato come modulo interno, protetto dal login
-  Dvsolutions e senza chiavi API. Gestione di siti, rack, cassetti e porte,
-  collegamenti reciproci, stati e controlli di coerenza. Un clic sul sito in
-  mappa apre la sua scheda; dalla scheda si ritorna alla mappa. PDF dei cassetti
-  ed esportazione JSON dell'archivio. Il nuovo archivio parte vuoto e non
-  modifica l'app RailFiber Manager esterna né i suoi dati.
+  Versione 1.19.0: creazione siti selezionando un punto della mappa, con nome
+  e salvataggio espliciti. PDF per sito e rack con inventario e schede di tutti
+  i cassetti contenuti; esportazione PDF del singolo cassetto. Riepilogo degli
+  stati e delle porte collegate, dettagli cavo/fibra/connettore e legenda SM/MM.
+  Vista delle posizioni U dei cassetti nel rack e lista delle posizioni non
+  impostate. Dati esistenti conservati.
 
 dependencies: []
 path: ""
