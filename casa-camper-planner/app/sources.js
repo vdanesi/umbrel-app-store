@@ -167,8 +167,11 @@ function parseGpx(text) {
   let m;
   while ((m = re.exec(text))) {
     const head = m[2] || m[5] || '', body = m[3] || '';
+    // indirizzo nelle estensioni Garmin (gpxx:Address), se c'è
+    const address = ['gpxx:StreetAddress', 'gpxx:City', 'gpxx:State'].map(t => tag(body, t)).filter(Boolean).join(', ');
     out.push({ lat: parseFloat(attr(head, 'lat')), lon: parseFloat(attr(head, 'lon')),
       name: tag(body, 'name'), notes: [tag(body, 'desc'), tag(body, 'cmt')].filter(Boolean).join(' · '),
+      cmt: tag(body, 'cmt'), city: tag(body, 'gpxx:City'), address,
       kindHint: tag(body, 'type') + ' ' + tag(body, 'sym') });
   }
   return out;
@@ -329,19 +332,79 @@ export function guessCategory(text) {
   return 'area_camper';
 }
 
+// ---------- file di CamperOnLine.it ----------
+// I nomi iniziano con i codici del sito: [AA] area attrezzata, [PS] punto sosta,
+// [CS] camper service, [AU] area di servizio autostradale (anche combinati: [PS+CS]).
+// I servizi sono un elenco fisso nel campo <cmt>.
+const COL_CODES = { AA: 'area attrezzata', PS: 'punto sosta', CS: 'camper service', AU: 'area di servizio' };
+const isCamperOnLine = text => /creator="CamperOnLine/i.test(text.slice(0, 1500));
+
+// Testo codificato due volte alla fonte ("MÃ¼nchberg" invece di "Münchberg"): si ripara.
+function fixMojibake(t) {
+  t = String(t || '');
+  if (!/[ÃÂÅ][\u0080-\u00BF]/.test(t)) return t;
+  try {
+    const fixed = new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from([...t].map(c => c.charCodeAt(0) & 0xff)));
+    return [...t].every(c => c.charCodeAt(0) < 256) ? fixed : t;
+  } catch { return t; }
+}
+
+function camperOnLinePoint(p) {
+  p = { ...p, name: fixMojibake(p.name), cmt: fixMojibake(p.cmt), city: fixMojibake(p.city), address: fixMojibake(p.address) };
+  const m = String(p.name || '').match(/^\s*\[([A-Z+]*)\]\s*/);
+  const codes = m ? m[1].split('+').filter(c => COL_CODES[c]) : [];
+  const name = m ? p.name.slice(m[0].length).trim() : p.name;
+  const srv = new Set(String(p.cmt || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean));
+  const has = (...k) => k.some(x => srv.has(x));
+  const category = codes.length && codes.every(c => c === 'CS') ? 'scarico' : 'area_camper';
+  const tags = {};
+  if (has('a pagamento')) tags.fee = 'yes';
+  if (has('allacciamento elettrico')) tags.power = 'yes';
+  if (has('carico acqua')) tags.water = 'yes';
+  if (has('scarico pozzetto', 'scarico cassetta wc')) tags.dump = 'yes';
+  if (has('servizi igienici con wc')) tags.toilets = 'yes';
+  if (has('docce calde', 'docce fredde')) tags.shower = 'yes';
+  if (has('wi-fi')) tags.internet = 'yes';
+  if (p.address) tags.address = p.address;
+  const other = [...srv].filter(x => !['a pagamento', 'allacciamento elettrico', 'carico acqua', 'scarico pozzetto', 'scarico cassetta wc',
+    'servizi igienici con wc', 'docce calde', 'docce fredde', 'wi-fi'].includes(x));
+  const kind = codes.map(c => COL_CODES[c]).join(' + ');
+  return {
+    ...p,
+    name: name || (kind ? kind[0].toUpperCase() + kind.slice(1) : 'Area sosta') + (p.city ? ` ${p.city}` : ''),
+    notes: [kind, other.join(', ')].filter(Boolean).join(' · '),
+    category, tags
+  };
+}
+
+// Alcuni punti dei file CamperOnLine hanno la latitudine troncata (es. 2.57 invece di 42.57)
+// o uguale alla longitudine: si scartano quelli fuori dall'Europa e dintorni.
+const inEuropeArea = p => p.lat !== p.lon && p.lat >= 27 && p.lat <= 72 && p.lon >= -32 && p.lon <= 45;
+
 export function parsePoiFile(filename, text, { category } = {}) {
   const ext = (filename.split(/[?#]/)[0].split('.').pop() || '').toLowerCase();
   const head = text.slice(0, 2000).trimStart();
   let pts;
+  const col = isCamperOnLine(text);
+  let skipped = 0;
   if (ext === 'gpx' || /<gpx[\s>]/i.test(head)) pts = parseGpx(text);
   else if (ext === 'kml' || /<kml[\s>]/i.test(head)) pts = parseKml(text);
   else if (/^(geo)?json$/.test(ext) || head.startsWith('{') || head.startsWith('[')) pts = parseJson(text);
   else pts = parseCsv(text);
-  return pts
+  if (col) {
+    const before = pts.length;
+    pts = pts.filter(p => Number.isFinite(p.lat) && inEuropeArea(p)).map(camperOnLinePoint);
+    skipped = before - pts.length;
+  }
+  const out = pts
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && !(p.lat === 0 && p.lon === 0))
     .map(p => ({ lat: p.lat, lon: p.lon, name: String(p.name || '').slice(0, 200), notes: String(p.notes || '').slice(0, 2000),
       website: String(p.website || '').slice(0, 300), phone: String(p.phone || '').slice(0, 60),
-      category: category || guessCategory(`${p.name} ${p.kindHint || ''} ${filename}`) }));
+      ...(p.tags && Object.keys(p.tags).length ? { tags: p.tags } : {}),
+      category: category || p.category || guessCategory(`${p.name} ${p.kindHint || ''} ${filename}`) }));
+  out.skipped = skipped;
+  out.source = col ? 'camperonline' : '';
+  return out;
 }
 
 // ---------- unione dei duplicati ----------

@@ -12,7 +12,7 @@ services:
 
   web:
     # Built by .github/workflows/camper-planner.yml. Change the tag together with "version" in umbrel-app.yml.
-    image: ghcr.io/vdanesi/camper-planner:2.1.0
+    image: ghcr.io/vdanesi/camper-planner:2.2.0
     user: "1000:1000"
     init: true
     restart: on-failure

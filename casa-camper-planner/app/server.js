@@ -469,7 +469,7 @@ function searchMine(c, area, types) {
   return c.items.filter(i => types.includes(i.category) && area.contains([i.lat, i.lon])).map(i => ({
     id: 'mine:' + i.id, mineId: i.id, sources: ['mine'], lat: i.lat, lon: i.lon, category: i.category, name: i.name || null,
     acsi: i.acsi || null,
-    tags: { notes: i.notes || undefined, list: i.source === 'preferiti' ? undefined : i.source, website: i.website || undefined, phone: i.phone || undefined }
+    tags: { ...(i.tags || {}), notes: i.notes || undefined, list: i.source === 'preferiti' ? undefined : i.source, website: i.website || undefined, phone: i.phone || undefined }
   }));
 }
 
@@ -493,7 +493,9 @@ app.post('/api/collection/import', wrap(async (req, res) => {
   let pts;
   try { pts = parsePoiFile(filename, text); } catch (e) { return res.status(400).json({ error: 'File non leggibile: ' + e.message }); }
   if (!pts.length) return res.status(400).json({ error: 'Nessun punto trovato nel file (servono GPX, KML, GeoJSON o CSV con coordinate)' });
-  res.json(await storeImport(filename, pts));
+  const meta = pts.source === 'camperonline'
+    ? { licence: 'solo uso personale, non ridistribuire', attribution: 'CamperOnLine.it', page: 'https://www.camperonline.it/iCOL' } : {};
+  res.json({ ...(await storeImport(filename, pts, meta)), skipped: pts.skipped || 0, source: pts.source || '' });
 }));
 
 // Scarica una fonte esterna (dati aperti) direttamente dall'Umbrel.

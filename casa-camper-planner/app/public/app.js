@@ -512,7 +512,8 @@ const punti = n => `${n.toLocaleString('it-IT')} ${n === 1 ? 'punto' : 'punti'}`
 
 function renderPoiSources() {
   const s = state.settings || {};
-  const prev = Object.fromEntries($$('#poiSources input').map(i => [i.value, i.checked]));
+  // si ricorda la scelta solo per le fonti che erano già disponibili: una fonte appena attivata parte spuntata
+  const prev = Object.fromEntries($$('#poiSources input').filter(i => !i.disabled).map(i => [i.value, i.checked]));
   const items = [
     { k: 'osm', on: prev.osm ?? true, note: 'aree, campeggi, servizi' },
     { k: 'overture', on: prev.overture ?? Boolean(s.openPlacesKeySet), disabled: !s.openPlacesKeySet,
@@ -590,13 +591,25 @@ $('#urlForm').addEventListener('submit', e => {
   runImport('Importazione dal web', btn, () => api('/collection/import-url', { method: 'POST', body: { url, category: $('#urlCat').value } }))
     .then(ok => { if (ok) $('#urlInput').value = ''; });
 });
+// Legge il file con la codifica giusta. Prima si prova UTF-8, che si riconosce con certezza
+// (i file CamperOnLine dichiarano ISO-8859-1 ma sono in UTF-8); se non è valido si usa
+// la codifica dichiarata o quella dei vecchi file Windows.
+async function readTextFile(f) {
+  const buf = await f.arrayBuffer();
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch { /* non è UTF-8 */ }
+  const head = new TextDecoder('ascii').decode(buf.slice(0, 300));
+  const declared = head.match(/encoding=["']([\w-]+)["']/i)?.[1]?.toLowerCase() || '';
+  try { if (declared && !/8859-1|latin/.test(declared)) return new TextDecoder(declared).decode(buf); } catch { /* sconosciuta */ }
+  return new TextDecoder('windows-1252').decode(buf);
+}
 $('#collFile').addEventListener('change', async e => {
   const files = [...e.target.files]; e.target.value = '';
   for (const f of files) {
     if (f.size > 20 * 1024 * 1024) { toast(`${f.name}: file troppo grande (max 20 MB)`, true); continue; }
     try {
-      const r = await api('/collection/import', { method: 'POST', body: { filename: f.name, content: await f.text() } });
-      state.collection = r; toast(`${f.name}: ${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}`);
+      const r = await api('/collection/import', { method: 'POST', body: { filename: f.name, content: await readTextFile(f) } });
+      state.collection = r;
+      toast(`${f.name}: ${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}${r.skipped ? ` · ${r.skipped} scartati (coordinate non valide)` : ''}`);
     } catch (err) { toast(`${f.name}: ${err.message}`, true); }
   }
   renderCollection(); renderPoiSources();

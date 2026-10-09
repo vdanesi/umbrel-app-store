@@ -63,6 +63,12 @@ export const CATALOG = [
 // Fonti da scaricare a mano (dati gratuiti ma per uso personale, o che richiedono un account).
 export const MANUAL_SOURCES = [
   {
+    name: 'CamperOnLine', country: 'Italia ed Europa',
+    what: 'Circa 12.000 aree attrezzate, punti sosta e camper service, con i servizi di ciascuno',
+    page: 'https://www.camperonline.it/iCOL',
+    how: 'Accedi a CamperOnLine (account gratuito), scarica il file Garmin .gpx dell\'Europa (contiene anche l\'Italia) e importalo qui. Licenza: solo uso personale, vietato ridistribuirlo.'
+  },
+  {
     name: 'Archies Campings', country: 'Europa',
     what: 'Oltre 30.000 campeggi in tutta Europa, file POI gratuiti per navigatori',
     page: 'http://www.archiescampings.eu/eng1/',
