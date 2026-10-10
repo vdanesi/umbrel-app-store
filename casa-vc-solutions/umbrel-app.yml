@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.22.0"
+version: "1.22.1"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -32,12 +32,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.22.0: nuovo menu Compilatore Fibra protetto dal login del portale.
-  Include i tre modelli Excel Brescia-Iseo, Iseo-Edolo e Bornato-Rovato,
-  con dieci schemi compilabili, stati delle tratte, servizi e connettori.
-  Esportazione nei modelli originali e backup JSON dei dati del browser.
-  Dati della compilazione locali al browser, senza sincronizzazione tra utenti.
-  Nessuna migrazione dei dati esistenti; resta attiva la sincronizzazione Quadri.
+  Versione 1.22.1: stati della fibra nelle celle piccole centrali dei siti,
+  con libero bianco, passante grigio, bretellato giallo e utilizzato rosso.
+  Connettori SC verdi e LC azzurri nelle celle piccole laterali,
+  con selezioni indipendenti dei due lati e dicitura sotto il gruppo.
+  Le descrizioni rimangono nei campi grandi. Backup precedenti compatibili.
+  Nessuna migrazione dei dati esistenti del portale.
 
 dependencies: []
 path: ""
