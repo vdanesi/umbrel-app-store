@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.21.0"
+version: "1.22.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -32,13 +32,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.21.0: sincronizzazione in lettura da quadri.dvso.net all'avvio
-  e ogni 5 minuti, con pulsante Sincronizza adesso. Importa siti e cassetti
-  in fibra con porte e collegamenti; gli switch sono esclusi. I quadri con
-  fibra diventano rack. Indirizzi, coordinate e posizioni U locali conservati.
-  Identificativi stabili, segnalazione delle modifiche locali e degli elementi
-  assenti dalla fonte, senza cancellazioni automatiche degli elementi.
-  Nessuna scrittura su Quadri e nessuna importazione di utenti o password.
+  Versione 1.22.0: nuovo menu Compilatore Fibra protetto dal login del portale.
+  Include i tre modelli Excel Brescia-Iseo, Iseo-Edolo e Bornato-Rovato,
+  con dieci schemi compilabili, stati delle tratte, servizi e connettori.
+  Esportazione nei modelli originali e backup JSON dei dati del browser.
+  Dati della compilazione locali al browser, senza sincronizzazione tra utenti.
+  Nessuna migrazione dei dati esistenti; resta attiva la sincronizzazione Quadri.
 
 dependencies: []
 path: ""
