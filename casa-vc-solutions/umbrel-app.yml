@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.24.0"
+version: "1.25.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,12 +34,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.24.0: nuova impaginazione leggera del Personal Organizer con logo
-  DV locale in alto a sinistra, calendario mensile centrale e agenda del giorno.
-  Colori Dvsolutions mantenuti, riepiloghi per appuntamenti, note, promemoria
-  e attività. Modulo di inserimento aperto solo quando serve, ricerca e filtri,
-  layout adattabile a telefono e desktop. Nessuna libreria aggiuntiva.
-  Dati esistenti e tutte le funzioni precedenti conservati.
+  Versione 1.25.0: editor note con copia e incolla formattato, titoli,
+  grassetto, corsivo, elenchi, rientri, tabulazione, tabelle e collegamenti.
+  Documenti allegati persistenti con download protetto dal login, rimozione
+  e conservazione durante la modifica del testo. Massimo 5 MB per documento,
+  10 allegati e 25 MB per nota. Note precedenti compatibili. Interfaccia
+  adattabile a desktop e telefono e colori Dvsolutions mantenuti.
 
 dependencies: []
 path: ""
