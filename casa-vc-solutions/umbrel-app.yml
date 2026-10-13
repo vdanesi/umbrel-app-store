@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.22.2"
+version: "1.23.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -20,6 +20,8 @@ description: >-
   Include una raccolta POI con categorie, coordinate, note, ricerca e mappa
   OpenStreetMap. I POI possono diventare tappe dei viaggi, con coordinate e note
   conservate. La mappa dell'itinerario mostra le tappe numerate e riordinabili.
+  Personal Organizer include calendario locale, eventi, note, promemoria e
+  attività con categorie, priorità, ricerca e salvataggio persistente.
   CasaOS mantiene il solo controllo di raggiungibilità HTTPS.
   RailFiber è un modulo interno con siti, rack, cassetti, porte, collegamenti,
   mappa interattiva e schede PDF. Il menu PROJECTS apre RailFiber e permette
@@ -32,12 +34,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.22.2: pulsante Copia da per duplicare la configurazione
-  di una fibra su un’altra fibra dello stesso cavo, dopo conferma.
-  Copia servizi, collegamenti, stati e connettori, inclusi quelli originali
-  del modello Excel. Numeri delle fibre e distanze comuni restano invariati.
-  Copie indipendenti dalle successive modifiche della sorgente.
-  Backup precedenti compatibili e nessuna migrazione del portale.
+  Versione 1.23.0: nuovo Personal Organizer con calendario locale mensile,
+  eventi, note, promemoria e attività. Creazione, modifica e cancellazione,
+  categorie, priorità, completamento, ricerca e filtri. Dati persistenti
+  protetti dal login Dvsolutions. Include il Compilatore Fibra con Copia da
+  una fibra dello stesso cavo e tutte le funzioni precedenti del portale.
+  Dashboard e Collector aggiornati alla 1.23.0.
 
 dependencies: []
 path: ""
