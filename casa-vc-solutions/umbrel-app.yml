@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.33.0"
+version: "1.33.1"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,13 +34,10 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.33.0: vista del percorso fibra registrato dalla scheda porta.
-  Mostra i due estremi con sito, rack, cassetto, stato, colore, cavo, numero
-  fibra e connettore. Apertura diretta della porta di destinazione e PDF A4
-  con verifiche e dati mancanti. Evidenzia guasti, porte da verificare e fibre
-  duplicate nello stesso cassetto. Destinazioni testuali e stato passante non
-  generano collegamenti dedotti. Esportazione protetta da controllo revisione.
-  Home pubblica e stile Dvsolutions mantenuti.
+  Versione 1.33.1: ripristinato il logo originale fornito dall'utente,
+  mantenendo immagine e colori senza modifiche. Logo intero, senza ritagli,
+  nella barra laterale desktop e mobile. Scritta Dvsolutions mantenuta.
+  Aggiornata anche l'icona delle notifiche browser.
 
 dependencies: []
 path: ""
