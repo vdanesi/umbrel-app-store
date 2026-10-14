@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.26.0"
+version: "1.27.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,12 +34,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.26.0: backup ZIP di Organizer, allegati, RailFiber, viaggi, POI,
-  progetti e dati del Compilatore presenti in questo browser. Verifica integrità,
-  anteprima, conferma di ripristino e protezione dalle modifiche intervenute
-  dopo la verifica. Recupero dei file precedenti in caso di errore.
-  Nuovo riepilogo personale in dashboard: appuntamenti di oggi, promemoria,
-  attività aperte e note recenti. Credenziali di accesso conservate.
+  Versione 1.27.0: avvisi per scadenze imminenti e raggiunte nell'Organizer,
+  con Rimanda 1 ora e Completa. Notifiche browser facoltative dopo consenso,
+  disponibili tramite HTTPS o localhost mentre Dvsolutions è aperta.
+  Deduplicazione degli avvisi per scadenza e fase, controllo ogni 30 secondi.
+  Preferenze specifiche del browser. Dati e tutte le funzioni precedenti
+  conservati, inclusi backup ZIP e dashboard personale.
 
 dependencies: []
 path: ""
