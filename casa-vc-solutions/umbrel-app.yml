@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.28.0"
+version: "1.29.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,12 +34,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.28.0: cartelle, tag e preferiti per le note. Cartelle Personale,
-  Lavoro, Homelab e Fibra, oltre a nomi personalizzati quando si salva una nota.
-  Preferiti in cima, filtri combinabili per cartella, tag, tipo e allegati.
-  Ricerca anche nei nomi dei documenti e comando Azzera filtri.
-  Note precedenti e backup compatibili; metadati conservati nelle modifiche
-  effettuate da client precedenti. Calendario e scadenze mantenuti.
+  Versione 1.29.0: nuova home pubblica di monitoraggio, consultabile senza
+  login Dvsolutions. CPU, RAM, disco, uptime, container Docker e controlli
+  di raggiungibilità con aggiornamento ogni 15 secondi. Dati mancanti e
+  controlli offline distinti. Stile e colori Dvsolutions mantenuti.
+  Note, allegati, viaggi, configurazioni e comandi restano protetti;
+  nessuna esposizione di indirizzi di rete o immagini Docker nel riepilogo.
 
 dependencies: []
 path: ""
