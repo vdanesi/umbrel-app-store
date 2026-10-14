@@ -13,6 +13,8 @@ import { CATALOG, MANUAL_SOURCES } from './catalog.js';
 import { createAuth } from './auth.js';
 import { createOsmTiles } from './osmtiles.js';
 import { createGeocoder, dominantCountry, centerOf } from './geocode.js';
+import { planDays, nightWindow, rankNight } from './planner.js';
+import { createFuel, FUELS } from './fuel.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -134,6 +136,7 @@ function sanitizeTrip(input, existing = {}) {
     name: str(t.name, 200) || 'Nuovo viaggio',
     startDate: str(t.startDate, 10),
     budget: Math.max(0, num(t.budget)),
+    plan: { maxKm: Math.max(0, Math.min(2000, num(t.plan?.maxKm, 250))), maxHours: Math.max(0, Math.min(24, num(t.plan?.maxHours, 0))) },
     notes: str(t.notes, 50000),
     stops, expenses, route,
     createdAt: existing.createdAt || new Date().toISOString(),
@@ -854,6 +857,52 @@ app.post('/api/pois', wrap(async (req, res) => {
   if (stream) { send({ ...final, final: true }); return res.end(); }
   if (sources.every(s => !results[s].length) && warnings.length === sources.length) return res.status(502).json({ error: warnings.join(' · ') });
   res.json(final);
+}));
+
+// ---------- giornate di viaggio ----------
+app.post('/api/plan', wrap(async (req, res) => {
+  const b = req.body || {};
+  const geometry = (Array.isArray(b.geometry) ? b.geometry : []).map(p => [num(p[0]), num(p[1])]);
+  const stops = (Array.isArray(b.stops) ? b.stops : []).map(s => ({ lat: num(s.lat), lon: num(s.lon), nights: Math.max(0, Math.round(num(s.nights))), name: str(s.name, 200) }));
+  if (geometry.length < 2 || stops.length < 2) return res.status(400).json({ error: 'Serve un percorso calcolato con almeno due tappe' });
+  const maxKm = Math.max(0, Math.min(2000, num(b.maxKm))), maxHours = Math.max(0, Math.min(24, num(b.maxHours)));
+  if (!maxKm && !maxHours) return res.status(400).json({ error: 'Indica i km o le ore di guida al giorno' });
+  const plan = planDays({ geometry, legs: Array.isArray(b.legs) ? b.legs : [], stops, startDate: str(b.startDate, 10), maxKm, maxHours });
+  const sources = (Array.isArray(b.sources) ? b.sources : ['osm', 'mine']).filter(x => ['osm', 'mine'].includes(x));
+  const warnings = [];
+  const coll = sources.includes('mine') ? await loadCollection() : null;
+  for (const n of plan.nights) {
+    const line = nightWindow(plan.geometry, plan.cumKm, n, maxKm);
+    const area = makeArea({ line, radius: Math.max(3000, Math.min(20000, num(b.radius, 8000))) });
+    const lists = [];
+    if (sources.includes('osm')) {
+      try { lists.push(await searchOsm(area, ['area_camper', 'campeggio'])); }
+      catch (e) { if (!warnings.length) warnings.push(`OpenStreetMap: ${e.message}`); }
+    }
+    if (coll) lists.push(searchMine(coll, area, ['area_camper', 'campeggio']));
+    n.candidates = rankNight(mergePois(lists), n.point, plan.cumKm, plan.geometry, n.index).slice(0, 5);
+  }
+  const { cumKm, sIdx, geometry: _g, ...out } = plan;
+  res.json({ ...out, warnings });
+}));
+
+// ---------- prezzi dei carburanti (MIMIT) ----------
+const fuel = createFuel({ cacheDir: path.join(DATA_DIR, 'cache'), userAgent: USER_AGENT });
+app.post('/api/fuel', wrap(async (req, res) => {
+  const b = req.body || {};
+  const kind = FUELS[b.fuel] ? b.fuel : 'gasolio';
+  const radius = Math.max(500, Math.min(20000, Math.round(num(b.radius, 3000))));
+  const line = Array.isArray(b.line) && b.line.length >= 2 ? b.line.map(p => [num(p[0]), num(p[1])]) : null;
+  const center = !line && Array.isArray(b.center) ? [num(b.center[0]), num(b.center[1])] : null;
+  if (!line && !center) return res.status(400).json({ error: 'Serve un percorso o un punto' });
+  const r = await fuel.search({ line, center, radius, fuel: kind });
+  // i più economici ogni 50 km, così si vede dove conviene fermarsi
+  const byBand = new Map();
+  for (const s of r.stations) { const k = Math.floor(s.routeKm / 50); if (!byBand.has(k) || s.price < byBand.get(k).price) byBand.set(k, s); }
+  const bestIds = new Set([...byBand.values()].map(s => s.id));
+  const cheapest = [...r.stations].sort((a, b) => a.price - b.price).slice(0, 200);
+  const keep = new Map([...cheapest, ...byBand.values()].map(s => [s.id, { ...s, bestOfBand: bestIds.has(s.id) }]));
+  res.json({ ...r, stations: [...keep.values()].sort((a, b) => a.routeKm - b.routeKm || a.price - b.price), total: r.stations.length });
 }));
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Non trovato' }));

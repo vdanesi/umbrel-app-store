@@ -200,6 +200,9 @@ function fillTripForm() {
   $('#tripNotes').value = t.notes || '';
   $('#tabTripName').textContent = t.name;
   $('#expDate').value = t.startDate || isoDate(new Date());
+  $('#planKm').value = t.plan?.maxKm || 250;
+  $('#planHours').value = t.plan?.maxHours || '';
+  $('#planDays').innerHTML = ''; $('#planStatus').textContent = '';
 }
 $('#tripName').addEventListener('input', e => { state.trip.name = e.target.value; $('#tabTripName').textContent = e.target.value || 'Viaggio'; markDirty(); });
 $('#tripStart').addEventListener('change', e => { state.trip.startDate = e.target.value; renderStops(); markDirty(); });
@@ -209,6 +212,7 @@ $('#tripNotes').addEventListener('input', e => { state.trip.notes = e.target.val
 $$('.subtab').forEach(b => b.addEventListener('click', () => {
   $$('.subtab').forEach(x => x.classList.toggle('active', x === b));
   $$('.pane').forEach(p => (p.hidden = p.id !== 'pane-' + b.dataset.pane));
+  if (b.dataset.pane === 'fuel') renderFuelScope();
   if (b.dataset.pane === 'pois') { renderPoiScope(); loadCollection(); if (!state.catalog) loadCatalog(); }
   if (b.dataset.pane === 'diary') renderDiary();
 }));
@@ -264,6 +268,7 @@ function renderStops() {
         </label>
         ${s.kind === 'campeggio' || s.acsi ? `<label class="full acsi-field"><span><input type="checkbox" data-f="acsi" ${s.acsi ? 'checked' : ''}> CampingCard ACSI</span>
           <span class="acsi-price">tariffa a notte € <input type="number" min="0" step="0.5" data-f="acsiPrice" value="${s.acsi?.price ?? ''}" ${s.acsi ? '' : 'disabled'}></span></label>` : ''}
+        <div class="full">${navLinks(s.lat, s.lon)}</div>
         <details class="notes full" ${s.notes ? 'open' : ''}>
           <summary>Note e diario della tappa</summary>
           <textarea data-f="notes" rows="3" placeholder="Prenotazione, cosa vedere, impressioni…">${esc(s.notes)}</textarea>
@@ -404,7 +409,7 @@ $('#searchResults').addEventListener('click', e => {
 });
 
 // ---------- mappa ----------
-let map, stopLayer, routeLayer, poiLayer, stopMarkers = [];
+let map, stopLayer, routeLayer, poiLayer, planLayer, fuelLayer, stopMarkers = [];
 function initMap() {
   if (map) return;
   const osmDark = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'tiles-dark', attribution: '&copy; OpenStreetMap' });
@@ -415,6 +420,8 @@ function initMap() {
   L.control.scale({ imperial: false }).addTo(map);
   routeLayer = L.layerGroup().addTo(map);
   poiLayer = L.layerGroup().addTo(map);
+  planLayer = L.layerGroup().addTo(map);
+  fuelLayer = L.layerGroup().addTo(map);
   stopLayer = L.layerGroup().addTo(map);
 
   map.on('click', async e => {
@@ -489,6 +496,7 @@ async function computeRoute(force) {
     t.route = { ...r, signature: sig, computedAt: new Date().toISOString() };
     if (r.warning) toast(r.warning, true);
     renderStops(); renderRoute(); renderSummary(); renderDiary(); markDirty();
+    if ($('#planDays').childElementCount) { $('#planDays').innerHTML = ''; planLayer?.clearLayers(); $('#planStatus').innerHTML = '<span class="c-yellow">Il percorso è cambiato:</span> premi di nuovo "Pianifica le giornate".'; }
   } catch (e) {
     if (seq === state.routeSeq) { toast('Percorso non calcolato: ' + e.message, true); renderRoute(); }
   } finally {
@@ -772,6 +780,7 @@ function poiPopup(p, idx) {
   if (t.website) links.push(`<a href="${esc(/^https?:/i.test(t.website) ? t.website : 'https://' + t.website)}" target="_blank" rel="noopener">sito web</a>`);
   if (p.osmType) links.push(`<a href="https://www.openstreetmap.org/${p.osmType}/${p.osmId}" target="_blank" rel="noopener">OpenStreetMap</a>`);
   links.push(`<a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Google Maps</a>`);
+  links.push(`<br>${navLinks(p.lat, p.lon)}`);
   return `<b>${esc(poiName(p))}</b> ${srcBadges(p)} ${acsiBadge(p.acsi)}<br><span class="muted">${POI_TYPES[p.category]?.label || ''}</span>
     ${poiDetails(p) ? '<br>' + poiDetails(p) : ''}
     ${t.phone ? `<br>☎ ${esc(t.phone)}` : ''}
@@ -1044,6 +1053,170 @@ function buildPrint() {
 }
 
 // ---------- avvio ----------
+
+// ---------- navigazione verso un punto ----------
+function navLinks(lat, lon) {
+  const ll = `${(+lat).toFixed(6)},${(+lon).toFixed(6)}`;
+  return `<span class="navlinks">➤ Naviga: <a href="https://www.google.com/maps/dir/?api=1&destination=${ll}&travelmode=driving" target="_blank" rel="noopener">Google Maps</a>` +
+    `<a href="https://waze.com/ul?ll=${ll}&navigate=yes" target="_blank" rel="noopener">Waze</a>` +
+    `<a href="https://maps.apple.com/?daddr=${ll}&dirflg=d" target="_blank" rel="noopener">Apple</a>` +
+    `<a href="https://osmand.net/map?pin=${ll}#15/${(+lat).toFixed(5)}/${(+lon).toFixed(5)}" target="_blank" rel="noopener">OsmAnd</a></span>`;
+}
+// Una giornata intera su Google Maps: partenza, arrivo e fino a 8 tappe in mezzo.
+function dayNavUrl(points) {
+  const f = p => `${(+p[0]).toFixed(6)},${(+p[1]).toFixed(6)}`;
+  if (points.length < 2) return '';
+  const mid = points.slice(1, -1).slice(0, 8);
+  return `https://www.google.com/maps/dir/?api=1&origin=${f(points[0])}&destination=${f(points.at(-1))}${mid.length ? `&waypoints=${mid.map(f).join('%7C')}` : ''}&travelmode=driving`;
+}
+
+// ---------- giornate di viaggio ----------
+state.plan = null;
+$('#btnPlan').addEventListener('click', async () => {
+  const t = state.trip;
+  if (t.stops.length < 2) return toast('Servono almeno due tappe', true);
+  if (!t.route || t.route.signature !== routeSignature(t)) { toast('Prima calcolo il percorso…'); await computeRoute(true); }
+  if (!t.route || t.route.signature !== routeSignature(t)) return toast('Percorso non disponibile', true);
+  const maxKm = +$('#planKm').value || 0, maxHours = +$('#planHours').value || 0;
+  if (!maxKm && !maxHours) return toast('Indica i km o le ore di guida al giorno', true);
+  t.plan = { maxKm, maxHours }; markDirty();
+  $('#planStatus').innerHTML = '<span class="c-cyan">…</span> divido il percorso e cerco le aree per la notte';
+  $('#btnPlan').disabled = true;
+  try {
+    const sources = ['osm', ...(state.collection.total ? ['mine'] : [])];
+    state.plan = await api('/plan', { method: 'POST', body: { geometry: t.route.geometry, legs: t.route.legs, startDate: t.startDate,
+      stops: t.stops.map(s => ({ lat: s.lat, lon: s.lon, nights: s.nights, name: s.name })), maxKm, maxHours, sources } });
+    renderPlan();
+  } catch (e) { $('#planStatus').innerHTML = `<span class="err">✘</span> ${esc(e.message)}`; }
+  finally { $('#btnPlan').disabled = false; }
+});
+
+function renderPlan() {
+  const p = state.plan, t = state.trip;
+  planLayer.clearLayers();
+  if (!p) return;
+  const driving = p.days.filter(d => !d.rest);
+  const longest = Math.max(0, ...driving.map(d => d.km));
+  $('#planStatus').innerHTML = `<span class="ok">✔</span> ${p.days.length} giorni · ${driving.length} di guida · ${p.totalKm} km · ${fmtDur(p.totalHours * 3600)} di guida · giornata più lunga ${longest} km` +
+    (p.nights.length ? `<br><span class="c-yellow">${p.nights.length} ${p.nights.length === 1 ? 'notte da scegliere' : 'notti da scegliere'}</span>` : '<br>Le notti che hai previsto bastano.') +
+    (p.warnings || []).map(w => `<br><span class="c-yellow">⚠ ${esc(w)}</span>`).join('');
+  $('#planDays').innerHTML = p.days.map(d => {
+    const date = d.date ? fmtDate(parseDate(d.date)) : '';
+    if (d.rest) return `<div class="day rest"><div class="day-head"><span><b>Giorno ${d.day}</b> ${date} · fermi a ${esc(d.to)}</span></div></div>`;
+    const night = d.night != null ? p.nights[d.night] : null;
+    const nav = dayNavUrl(d.nav || []);
+    const cands = night ? (night.candidates.length ? night.candidates.map((c, ci) => `<div class="cand">
+        <span class="poi-dot c-${c.category}">${POI_TYPES[c.category]?.letter || '?'}</span>
+        <span class="cand-name">${esc(poiName(c))} ${srcBadges(c)} ${acsiBadge(c.acsi)}</span>
+        <button class="btn btn-small" data-night="${d.night}" data-cand="${ci}">+ Notte qui</button>
+        <span class="cand-meta">${c.deltaKm === 0 ? 'al punto della giornata' : c.deltaKm < 0 ? `${-c.deltaKm} km prima` : `${c.deltaKm} km dopo`} · a ${c.offKm} km dal percorso${poiDetails(c) ? ' · ' + poiDetails(c) : ''}</span>
+      </div>`).join('') : '<p class="hint">Nessuna area trovata vicino: prova con più km o aggiungi una tappa a mano.</p>') : '';
+    return `<div class="day ${night ? 'needs' : ''}">
+      <div class="day-head"><span><b>Giorno ${d.day}</b> ${date} · ${esc(d.from)} → ${night ? '<span class="c-yellow">notte da scegliere</span>' : esc(d.to)}</span>
+        <span class="day-km">${d.km} km · ${fmtDur(d.hours * 3600)}</span></div>
+      ${nav ? `<div class="navlinks"><a href="${nav}" target="_blank" rel="noopener">➤ Naviga la giornata con Google Maps</a></div>` : ''}
+      ${cands}
+    </div>`;
+  }).join('');
+  // punti dove finisce la giornata
+  for (const n of p.nights) {
+    L.marker(n.point, { icon: L.divIcon({ className: '', html: `<div class="night-marker"><span>${n.day}</span></div>`, iconSize: [22, 22], iconAnchor: [11, 11] }), title: `Fine del giorno ${n.day}` })
+      .bindPopup(`<b>Fine del giorno ${n.day}</b><br>${n.km} km · ${fmtDur(n.hours * 3600)} dalla partenza della giornata`).addTo(planLayer);
+    for (const c of n.candidates) {
+      L.marker([c.lat, c.lon], { icon: L.divIcon({ className: '', html: `<span class="poi-dot poi-marker c-${c.category}">${POI_TYPES[c.category]?.letter}</span>`, iconSize: [20, 20], iconAnchor: [10, 10] }) })
+        .bindPopup(`<b>${esc(poiName(c))}</b><br>notte del giorno ${n.day}${poiDetails(c) ? '<br>' + poiDetails(c) : ''}<br>${navLinks(c.lat, c.lon)}`).addTo(planLayer);
+    }
+  }
+}
+$('#planDays').addEventListener('click', e => {
+  const b = e.target.closest('[data-night]'); if (!b) return;
+  const n = state.plan.nights[+b.dataset.night], c = n.candidates[+b.dataset.cand];
+  addStop({ name: poiName(c), lat: c.lat, lon: c.lon, nights: 1, kind: c.category === 'campeggio' ? 'campeggio' : 'sosta',
+    notes: poiDetails(c).replace(/<[^>]+>/g, ''), acsi: c.acsi || null,
+    poi: { osmType: c.osmType || '', osmId: c.osmId || 0, category: c.category, sources: c.sources } }, n.insertAt);
+  $('#planStatus').innerHTML = '<span class="c-cyan">…</span> notte aggiunta: ricalcolo il percorso, poi ripianifica per le giornate successive.';
+  $('#planDays').innerHTML = ''; planLayer.clearLayers();
+  // quando il nuovo percorso è pronto, si ripianifica da solo
+  const sig = routeSignature(state.trip);
+  const wait = setInterval(() => {
+    if (state.trip?.route?.signature === sig) { clearInterval(wait); $('#btnPlan').click(); }
+  }, 700);
+  setTimeout(() => clearInterval(wait), 60000);
+});
+
+// ---------- carburante ----------
+state.fuel = null; state.fuelSort = 'route';
+function renderFuelScope() {
+  const t = state.trip; if (!t) return;
+  const sel = $('#fuelScope'); const prev = sel.value;
+  const hasRoute = t.route?.signature === routeSignature(t);
+  sel.innerHTML = (hasRoute ? '<option value="route">Lungo tutto il percorso</option>' : '') +
+    t.stops.map((s, i) => `<option value="${i}">Vicino a ${i + 1}. ${esc(s.name)}</option>`).join('') + '<option value="view">Centro della mappa</option>';
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  const ft = state.settings?.vehicle?.fuelType;
+  if (!sel.dataset.init) { $('#fuelKind').value = ft === 'gpl' ? 'gpl' : ft === 'benzina' ? 'benzina' : 'gasolio'; sel.dataset.init = '1'; }
+}
+const fmtL = n => n == null ? '—' : n.toLocaleString('it-IT', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+$('#btnFuel').addEventListener('click', async () => {
+  const t = state.trip, scope = $('#fuelScope').value;
+  const body = { fuel: $('#fuelKind').value, radius: +$('#fuelRadius').value };
+  if (scope === 'route') body.line = t.route.geometry;
+  else if (scope === 'view') { const c = map.getCenter(); body.center = [c.lat, c.lng]; body.radius = Math.max(body.radius, 10000); }
+  else { const s = t.stops[+scope]; body.center = [s.lat, s.lon]; body.radius = Math.max(body.radius, 5000); }
+  $('#fuelStatus').innerHTML = '<span class="c-cyan">…</span> leggo i prezzi del Ministero (la prima volta del giorno ci vuole qualche secondo)';
+  $('#btnFuel').disabled = true;
+  try { state.fuel = await api('/fuel', { method: 'POST', body }); renderFuel(true); }
+  catch (e) { $('#fuelStatus').innerHTML = `<span class="err">✘</span> ${esc(e.message)}`; }
+  finally { $('#btnFuel').disabled = false; }
+});
+$('#btnFuelSort').addEventListener('click', () => {
+  state.fuelSort = state.fuelSort === 'route' ? 'price' : 'route';
+  $('#btnFuelSort').textContent = state.fuelSort === 'route' ? 'Ordina per prezzo' : 'Ordina lungo il percorso';
+  renderFuel(false);
+});
+$('#btnFuelClear').addEventListener('click', () => { state.fuel = null; fuelLayer.clearLayers(); $('#fuelList').innerHTML = ''; $('#fuelStatus').textContent = ''; });
+function renderFuel(fit) {
+  const f = state.fuel; fuelLayer.clearLayers();
+  if (!f) return;
+  const label = { gasolio: 'gasolio', gpl: 'GPL', benzina: 'benzina', metano: 'metano' }[f.fuel];
+  const unit = f.fuel === 'metano' ? '€/kg' : '€/l';
+  const est = state.settings?.fuelPrice;
+  $('#fuelStatus').innerHTML = f.stats
+    ? `<span class="ok">✔</span> ${f.total} distributori di ${label} · minimo <span class="c-magenta">${fmtL(f.stats.min)}</span> · mediana <span class="c-magenta">${fmtL(f.stats.median)}</span> · massimo ${fmtL(f.stats.max)} ${unit}` +
+      (f.total > f.stations.length ? `<br><span class="muted">mostro i ${f.stations.length} più convenienti e il migliore ogni 50 km (★)</span>` : '') +
+      `<br><span class="muted">prezzi MIMIT${f.pricesDate ? ' del ' + esc(f.pricesDate.split('-').reverse().join('/')) : ''}</span>` +
+      (f.fuel === (state.settings?.vehicle?.fuelType === 'diesel' ? 'gasolio' : state.settings?.vehicle?.fuelType) && est ? ` · nella stima uso ${fmtL(est)} ${unit} <button class="btn btn-small" id="btnFuelUse">Usa la mediana</button>` : '') +
+      (f.warning ? `<br><span class="c-yellow">⚠ ${esc(f.warning)}</span>` : '')
+    : `Nessun distributore con ${label} trovato: prova ad allargare la distanza.` + (f.warning ? `<br><span class="c-yellow">⚠ ${esc(f.warning)}</span>` : '');
+  const list = state.fuelSort === 'price' ? [...f.stations].sort((a, b) => a.price - b.price) : f.stations;
+  $('#fuelList').innerHTML = list.map(s => `<div class="fuel ${s.bestOfBand ? 'best' : ''}" data-id="${esc(s.id)}">
+      <span class="fuel-price">${fmtL(s.price)}</span>
+      <span class="fuel-name">${esc(s.brand || s.name)}${s.type === 'Autostradale' ? ' <span class="muted">· autostrada</span>' : ''}</span>
+      <button class="btn-icon" data-addfuel="${esc(s.id)}" title="Aggiungi come tappa">＋</button>
+      <span class="fuel-meta">${f.stations.some(x => x.routeKm) ? `km ${s.routeKm} · ` : ''}a ${String(s.offKm).replace('.', ',')} km · ${s.self != null ? 'self' : 'servito'}${s.self != null && s.servito != null ? ` (servito ${fmtL(s.servito)})` : ''} · ${esc(s.address)}${s.priceAt ? ` · prezzo del ${esc(s.priceAt.split(' ')[0])}` : ''}<br>${navLinks(s.lat, s.lon)}</span>
+    </div>`).join('');
+  for (const s of f.stations) {
+    L.marker([s.lat, s.lon], { icon: L.divIcon({ className: '', html: `<span class="fuel-marker ${s.bestOfBand ? 'best' : ''}">${fmtL(s.price)}</span>`, iconSize: null, iconAnchor: [20, 8] }), title: s.brand || s.name })
+      .bindPopup(`<b>${esc(s.brand || s.name)}</b> · ${fmtL(s.price)} ${unit}<br>${esc(s.address)}<br>${navLinks(s.lat, s.lon)}`).addTo(fuelLayer);
+  }
+  if (fit && f.stations.length) map.fitBounds(f.stations.map(s => [s.lat, s.lon]), { padding: [30, 30] });
+}
+$('#fuelStatus').addEventListener('click', async e => {
+  if (e.target.id !== 'btnFuelUse') return;
+  try {
+    await api('/settings', { method: 'PUT', body: { fuelPrice: state.fuel.stats.median } });
+    await loadSettings(); renderDiary(); renderFuel(false); toast(`Stima carburante: ${fmtL(state.fuel.stats.median)} €/l`);
+  } catch (x) { toast(x.message, true); }
+});
+$('#fuelList').addEventListener('click', e => {
+  const a = e.target.closest('[data-addfuel]');
+  const s = state.fuel.stations.find(x => x.id === (a || e.target.closest('.fuel'))?.dataset[a ? 'addfuel' : 'id']);
+  if (!s) return;
+  if (a) return addStop({ name: `${s.brand || 'Distributore'} ${fmtL(s.price)} €`, lat: s.lat, lon: s.lon, nights: 0, kind: 'tappa', notes: s.address }, bestInsertIndex(s.lat, s.lon));
+  if (e.target.closest('a')) return;
+  map.setView([s.lat, s.lon], Math.max(map.getZoom(), 14));
+});
+
 (async function boot() {
   try { await loadSettings(); } catch (e) { toast('Server non raggiungibile: ' + e.message, true); }
   loadCollection();

@@ -63,6 +63,7 @@
     <nav class="subtabs" role="tablist">
       <button class="subtab active" data-pane="stops">Tappe</button>
       <button class="subtab" data-pane="pois">Aree sosta</button>
+      <button class="subtab" data-pane="fuel">Carburante</button>
       <button class="subtab" data-pane="diary">Diario e costi</button>
       <button class="subtab" data-pane="vehicle">Mezzo</button>
       <button class="subtab" data-pane="export">Esporta</button>
@@ -83,6 +84,38 @@
         <button class="btn" id="btnReverse">Inverti ordine</button>
         <button class="btn" id="btnFit">Inquadra tutto</button>
       </div>
+
+      <h3 class="c-green">Giornate di viaggio</h3>
+      <p class="hint">Quanto vuoi guidare al giorno? L'app divide il percorso in giornate, rispetta le notti che hai già previsto e, dove manca una notte, propone le aree vicine al punto di arrivo.</p>
+      <div class="plan-form">
+        <label>Km al giorno <input type="number" id="planKm" min="0" max="2000" step="10" placeholder="es. 250"></label>
+        <label>Ore di guida <input type="number" id="planHours" min="0" max="24" step="0.5" placeholder="facoltativo"></label>
+        <button class="btn btn-primary" id="btnPlan">Pianifica le giornate</button>
+      </div>
+      <div id="planStatus" class="hint"></div>
+      <div id="planDays" class="plan-days"></div>
+    </section>
+
+    <!-- Carburante -->
+    <section class="pane" id="pane-fuel" hidden>
+      <h3 class="c-green">Prezzi del carburante</h3>
+      <p class="hint">Prezzi comunicati dai distributori italiani al Ministero (MIMIT, dati aperti), aggiornati ogni mattina con i prezzi del giorno prima.</p>
+      <div class="form-grid">
+        <label>Carburante
+          <select id="fuelKind"><option value="gasolio">Gasolio</option><option value="gpl">GPL</option><option value="benzina">Benzina</option><option value="metano">Metano</option></select>
+        </label>
+        <label>Distanza dal percorso
+          <select id="fuelRadius"><option value="1000">1 km</option><option value="3000" selected>3 km</option><option value="5000">5 km</option><option value="10000">10 km</option></select>
+        </label>
+        <label class="span2">Dove <select id="fuelScope"></select></label>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="btnFuel">Cerca</button>
+        <button class="btn" id="btnFuelSort">Ordina per prezzo</button>
+        <button class="btn" id="btnFuelClear">Pulisci mappa</button>
+      </div>
+      <div id="fuelStatus" class="hint"></div>
+      <div id="fuelList" class="fuel-list"></div>
     </section>
 
     <!-- Aree sosta -->
