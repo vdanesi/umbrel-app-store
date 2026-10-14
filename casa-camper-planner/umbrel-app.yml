@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "2.3.0"
+version: "2.3.1"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -49,14 +49,12 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Mappe di Google My Maps: si importano anche i KML che contengono solo il collegamento
-  alla mappa (l'Umbrel la scarica da Google, con le mappe collegate) e si può incollare
-  direttamente il link della mappa. I punti che hanno solo l'indirizzo vengono
-  posizionati con OpenStreetMap, in background e con l'avanzamento visibile; gli
-  indirizzi non trovati sono elencati. Il nome delle cartelle della mappa diventa tipo
-  e servizi (gratis, a pagamento, corrente, carico/scarico). Nuova categoria "Luoghi da
-  visitare" per siti UNESCO, borghi e mete, da cercare lungo il percorso. Con ↻ si
-  riscarica la mappa quando viene aggiornata.
+  Molti più indirizzi trovati nelle mappe importate. Se un indirizzo non viene trovato
+  si riprova con versioni semplificate (senza CAP e sigla della provincia, senza le
+  indicazioni dopo il trattino, solo il paese), limitando la ricerca al paese della
+  mappa, e poi con un secondo servizio (Photon). Se il servizio è occupato l'app aspetta
+  e riprova invece di dare l'indirizzo per non trovato. Nuovo pulsante "Riprova questi
+  indirizzi" per cercare di nuovo solo quelli mancanti, senza reimportare la mappa.
 dependencies: []
 path: ""
 defaultUsername: ""

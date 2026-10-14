@@ -537,7 +537,7 @@ function renderCollection() {
     ? `<span class="c-magenta">${punti(c.total)}</span> · <span class="c-yellow">★ ${c.favorites}</span> ${c.favorites === 1 ? 'preferito' : 'preferiti'}${c.acsi ? ` · <span class="acsi">ACSI</span> ${c.acsi}` : ''}`
     : '<span class="muted">Vuota. Importa un file o una fonte esterna qui sotto, oppure salva le aree che trovi con ☆.</span>';
   $('#collImports').innerHTML = c.imports.map(i => `<div class="coll-row">
-      <span>${esc(i.name)}${i.title && i.title !== i.name ? ` <span class="c-cyan">${esc(i.title)}</span>` : ''} <span class="muted">· ${punti(i.count)} · ${new Date(i.importedAt).toLocaleDateString('it-IT')}${i.licence ? ' · ' + esc(i.licence) : ''}</span>${i.missingCount ? `<br><details class="missing"><summary class="c-yellow">${i.missingCount === 1 ? '1 indirizzo non trovato' : `${i.missingCount} indirizzi non trovati`}</summary><span class="muted">${i.missing.map(esc).join(' · ')}${i.missingCount > i.missing.length ? ' …' : ''}</span></details>` : ''}</span>
+      <span>${esc(i.name)}${i.title && i.title !== i.name ? ` <span class="c-cyan">${esc(i.title)}</span>` : ''} <span class="muted">· ${punti(i.count)} · ${new Date(i.importedAt).toLocaleDateString('it-IT')}${i.licence ? ' · ' + esc(i.licence) : ''}</span>${i.missingCount ? `<br><details class="missing"><summary class="c-yellow">${i.missingCount === 1 ? '1 indirizzo non trovato' : `${i.missingCount} indirizzi non trovati`}</summary>${i.canRetry ? `<button class="btn btn-small" data-retry="${esc(i.name)}">↻ Riprova questi indirizzi</button> ` : ''}<span class="muted">${i.missing.map(esc).join(' · ')}${i.missingCount > i.missing.length ? ' …' : ''}</span></details>` : ''}</span>
       <span class="poi-actions">${i.url ? `<button class="btn-icon" data-refresh="${esc(i.name)}" title="Riscarica la versione più recente">↻</button>` : ''}
       <button class="btn-icon" data-delimport="${esc(i.name)}" title="Rimuovi dalla raccolta">✕</button></span></div>`).join('');
   renderCatalog();
@@ -584,9 +584,10 @@ async function waitImport(r, label) {
   }
 }
 function importSummary(label, r) {
-  const bits = [`${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}`];
+  const bits = [r.retried ? `${r.added} ${r.added === 1 ? 'indirizzo trovato' : 'indirizzi trovati'}` : `${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}`];
   if (r.linked > 1 || (r.linked === 1 && !/^https?:/.test(label))) bits.push(`da ${r.linked} ${r.linked === 1 ? 'mappa collegata' : 'mappe collegate'}`);
-  if (r.missing) bits.push(r.missing === 1 ? '1 indirizzo non trovato' : `${r.missing} indirizzi non trovati`);
+  if (r.missing) bits.push(r.missing === 1 ? '1 indirizzo ancora senza posizione' : `${r.missing} indirizzi ancora senza posizione`);
+  if (r.unavailable) bits.push(`il servizio indirizzi non risponde: ${r.unavailable} da riprovare più tardi`);
   if (r.skipped) bits.push(`${r.skipped} ${r.skipped === 1 ? 'scartato' : 'scartati'} (coordinate non valide)`);
   if (r.shapes) bits.push(r.shapes === 1 ? '1 percorso disegnato ignorato' : `${r.shapes} percorsi disegnati ignorati`);
   return `${label}: ${bits.join(' · ')}`;
@@ -643,6 +644,8 @@ $('#collFile').addEventListener('change', async e => {
   renderCollection(); renderPoiSources();
 });
 $('#collImports').addEventListener('click', async e => {
+  const rt = e.target.closest('[data-retry]');
+  if (rt) return runImport(rt.dataset.retry, rt, () => api('/collection/retry-missing', { method: 'POST', body: { name: rt.dataset.retry } }));
   const rf = e.target.closest('[data-refresh]');
   if (rf) return runImport(rf.dataset.refresh, rf, () => api('/collection/refresh', { method: 'POST', body: { name: rf.dataset.refresh } }));
   const b = e.target.closest('[data-delimport]'); if (!b) return;

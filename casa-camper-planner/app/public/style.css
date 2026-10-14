@@ -281,6 +281,7 @@ details.notes[open] summary { margin-bottom: 4px; }
 .c-luogo { background: var(--accent-magenta); }
 .k-visita.stop-marker { background: var(--accent-magenta); }
 .missing summary { cursor: pointer; font-size: 12px; }
+.btn-small { padding: 2px 8px; font-size: 12px; margin: 4px 0; }
 .poi-list { display: flex; flex-direction: column; margin-top: 8px; }
 .poi {
   display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start;

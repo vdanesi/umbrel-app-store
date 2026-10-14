@@ -12,6 +12,7 @@ import { haversine, makeArea, searchOverture, parsePoiFile, mergePois, guessCate
 import { CATALOG, MANUAL_SOURCES } from './catalog.js';
 import { createAuth } from './auth.js';
 import { createOsmTiles } from './osmtiles.js';
+import { createGeocoder, dominantCountry, centerOf } from './geocode.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +31,7 @@ const VERSION = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'u
 const OSRM_URL = process.env.OSRM_URL || 'https://router.project-osrm.org';
 const ORS_URL = process.env.ORS_URL || 'https://api.openrouteservice.org';
 const NOMINATIM_URL = process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org';
+const PHOTON_URL = process.env.PHOTON_URL ?? 'https://photon.komoot.io';
 const OVERPASS_URLS = (process.env.OVERPASS_URL || 'https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter')
   .split(',').map(s => s.trim()).filter(Boolean);
 const USER_AGENT = `CamperPlanner/${VERSION} (self-hosted Umbrel app)`;
@@ -466,7 +468,8 @@ async function loadCollection() {
 function collectionSummary(c) {
   const fav = c.items.filter(i => i.source === 'preferiti').length;
   const acsi = c.items.filter(i => i.acsi).length;
-  return { total: c.items.length, favorites: fav, acsi, imports: c.imports };
+  // gli indirizzi da riprovare restano sul server: al browser basta sapere quanti sono
+  return { total: c.items.length, favorites: fav, acsi, imports: c.imports.map(({ pending, ...i }) => ({ ...i, canRetry: !!pending?.length })) };
 }
 function searchMine(c, area, types) {
   return c.items.filter(i => types.includes(i.category) && area.contains([i.lat, i.lon])).map(i => ({
@@ -577,36 +580,31 @@ async function collectPoints(first, { category, onPhase } = {}) {
   return { points, needGeocode, urls, skipped, shapes, source, docName, errors };
 }
 
-// ---------- geocodifica degli indirizzi (Nominatim: al massimo 1 richiesta al secondo) ----------
-const GEO_FILE = path.join(DATA_DIR, 'cache', 'geocode.json');
-let geoCache = null, geoSaveTimer = null, geoChain = Promise.resolve(), geoLast = 0;
-async function geoLoad() { if (!geoCache) geoCache = new Map(Object.entries(await readJson(GEO_FILE, {}))); return geoCache; }
-function geoSave() {
-  clearTimeout(geoSaveTimer);
-  geoSaveTimer = setTimeout(async () => {
-    try { await fs.mkdir(path.dirname(GEO_FILE), { recursive: true }); await writeJsonAtomic(GEO_FILE, Object.fromEntries(geoCache)); }
-    catch (e) { console.error('Cache indirizzi non salvata:', e.message); }
-  }, 2000);
-}
-const geoKey = a => String(a).toLowerCase().replace(/\s+/g, ' ').trim();
-async function geocodeAddress(address) {
-  const cache = await geoLoad();
-  const key = geoKey(address);
-  const hit = cache.get(key);
-  if (hit !== undefined && (hit || Date.now() - (cache.get('#t:' + key) || 0) < 30 * 864e5)) return hit;
-  // una richiesta alla volta per tutto il server, come chiede Nominatim
-  const run = geoChain.then(async () => {
-    const wait = 1100 - (Date.now() - geoLast);
-    if (wait > 0) await new Promise(r => setTimeout(r, wait));
-    geoLast = Date.now();
-    const d = await fetchJson(`${NOMINATIM_URL}/search?format=jsonv2&limit=1&accept-language=it&q=${encodeURIComponent(address)}`);
-    const r = Array.isArray(d) && d[0] ? [Number(d[0].lat), Number(d[0].lon)] : null;
-    cache.set(key, r); if (!r) cache.set('#t:' + key, Date.now());
-    geoSave();
-    return r;
-  });
-  geoChain = run.catch(() => {});
-  return run;
+// ---------- geocodifica degli indirizzi (vedi geocode.js) ----------
+const geocoder = createGeocoder({ cacheFile: path.join(DATA_DIR, 'cache', 'geocode.json'), nominatimUrl: NOMINATIM_URL, photonUrl: PHOTON_URL, userAgent: USER_AGENT, fetchJson });
+
+// Posiziona i punti che hanno solo l'indirizzo. Se il servizio smette di rispondere,
+// quelli rimasti restano "da riprovare" invece di essere dati per non trovati.
+async function geocodePending(job, pending, known) {
+  const found = [], notFound = [], retry = [];
+  const country = dominantCountry(known, pending);
+  let bias = centerOf(known);
+  let failures = 0;
+  job.total = pending.length; job.done = 0; job.phase = 'indirizzi';
+  for (const p of pending) {
+    if (failures >= 3) { retry.push(p); job.done++; continue; }
+    try {
+      const c = await geocoder.geocode(p, { country, bias });
+      failures = 0;
+      if (c) { const { address, ...rest } = p; found.push({ ...rest, tags: { ...(rest.tags || {}), address }, lat: c[0], lon: c[1] }); if (!bias) bias = c; }
+      else notFound.push(p);
+    } catch (e) {
+      console.error('Geocodifica:', e.message);
+      if (e.unavailable) { failures++; retry.push(p); } else notFound.push(p);
+    }
+    job.done++;
+  }
+  return { found, notFound, retry };
 }
 
 // ---------- importazioni in background ----------
@@ -630,17 +628,13 @@ async function runImport(req, res, name, work) {
 
 async function finishImport(job, name, collected, meta = {}) {
   const { points, needGeocode, urls, skipped, shapes, source, docName, errors } = collected;
-  const missing = [];
+  let notFound = [], retry = [];
   if (needGeocode.length) {
-    job.total = needGeocode.length; job.phase = 'indirizzi';
-    for (const p of needGeocode) {
-      let c = null;
-      try { c = await geocodeAddress(p.address); } catch (e) { console.error('Geocodifica:', e.message); }
-      if (c) { const { address, ...rest } = p; points.push({ ...rest, lat: c[0], lon: c[1] }); }
-      else missing.push(p.name || p.address);
-      job.done++;
-    }
+    const g = await geocodePending(job, needGeocode, points);
+    points.push(...g.found); notFound = g.notFound; retry = g.retry;
   }
+  const missingItems = [...retry, ...notFound];
+  const missing = missingItems.map(p => p.name || p.address);
   if (!points.length) {
     const e = new Error(errors.length ? `Mappa non scaricata: ${errors[0]}` : missing.length ? 'Nessun indirizzo della mappa è stato trovato' : 'Nessun punto trovato (servono GPX, KML, GeoJSON o CSV con coordinate o indirizzi)');
     e.status = 400; throw e;
@@ -649,9 +643,10 @@ async function finishImport(job, name, collected, meta = {}) {
   const licenceMeta = source === 'camperonline'
     ? { licence: 'solo uso personale, non ridistribuire', attribution: 'CamperOnLine.it', page: 'https://www.camperonline.it/iCOL' } : {};
   const extra = { ...licenceMeta, ...meta, ...(urls.length ? { url: urls[0], urls } : {}), ...(docName ? { title: docName } : {}),
-    ...(missing.length ? { missing: missing.slice(0, 50), missingCount: missing.length } : { missing: undefined, missingCount: undefined }) };
+    ...(missing.length ? { missing: missing.slice(0, 50), missingCount: missing.length, pending: missingItems.slice(0, 2000), retryCount: retry.length }
+      : { missing: undefined, missingCount: undefined, pending: undefined, retryCount: undefined }) };
   const r = await storeImport(name, points, extra);
-  return { ...r, skipped, shapes, missing: missing.length, linked: urls.length, errors, source };
+  return { ...r, skipped, shapes, missing: missing.length, unavailable: retry.length, linked: urls.length, errors, source };
 }
 
 app.post('/api/collection/import', wrap(async (req, res) => {
@@ -661,6 +656,29 @@ app.post('/api/collection/import', wrap(async (req, res) => {
   try { pts = parsePoiFile(filename, text); } catch (e) { return res.status(400).json({ error: 'File non leggibile: ' + e.message }); }
   if (!pts.length && !pts.needGeocode?.length && !pts.links?.length) return res.status(400).json({ error: 'Nessun punto trovato nel file (servono GPX, KML, GeoJSON o CSV con coordinate)' });
   await runImport(req, res, filename, async job => finishImport(job, filename, await collectPoints({ pts }, { onPhase: t => (job.phase = t) })));
+}));
+
+// Riprova solo gli indirizzi rimasti senza posizione, senza riscaricare la mappa.
+app.post('/api/collection/retry-missing', wrap(async (req, res) => {
+  const c0 = await loadCollection();
+  const imp = c0.imports.find(i => i.name === req.body?.name);
+  if (!imp?.pending?.length) return res.status(404).json({ error: 'Non ci sono indirizzi da riprovare per questa importazione' });
+  await runImport(req, res, imp.name, async job => {
+    const known = c0.items.filter(i => i.source === imp.name);
+    const g = await geocodePending(job, imp.pending, known);
+    job.phase = 'salvataggio';
+    const c = await loadCollection();
+    const rec = c.imports.find(i => i.name === imp.name);
+    if (!rec) throw new Error('L\'importazione è stata rimossa nel frattempo');
+    const now = new Date().toISOString();
+    for (const p of g.found) c.items.push({ id: crypto.randomUUID(), source: imp.name, addedAt: now, ...p });
+    const left = [...g.retry, ...g.notFound];
+    rec.count = (rec.count || 0) + g.found.length;
+    if (left.length) Object.assign(rec, { pending: left, missing: left.map(p => p.name || p.address).slice(0, 50), missingCount: left.length, retryCount: g.retry.length });
+    else { delete rec.pending; delete rec.missing; delete rec.missingCount; delete rec.retryCount; }
+    await writeJsonAtomic(ctx().collectionFile, c);
+    return { added: g.found.length, missing: left.length, unavailable: g.retry.length, retried: true, ...collectionSummary(c) };
+  });
 }));
 
 app.get('/api/collection/jobs/:id', (req, res) => {
@@ -714,7 +732,7 @@ app.post('/api/collection/refresh', wrap(async (req, res) => {
   const imp = c.imports.find(i => i.name === req.body?.name && i.url);
   if (!imp) return res.status(404).json({ error: 'Questa fonte non ha un indirizzo da cui aggiornarla' });
   const s = imp.catalogId && catalogEntries().find(x => x.id === imp.catalogId);
-  const { name, count, importedAt, url, urls, missing, missingCount, ...meta } = imp;
+  const { name, count, importedAt, url, urls, missing, missingCount, pending, retryCount, ...meta } = imp;
   await importFromUrl(req, res, { url: s ? s.url : url, urls: s ? null : urls, name, category: s ? s.category : (imp.category || undefined), meta });
 }));
 
