@@ -177,17 +177,93 @@ function parseGpx(text) {
   return out;
 }
 
+// KML (anche esportato da Google My Maps). Tiene conto delle cartelle (i "livelli" della
+// mappa), dei punti che hanno solo l'indirizzo e dei NetworkLink verso altre mappe.
 function parseKml(text) {
   const out = [];
-  const re = /<Placemark\b[^>]*>([\s\S]*?)<\/Placemark>/gi;
+  const links = [];
+  const folders = [];          // pila dei nomi delle cartelle aperte
+  let docName = '', docDesc = '';
+  const re = /<(\/?)(Folder|Document|Placemark|NetworkLink)\b[^>]*>/gi;
   let m;
   while ((m = re.exec(text))) {
-    const body = m[1];
+    const closing = m[1] === '/', el = m[2].toLowerCase();
+    if (el === 'folder' || el === 'document') {
+      if (closing) { if (el === 'folder') folders.pop(); continue; }
+      const nm = text.slice(re.lastIndex, re.lastIndex + 600).match(/^\s*<name>([\s\S]*?)<\/name>/i);
+      const name = nm ? decode(nm[1]) : '';
+      if (el === 'folder') folders.push(name);
+      else if (!docName) {
+        docName = name;
+        const dd = text.slice(re.lastIndex, re.lastIndex + 3000).match(/^\s*<name>[\s\S]*?<\/name>\s*<description>([\s\S]*?)<\/description>/i);
+        docDesc = dd ? decode(dd[1]) : '';
+      }
+      continue;
+    }
+    if (closing) continue;
+    const endTag = el === 'placemark' ? '</Placemark>' : '</NetworkLink>';
+    const stop = text.indexOf(endTag, re.lastIndex);
+    if (stop < 0) break;
+    const body = text.slice(re.lastIndex, stop);
+    re.lastIndex = stop + endTag.length;
+    if (el === 'networklink') {
+      const href = tag(body, 'href');
+      if (href) links.push(href);
+      continue;
+    }
+    const data = {};
+    for (const d of body.matchAll(/<Data\b[^>]*name\s*=\s*["']([^"']+)["'][^>]*>\s*<value>([\s\S]*?)<\/value>/gi)) data[d[1].toLowerCase()] = decode(d[2]);
     const pt = body.match(/<Point\b[\s\S]*?<coordinates>\s*([-\d.]+)\s*,\s*([-\d.]+)/i);
-    if (!pt) continue; // linee e poligoni non sono aree sosta
-    out.push({ lat: parseFloat(pt[2]), lon: parseFloat(pt[1]), name: tag(body, 'name'), notes: tag(body, 'description') });
+    const isShape = /<(LineString|Polygon|MultiGeometry)\b/i.test(body) && !pt;
+    const address = tag(body, 'address') || data.indirizzo || data.address || data.adresse || '';
+    let description = tag(body, 'description');
+    // Google My Maps ripete i dati della tabella nella descrizione ("indirizzo: …<br>descrizione: …")
+    if (data.descrizione || data.description) description = data.descrizione || data.description;
+    const extra = Object.entries(data)
+      .filter(([k, v]) => v && !['indirizzo', 'address', 'adresse', 'descrizione', 'description', 'name', 'nome', 'gx_media_links'].includes(k))
+      .map(([k, v]) => `${k}: ${v}`).join(' · ');
+    const folder = folders.filter(Boolean).join(' / ');
+    out.push({
+      lat: pt ? parseFloat(pt[2]) : NaN, lon: pt ? parseFloat(pt[1]) : NaN,
+      name: tag(body, 'name') || data.nome || data.name || '',
+      notes: [description, extra].filter(Boolean).join(' · ').slice(0, 1500),
+      address: pt ? '' : address,
+      website: (body.match(/https?:\/\/[^\s"'<>\]]+/) || [''])[0].replace(/&amp;/g, '&'),
+      folder, docName, isShape,
+      kindHint: `${folder} ${docName} ${docDesc}`
+    });
   }
+  out.links = links;
+  out.docName = docName;
   return out;
+}
+
+// "46.01646, 13.39305" scritto nel campo indirizzo
+export function coordsFromText(t) {
+  const m = String(t || '').trim().match(/^(-?\d{1,2}(?:\.\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:\.\d+)?)$/);
+  if (!m) return null;
+  const lat = +m[1], lon = +m[2];
+  return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? [lat, lon] : null;
+}
+
+// Il nome del punto decide; il contesto (cartella, mappa) serve solo per campeggi e luoghi da visitare.
+function kmlCategory(p, filename) {
+  const own = guessCategory(`${p.name} ${p.notes || ''}`);
+  if (own !== 'area_camper' || p.docName === undefined) return p.docName === undefined ? guessCategory(`${p.name} ${p.kindHint || ''} ${filename}`) : own;
+  const ctx = guessCategory(`${p.kindHint || ''} ${filename}`);
+  return ctx === 'campeggio' || ctx === 'luogo' ? ctx : 'area_camper';
+}
+
+// Servizi e tipo dedotti dal nome della cartella o della mappa (es. "corrente + carico scarico gratis").
+function folderTags(text) {
+  const t = String(text || '').toLowerCase();
+  const tags = {};
+  if (/(gratis|gratuit|free\b|offerta libera)/.test(t)) tags.fee = 'no';
+  else if (/(a pagamento|pagamento|payant|paid)/.test(t)) tags.fee = 'yes';
+  if (/(corrente|elettric|allaccio|power)/.test(t)) tags.power = 'yes';
+  if (/(carico|acqua|water)/.test(t)) tags.water = 'yes';
+  if (/(scarico|camper ?service|vidange)/.test(t)) tags.dump = 'yes';
+  return tags;
 }
 
 function splitCsvLine(line, sep) {
@@ -326,7 +402,11 @@ function parseJson(text) {
   return rows.map(r => recordToPoint(r || {}, f, r?.geometry?.coordinates || r?.geo_shape?.geometry?.coordinates));
 }
 
+const RE_LUOGO = /(unesco|patrimonio|borgh|museo|castell|abbazi|duomo|cattedral|santuari|chiesa|basilica|monastero|rocca|villa\b|parco (nazionale|naturale|archeologic)|archeolog|cascat|lago di|grotte|terme|spiagg|belvedere|panoram|da visitare|cosa vedere|tour\b|itinerari|percorso|articolo)/i;
+const RE_SOSTA_WIDE = /(sosta|parchegg|parking|camper|aire|stellplatz|area attrezzat|carico|scarico|corrente|camping|campegg|agricamp|agriturismo)/i;
+
 export function guessCategory(text) {
+  if (RE_LUOGO.test(text) && !RE_SOSTA_WIDE.test(text)) return 'luogo';
   if (RE_CAMP.test(text) && !RE_SOSTA.test(text)) return 'campeggio';
   if (/(scarico|dump|vidange|entsorgung|ver\s*sorgung)/i.test(text) && !/(sosta|stellplatz)/i.test(text)) return 'scarico';
   return 'area_camper';
@@ -396,13 +476,36 @@ export function parsePoiFile(filename, text, { category } = {}) {
     pts = pts.filter(p => Number.isFinite(p.lat) && inEuropeArea(p)).map(camperOnLinePoint);
     skipped = before - pts.length;
   }
-  const out = pts
-    .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && !(p.lat === 0 && p.lon === 0))
-    .map(p => ({ lat: p.lat, lon: p.lon, name: String(p.name || '').slice(0, 200), notes: String(p.notes || '').slice(0, 2000),
+  // KML: coordinate scritte nell'indirizzo, servizi dal nome della cartella, punti con solo indirizzo da geocodificare
+  const needGeocode = [];
+  let shapes = 0;
+  if (pts.links || pts.docName !== undefined) {
+    for (const p of pts) {
+      if (p.isShape) { shapes++; continue; }
+      if (!Number.isFinite(p.lat) && p.address) {
+        const c = coordsFromText(p.address);
+        if (c) { [p.lat, p.lon] = c; p.address = ''; }
+      }
+      const ft = folderTags(`${p.folder} ${p.docName}`);
+      if (Object.keys(ft).length) p.tags = { ...ft, ...(p.tags || {}) };
+      if (p.address) p.tags = { ...(p.tags || {}), address: p.address };
+    }
+  }
+  const make = p => ({ lat: p.lat, lon: p.lon, name: String(p.name || '').slice(0, 200), notes: String(p.notes || '').slice(0, 2000),
       website: String(p.website || '').slice(0, 300), phone: String(p.phone || '').slice(0, 60),
       ...(p.tags && Object.keys(p.tags).length ? { tags: p.tags } : {}),
-      category: category || p.category || guessCategory(`${p.name} ${p.kindHint || ''} ${filename}`) }));
+      ...(p.folder ? { list: p.folder } : {}),
+      category: category || p.category || kmlCategory(p, filename) });
+  for (const p of pts) if (!p.isShape && !Number.isFinite(p.lat) && p.address) needGeocode.push({ ...make(p), address: p.address });
+  const out = pts
+    .filter(p => !p.isShape)
+    .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && !(p.lat === 0 && p.lon === 0))
+    .map(make);
   out.skipped = skipped;
+  out.needGeocode = needGeocode;
+  out.links = pts.links || [];
+  out.shapes = shapes;
+  out.docName = pts.docName || '';
   out.source = col ? 'camperonline' : '';
   return out;
 }

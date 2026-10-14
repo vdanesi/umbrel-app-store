@@ -214,6 +214,8 @@ async function routeORS(coords, settings) {
   };
 }
 
+// categorie dei punti: le prime cinque vengono anche da OpenStreetMap, 'luogo' solo dalle raccolte
+const CATEGORIES = ['area_camper', 'campeggio', 'scarico', 'acqua', 'gpl', 'luogo'];
 const POI_FILTERS = {
   area_camper: ['nwr["tourism"="caravan_site"]'],
   campeggio: ['nwr["tourism"="camp_site"]["caravans"!="no"]'],
@@ -403,6 +405,7 @@ app.get('/api/reverse', wrap(async (req, res) => {
 const osmTiles = createOsmTiles({ cacheDir: path.join(DATA_DIR, 'cache'), overpassUrls: OVERPASS_URLS, userAgent: USER_AGENT });
 
 async function searchOsm(area, types, onProgress) {
+  if (!types.some(t => POI_FILTERS[t])) return Object.assign([], { stats: { tiles: 0, fromCache: 0 } });
   const { elements, tiles, fromCache } = await osmTiles.elementsFor(area, onProgress);
   const seen = new Set();
   const out = [];
@@ -469,7 +472,7 @@ function searchMine(c, area, types) {
   return c.items.filter(i => types.includes(i.category) && area.contains([i.lat, i.lon])).map(i => ({
     id: 'mine:' + i.id, mineId: i.id, sources: ['mine'], lat: i.lat, lon: i.lon, category: i.category, name: i.name || null,
     acsi: i.acsi || null,
-    tags: { ...(i.tags || {}), notes: i.notes || undefined, list: i.source === 'preferiti' ? undefined : i.source, website: i.website || undefined, phone: i.phone || undefined }
+    tags: { ...(i.tags || {}), notes: i.notes || undefined, list: i.source === 'preferiti' ? undefined : (i.list ? `${i.source} / ${i.list}` : i.source), website: i.website || undefined, phone: i.phone || undefined }
   }));
 }
 
@@ -486,17 +489,6 @@ async function storeImport(name, pts, meta = {}) {
   await writeJsonAtomic(ctx().collectionFile, c);
   return { added: pts.length, ...collectionSummary(c) };
 }
-
-app.post('/api/collection/import', wrap(async (req, res) => {
-  const filename = str(req.body?.filename, 120).replace(/[\\/]/g, '_') || 'importazione';
-  const text = typeof req.body?.content === 'string' ? req.body.content : '';
-  let pts;
-  try { pts = parsePoiFile(filename, text); } catch (e) { return res.status(400).json({ error: 'File non leggibile: ' + e.message }); }
-  if (!pts.length) return res.status(400).json({ error: 'Nessun punto trovato nel file (servono GPX, KML, GeoJSON o CSV con coordinate)' });
-  const meta = pts.source === 'camperonline'
-    ? { licence: 'solo uso personale, non ridistribuire', attribution: 'CamperOnLine.it', page: 'https://www.camperonline.it/iCOL' } : {};
-  res.json({ ...(await storeImport(filename, pts, meta)), skipped: pts.skipped || 0, source: pts.source || '' });
-}));
 
 // Scarica una fonte esterna (dati aperti) direttamente dall'Umbrel.
 async function downloadText(url) {
@@ -523,7 +515,19 @@ async function downloadText(url) {
 const catalogEntries = () => process.env.CATALOG_BASE
   ? CATALOG.map(s => ({ ...s, url: `${process.env.CATALOG_BASE}/${s.id}` })) : CATALOG;
 
-async function importFromUrl({ url, name, category, meta }) {
+// Link di Google My Maps (visualizza/modifica/incorpora) → esportazione KML completa
+function normalizeMapUrl(url) {
+  try {
+    const u = new URL(url);
+    if (/(^|\.)google\.[a-z.]+$/i.test(u.hostname) && /\/maps\/d\//.test(u.pathname)) {
+      const mid = u.searchParams.get('mid');
+      if (mid) return `https://www.google.com/maps/d/kml?forcekml=1&mid=${encodeURIComponent(mid)}`;
+    }
+    return u.href;
+  } catch { return url; }
+}
+
+function checkPublicUrl(url) {
   let u;
   try { u = new URL(url); } catch { const e = new Error('Indirizzo non valido'); e.status = 400; throw e; }
   if (!/^https?:$/.test(u.protocol)) { const e = new Error('Servono indirizzi http o https'); e.status = 400; throw e; }
@@ -531,15 +535,154 @@ async function importFromUrl({ url, name, category, meta }) {
   if (!process.env.ALLOW_PRIVATE_URLS && /^(localhost|.*\.local|.*\.internal|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[)/i.test(u.hostname)) {
     const e = new Error('Sono ammessi solo indirizzi pubblici'); e.status = 400; throw e;
   }
+  return u;
+}
+
+async function downloadAndParse(url, category) {
+  const u = checkPublicUrl(normalizeMapUrl(url));
   const { text, type } = await downloadText(u.href);
   let hint = u.pathname;
-  if (/json/.test(type) && !/\.(geo)?json$/i.test(hint)) hint += '.json';
+  if (/kml|google\.[a-z.]+$/.test(type + ' ' + u.hostname) && /\/maps\/d\//.test(u.pathname)) hint += '.kml';
+  else if (/json/.test(type) && !/\.(geo)?json$/i.test(hint)) hint += '.json';
   else if (/csv/.test(type) && !/\.csv$/i.test(hint)) hint += '.csv';
-  let pts;
-  try { pts = parsePoiFile(hint, text, { category }); }
+  try { return { url: u.href, pts: parsePoiFile(hint, text, { category }) }; }
   catch (e) { const x = new Error('Formato non riconosciuto: ' + e.message); x.status = 400; throw x; }
-  if (!pts.length) { const e = new Error('Nessun punto con coordinate trovato a quell\'indirizzo'); e.status = 400; throw e; }
-  return storeImport(name, pts, { url: u.href, ...meta });
+}
+
+// Raccoglie i punti di un file e delle mappe collegate (NetworkLink), fino a 3 livelli e 20 mappe.
+async function collectPoints(first, { category, onPhase } = {}) {
+  const points = [...first.pts], needGeocode = [...(first.pts.needGeocode || [])];
+  const urls = first.url ? [first.url] : [];
+  let skipped = first.pts.skipped || 0, shapes = first.pts.shapes || 0;
+  const source = first.pts.source || '';
+  let docName = first.pts.docName || '';
+  const queue = (first.pts.links || []).map(l => ({ url: l, depth: 1 }));
+  const seen = new Set(urls);
+  const errors = [];
+  while (queue.length && seen.size < 20) {
+    const { url, depth } = queue.shift();
+    const norm = normalizeMapUrl(url);
+    if (seen.has(norm)) continue;
+    seen.add(norm);
+    onPhase?.(`scarico la mappa collegata ${urls.length + 1}`);
+    try {
+      const r = await downloadAndParse(norm, category);
+      urls.push(r.url);
+      points.push(...r.pts); needGeocode.push(...(r.pts.needGeocode || []));
+      skipped += r.pts.skipped || 0; shapes += r.pts.shapes || 0;
+      if (!docName) docName = r.pts.docName || '';
+      if (depth < 3) for (const l of r.pts.links || []) queue.push({ url: l, depth: depth + 1 });
+    } catch (e) { errors.push(`${norm}: ${e.message}`); }
+  }
+  return { points, needGeocode, urls, skipped, shapes, source, docName, errors };
+}
+
+// ---------- geocodifica degli indirizzi (Nominatim: al massimo 1 richiesta al secondo) ----------
+const GEO_FILE = path.join(DATA_DIR, 'cache', 'geocode.json');
+let geoCache = null, geoSaveTimer = null, geoChain = Promise.resolve(), geoLast = 0;
+async function geoLoad() { if (!geoCache) geoCache = new Map(Object.entries(await readJson(GEO_FILE, {}))); return geoCache; }
+function geoSave() {
+  clearTimeout(geoSaveTimer);
+  geoSaveTimer = setTimeout(async () => {
+    try { await fs.mkdir(path.dirname(GEO_FILE), { recursive: true }); await writeJsonAtomic(GEO_FILE, Object.fromEntries(geoCache)); }
+    catch (e) { console.error('Cache indirizzi non salvata:', e.message); }
+  }, 2000);
+}
+const geoKey = a => String(a).toLowerCase().replace(/\s+/g, ' ').trim();
+async function geocodeAddress(address) {
+  const cache = await geoLoad();
+  const key = geoKey(address);
+  const hit = cache.get(key);
+  if (hit !== undefined && (hit || Date.now() - (cache.get('#t:' + key) || 0) < 30 * 864e5)) return hit;
+  // una richiesta alla volta per tutto il server, come chiede Nominatim
+  const run = geoChain.then(async () => {
+    const wait = 1100 - (Date.now() - geoLast);
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    geoLast = Date.now();
+    const d = await fetchJson(`${NOMINATIM_URL}/search?format=jsonv2&limit=1&accept-language=it&q=${encodeURIComponent(address)}`);
+    const r = Array.isArray(d) && d[0] ? [Number(d[0].lat), Number(d[0].lon)] : null;
+    cache.set(key, r); if (!r) cache.set('#t:' + key, Date.now());
+    geoSave();
+    return r;
+  });
+  geoChain = run.catch(() => {});
+  return run;
+}
+
+// ---------- importazioni in background ----------
+const jobs = new Map();   // id -> {uid, name, status, phase, done, total, result, error, at}
+function jobView(j) { return { id: j.id, name: j.name, status: j.status, phase: j.phase, done: j.done, total: j.total, result: j.result, error: j.error }; }
+setInterval(() => { for (const [id, j] of jobs) if (j.status !== 'running' && Date.now() - j.at > 30 * 60e3) jobs.delete(id); }, 60e3).unref();
+
+// Avvia l'importazione; se finisce entro 3 secondi risponde subito, altrimenti con l'id del lavoro.
+async function runImport(req, res, name, work) {
+  const U = ctx();
+  const job = { id: crypto.randomUUID(), uid: req.user.id, name, status: 'running', phase: 'lettura', done: 0, total: 0, at: Date.now() };
+  jobs.set(job.id, job);
+  const p = userStore.run(U, () => work(job)).then(r => { job.status = 'done'; job.result = r; job.at = Date.now(); return r; },
+    e => { job.status = 'error'; job.error = e.message; job.at = Date.now(); throw e; });
+  const quick = await Promise.race([p.then(r => ({ r }), e => ({ e })), new Promise(r => setTimeout(() => r(null), 3000))]);
+  if (!quick) return res.status(202).json({ job: jobView(job) });
+  jobs.delete(job.id);
+  if (quick.e) return res.status(quick.e.status && quick.e.status < 500 ? quick.e.status : 502).json({ error: quick.e.message });
+  res.json(quick.r);
+}
+
+async function finishImport(job, name, collected, meta = {}) {
+  const { points, needGeocode, urls, skipped, shapes, source, docName, errors } = collected;
+  const missing = [];
+  if (needGeocode.length) {
+    job.total = needGeocode.length; job.phase = 'indirizzi';
+    for (const p of needGeocode) {
+      let c = null;
+      try { c = await geocodeAddress(p.address); } catch (e) { console.error('Geocodifica:', e.message); }
+      if (c) { const { address, ...rest } = p; points.push({ ...rest, lat: c[0], lon: c[1] }); }
+      else missing.push(p.name || p.address);
+      job.done++;
+    }
+  }
+  if (!points.length) {
+    const e = new Error(errors.length ? `Mappa non scaricata: ${errors[0]}` : missing.length ? 'Nessun indirizzo della mappa è stato trovato' : 'Nessun punto trovato (servono GPX, KML, GeoJSON o CSV con coordinate o indirizzi)');
+    e.status = 400; throw e;
+  }
+  job.phase = 'salvataggio';
+  const licenceMeta = source === 'camperonline'
+    ? { licence: 'solo uso personale, non ridistribuire', attribution: 'CamperOnLine.it', page: 'https://www.camperonline.it/iCOL' } : {};
+  const extra = { ...licenceMeta, ...meta, ...(urls.length ? { url: urls[0], urls } : {}), ...(docName ? { title: docName } : {}),
+    ...(missing.length ? { missing: missing.slice(0, 50), missingCount: missing.length } : { missing: undefined, missingCount: undefined }) };
+  const r = await storeImport(name, points, extra);
+  return { ...r, skipped, shapes, missing: missing.length, linked: urls.length, errors, source };
+}
+
+app.post('/api/collection/import', wrap(async (req, res) => {
+  const filename = str(req.body?.filename, 120).replace(/[\\/]/g, '_') || 'importazione';
+  const text = typeof req.body?.content === 'string' ? req.body.content : '';
+  let pts;
+  try { pts = parsePoiFile(filename, text); } catch (e) { return res.status(400).json({ error: 'File non leggibile: ' + e.message }); }
+  if (!pts.length && !pts.needGeocode?.length && !pts.links?.length) return res.status(400).json({ error: 'Nessun punto trovato nel file (servono GPX, KML, GeoJSON o CSV con coordinate)' });
+  await runImport(req, res, filename, async job => finishImport(job, filename, await collectPoints({ pts }, { onPhase: t => (job.phase = t) })));
+}));
+
+app.get('/api/collection/jobs/:id', (req, res) => {
+  const j = jobs.get(req.params.id);
+  if (!j || j.uid !== req.user.id) return res.status(404).json({ error: 'Importazione non trovata (forse è terminata da tempo)' });
+  res.json(jobView(j));
+});
+
+async function importFromUrl(req, res, { url, urls, name, category, meta }) {
+  const list = (urls && urls.length ? urls : [url]).map(normalizeMapUrl);
+  list.forEach(checkPublicUrl);
+  const fallback = (() => { try { const u = new URL(list[0]); return `${u.hostname}${u.pathname.split('/').filter(Boolean).slice(-1).map(x => ' · ' + x)}`.slice(0, 120); } catch { return 'dal web'; } })();
+  await runImport(req, res, name || fallback, async job => {
+    job.phase = 'download';
+    const first = await downloadAndParse(list[0], category);
+    // le altre mappe già note dall'importazione precedente si riscaricano come collegamenti
+    first.pts.links = [...(first.pts.links || []), ...list.slice(1)];
+    const collected = await collectPoints(first, { category, onPhase: t => (job.phase = t) });
+    const finalName = (name || collected.docName || fallback).replace(/[\\/]/g, '_').slice(0, 120);
+    job.name = finalName;
+    return finishImport(job, finalName, collected, meta);
+  });
 }
 
 app.get('/api/catalog', wrap(async (req, res) => {
@@ -554,16 +697,16 @@ app.get('/api/catalog', wrap(async (req, res) => {
 app.post('/api/collection/import-catalog', wrap(async (req, res) => {
   const s = catalogEntries().find(x => x.id === req.body?.id);
   if (!s) return res.status(404).json({ error: 'Fonte non trovata' });
-  res.json(await importFromUrl({ url: s.url, name: s.name, category: s.category,
-    meta: { catalogId: s.id, licence: s.licence, attribution: s.attribution, page: s.page } }));
+  await importFromUrl(req, res, { url: s.url, name: s.name, category: s.category,
+    meta: { catalogId: s.id, licence: s.licence, attribution: s.attribution, page: s.page } });
 }));
 
 app.post('/api/collection/import-url', wrap(async (req, res) => {
   const url = str(req.body?.url, 2000).trim();
-  let name = str(req.body?.name, 120).trim().replace(/[\\/]/g, '_');
-  if (!name) { try { const u = new URL(url); name = `${u.hostname}${u.pathname.split('/').filter(Boolean).slice(-1).map(x => ' · ' + x)}`.slice(0, 120); } catch { name = 'dal web'; } }
-  const category = ['area_camper', 'campeggio', 'scarico', 'acqua', 'gpl'].includes(req.body?.category) ? req.body.category : undefined;
-  res.json(await importFromUrl({ url, name, category, meta: { category: category || '' } }));
+  // senza nome si usa il titolo della mappa (es. Google My Maps) o il sito
+  const name = str(req.body?.name, 120).trim().replace(/[\\/]/g, '_');
+  const category = CATEGORIES.includes(req.body?.category) ? req.body.category : undefined;
+  await importFromUrl(req, res, { url, name, category, meta: { category: category || '' } });
 }));
 
 app.post('/api/collection/refresh', wrap(async (req, res) => {
@@ -571,8 +714,8 @@ app.post('/api/collection/refresh', wrap(async (req, res) => {
   const imp = c.imports.find(i => i.name === req.body?.name && i.url);
   if (!imp) return res.status(404).json({ error: 'Questa fonte non ha un indirizzo da cui aggiornarla' });
   const s = imp.catalogId && catalogEntries().find(x => x.id === imp.catalogId);
-  const { name, count, importedAt, url, ...meta } = imp;
-  res.json(await importFromUrl({ url: s ? s.url : url, name, category: s ? s.category : (imp.category || undefined), meta }));
+  const { name, count, importedAt, url, urls, missing, missingCount, ...meta } = imp;
+  await importFromUrl(req, res, { url: s ? s.url : url, urls: s ? null : urls, name, category: s ? s.category : (imp.category || undefined), meta });
 }));
 
 app.delete('/api/collection/imports/:name', wrap(async (req, res) => {
@@ -590,7 +733,7 @@ app.post('/api/collection/favorites', wrap(async (req, res) => {
   const c = await loadCollection();
   const near = c.items.find(i => i.source === 'preferiti' && haversine([i.lat, i.lon], [lat, lon]) < 30);
   if (near) return res.json({ item: near, ...collectionSummary(c) });
-  const category = ['area_camper', 'campeggio', 'scarico', 'acqua', 'gpl'].includes(b.category) ? b.category : guessCategory(str(b.name));
+  const category = CATEGORIES.includes(b.category) ? b.category : guessCategory(str(b.name));
   const item = { id: crypto.randomUUID(), source: 'preferiti', addedAt: new Date().toISOString(), lat, lon, category,
     name: str(b.name, 200), notes: str(b.notes, 2000), website: str(b.website, 300), phone: str(b.phone, 60) };
   c.items.push(item);
@@ -616,7 +759,7 @@ app.post('/api/collection/acsi', wrap(async (req, res) => {
     if (!acsi) return res.json({ item: null, ...collectionSummary(c) });
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return res.status(400).json({ error: 'Coordinate non valide' });
     item = { id: crypto.randomUUID(), source: 'preferiti', addedAt: new Date().toISOString(), lat, lon,
-      category: ['area_camper', 'campeggio', 'scarico', 'acqua', 'gpl'].includes(b.category) ? b.category : 'campeggio',
+      category: CATEGORIES.includes(b.category) ? b.category : 'campeggio',
       name: str(b.name, 200), notes: str(b.notes, 2000), website: str(b.website, 300), phone: str(b.phone, 60) };
     c.items.push(item);
   }
@@ -647,7 +790,7 @@ app.get('/api/collection/export', wrap(async (req, res) => {
 
 app.post('/api/pois', wrap(async (req, res) => {
   const b = req.body || {};
-  const types = (Array.isArray(b.types) ? b.types : Object.keys(POI_FILTERS)).filter(t => POI_FILTERS[t]);
+  const types = (Array.isArray(b.types) ? b.types : Object.keys(POI_FILTERS)).filter(t => CATEGORIES.includes(t));
   const sources = (Array.isArray(b.sources) ? b.sources : ['osm']).filter(s => ['osm', 'overture', 'mine'].includes(s));
   // i segni ACSI stanno nella raccolta: serve sempre leggerla
   if (b.acsiOnly && !sources.includes('mine')) sources.push('mine');

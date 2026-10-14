@@ -12,7 +12,8 @@ const POI_TYPES = {
   campeggio: { label: 'Campeggi', letter: 'C', kind: 'campeggio' },
   scarico: { label: 'Carico/scarico', letter: 'S', kind: 'sosta' },
   acqua: { label: 'Acqua', letter: 'W', kind: 'sosta' },
-  gpl: { label: 'GPL', letter: 'G', kind: 'tappa' }
+  gpl: { label: 'GPL', letter: 'G', kind: 'tappa' },
+  luogo: { label: 'Luoghi da visitare', letter: 'V', kind: 'visita' }
 };
 const EXPENSE_CATS = {
   carburante: 'Carburante', pedaggi: 'Pedaggi', sosta: 'Aree sosta', campeggio: 'Campeggi',
@@ -536,7 +537,7 @@ function renderCollection() {
     ? `<span class="c-magenta">${punti(c.total)}</span> · <span class="c-yellow">★ ${c.favorites}</span> ${c.favorites === 1 ? 'preferito' : 'preferiti'}${c.acsi ? ` · <span class="acsi">ACSI</span> ${c.acsi}` : ''}`
     : '<span class="muted">Vuota. Importa un file o una fonte esterna qui sotto, oppure salva le aree che trovi con ☆.</span>';
   $('#collImports').innerHTML = c.imports.map(i => `<div class="coll-row">
-      <span>${esc(i.name)} <span class="muted">· ${punti(i.count)} · ${new Date(i.importedAt).toLocaleDateString('it-IT')}${i.licence ? ' · ' + esc(i.licence) : ''}</span></span>
+      <span>${esc(i.name)}${i.title && i.title !== i.name ? ` <span class="c-cyan">${esc(i.title)}</span>` : ''} <span class="muted">· ${punti(i.count)} · ${new Date(i.importedAt).toLocaleDateString('it-IT')}${i.licence ? ' · ' + esc(i.licence) : ''}</span>${i.missingCount ? `<br><details class="missing"><summary class="c-yellow">${i.missingCount === 1 ? '1 indirizzo non trovato' : `${i.missingCount} indirizzi non trovati`}</summary><span class="muted">${i.missing.map(esc).join(' · ')}${i.missingCount > i.missing.length ? ' …' : ''}</span></details>` : ''}</span>
       <span class="poi-actions">${i.url ? `<button class="btn-icon" data-refresh="${esc(i.name)}" title="Riscarica la versione più recente">↻</button>` : ''}
       <button class="btn-icon" data-delimport="${esc(i.name)}" title="Rimuovi dalla raccolta">✕</button></span></div>`).join('');
   renderCatalog();
@@ -564,15 +565,41 @@ function renderCatalog() {
     </div>`;
   }).join('');
 }
+// Le importazioni lunghe (mappe collegate, indirizzi da trovare) continuano sull'Umbrel:
+// qui si segue l'avanzamento finché non finiscono.
+async function waitImport(r, label) {
+  if (!r.job) return r;
+  const line = $('#collJob');
+  const phases = { lettura: 'lettura del file', download: 'download', indirizzi: 'ricerca degli indirizzi', salvataggio: 'salvataggio' };
+  for (;;) {
+    const j = r.job.status ? r.job : r;
+    const pct = j.total ? ` ${j.done}/${j.total}` : '';
+    const eta = j.phase === 'indirizzi' && j.total ? ` · circa ${Math.max(1, Math.ceil((j.total - j.done) * 1.1 / 60))} min` : '';
+    line.hidden = false;
+    line.innerHTML = `<span class="c-cyan">…</span> ${esc(j.name || label)}: ${esc(phases[j.phase] || j.phase)}${pct}${eta}`;
+    if (j.status === 'done') { line.hidden = true; return j.result; }
+    if (j.status === 'error') { line.hidden = true; throw new Error(j.error); }
+    await new Promise(res => setTimeout(res, 1500));
+    r = { job: await api('/collection/jobs/' + j.id) };
+  }
+}
+function importSummary(label, r) {
+  const bits = [`${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}`];
+  if (r.linked > 1 || (r.linked === 1 && !/^https?:/.test(label))) bits.push(`da ${r.linked} ${r.linked === 1 ? 'mappa collegata' : 'mappe collegate'}`);
+  if (r.missing) bits.push(r.missing === 1 ? '1 indirizzo non trovato' : `${r.missing} indirizzi non trovati`);
+  if (r.skipped) bits.push(`${r.skipped} ${r.skipped === 1 ? 'scartato' : 'scartati'} (coordinate non valide)`);
+  if (r.shapes) bits.push(r.shapes === 1 ? '1 percorso disegnato ignorato' : `${r.shapes} percorsi disegnati ignorati`);
+  return `${label}: ${bits.join(' · ')}`;
+}
 async function runImport(label, btn, fn) {
   const old = btn?.textContent;
   let ok = false;
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   toast(`${label}: download in corso…`);
   try {
-    const r = await fn();
+    const r = await waitImport(await fn(), label);
     state.collection = r;
-    toast(`${label}: ${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}`);
+    toast(importSummary(label, r), !r.added);
     ok = true;
   } catch (err) { toast(`${label}: ${err.message}`, true); }
   finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
@@ -607,9 +634,10 @@ $('#collFile').addEventListener('change', async e => {
   for (const f of files) {
     if (f.size > 20 * 1024 * 1024) { toast(`${f.name}: file troppo grande (max 20 MB)`, true); continue; }
     try {
-      const r = await api('/collection/import', { method: 'POST', body: { filename: f.name, content: await readTextFile(f) } });
+      const r = await waitImport(await api('/collection/import', { method: 'POST', body: { filename: f.name, content: await readTextFile(f) } }), f.name);
       state.collection = r;
-      toast(`${f.name}: ${punti(r.added)} ${r.added === 1 ? 'importato' : 'importati'}${r.skipped ? ` · ${r.skipped} scartati (coordinate non valide)` : ''}`);
+      toast(importSummary(f.name, r), !r.added);
+      renderCollection(); renderPoiSources();
     } catch (err) { toast(`${f.name}: ${err.message}`, true); }
   }
   renderCollection(); renderPoiSources();

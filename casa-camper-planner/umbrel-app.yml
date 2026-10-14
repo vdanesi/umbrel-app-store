@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "2.2.0"
+version: "2.3.0"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -49,13 +49,14 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Importazione dei file di CamperOnLine.it: riconosce aree attrezzate, punti sosta e
-  camper service, i servizi di ogni area (acqua, scarico, corrente, WC, docce, a
-  pagamento) e l'indirizzo. Scarta i punti con coordinate sbagliate presenti nei file
-  e ripara i nomi con caratteri rovinati. I file importati ora vengono letti con la
-  codifica giusta anche quando sono in ISO-8859-1 o dichiarano una codifica sbagliata.
-  Una fonte appena diventata disponibile, come la raccolta dopo il primo import, è
-  subito attiva nelle ricerche.
+  Mappe di Google My Maps: si importano anche i KML che contengono solo il collegamento
+  alla mappa (l'Umbrel la scarica da Google, con le mappe collegate) e si può incollare
+  direttamente il link della mappa. I punti che hanno solo l'indirizzo vengono
+  posizionati con OpenStreetMap, in background e con l'avanzamento visibile; gli
+  indirizzi non trovati sono elencati. Il nome delle cartelle della mappa diventa tipo
+  e servizi (gratis, a pagamento, corrente, carico/scarico). Nuova categoria "Luoghi da
+  visitare" per siti UNESCO, borghi e mete, da cercare lungo il percorso. Con ↻ si
+  riscarica la mappa quando viene aggiornata.
 dependencies: []
 path: ""
 defaultUsername: ""

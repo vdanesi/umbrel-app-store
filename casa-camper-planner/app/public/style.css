@@ -278,6 +278,9 @@ details.notes[open] summary { margin-bottom: 4px; }
 .c-scarico { background: var(--accent-yellow); }
 .c-acqua { background: #7fd3ff; }
 .c-gpl { background: #ff9a62; }
+.c-luogo { background: var(--accent-magenta); }
+.k-visita.stop-marker { background: var(--accent-magenta); }
+.missing summary { cursor: pointer; font-size: 12px; }
 .poi-list { display: flex; flex-direction: column; margin-top: 8px; }
 .poi {
   display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start;
