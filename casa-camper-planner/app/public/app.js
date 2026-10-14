@@ -213,11 +213,12 @@ $$('.subtab').forEach(b => b.addEventListener('click', () => {
   $$('.subtab').forEach(x => x.classList.toggle('active', x === b));
   $$('.pane').forEach(p => (p.hidden = p.id !== 'pane-' + b.dataset.pane));
   if (b.dataset.pane === 'fuel') renderFuelScope();
+  if (b.dataset.pane === 'check') renderChecklist();
   if (b.dataset.pane === 'pois') { renderPoiScope(); loadCollection(); if (!state.catalog) loadCatalog(); }
   if (b.dataset.pane === 'diary') renderDiary();
 }));
 
-function renderAll() { renderSummary(); renderStops(); renderMapStops(); renderRoute(); renderDiary(); renderPoiScope(); renderPois(); }
+function renderAll() { renderChecklist(); renderSummary(); renderStops(); renderMapStops(); renderRoute(); renderDiary(); renderPoiScope(); renderPois(); }
 
 function renderSummary() {
   const t = state.trip; if (!t) return;
@@ -1049,7 +1050,8 @@ function buildPrint() {
       <tr><th>Totale speso</th><th class="r">${fmtEur(tt.spent)}</th></tr>
       ${t.budget ? `<tr><td>Budget</td><td class="r">${fmtEur(t.budget)}</td></tr>` : ''}
     </table>
-    ${t.notes ? `<h2>Diario</h2><div class="note">${esc(t.notes)}</div>` : ''}`;
+    ${t.notes ? `<h2>Diario</h2><div class="note">${esc(t.notes)}</div>` : ''}
+    ${t.checklist?.length ? `<h2>Check-list di partenza</h2><div class="print-check">${[...new Set(t.checklist.map(x => x.group))].map(g => `<div><b>${esc(g)}</b>${t.checklist.filter(x => x.group === g).map(x => `<div>${x.done ? '☑' : '☐'} ${esc(x.text)}</div>`).join('')}</div>`).join('')}</div>` : ''}`;
 }
 
 // ---------- avvio ----------
@@ -1252,6 +1254,68 @@ $('#fuelList').addEventListener('click', e => {
   if (a) return addStop({ name: `${s.brand || 'Distributore'} ${fmtL(s.price)} €`, lat: s.lat, lon: s.lon, nights: 0, kind: 'tappa', notes: s.address }, bestInsertIndex(s.lat, s.lon));
   if (e.target.closest('a')) return;
   map.setView([s.lat, s.lon], Math.max(map.getZoom(), 14));
+});
+
+// ---------- check-list di partenza ----------
+const checkFromModel = () => (state.settings?.checklist || []).map(x => ({ id: uid(), group: x.group, text: x.text, done: false }));
+function renderChecklist() {
+  const t = state.trip; if (!t || $('#pane-check').hidden) return;
+  if (!Array.isArray(t.checklist) || !t.checklist.length) {
+    if (!t.checklistCreated) { t.checklist = checkFromModel(); t.checklistCreated = true; if (t.checklist.length) markDirty(); }
+  }
+  const list = t.checklist || [];
+  const groups = [...new Set(list.map(x => x.group))];
+  const done = list.filter(x => x.done).length;
+  $('#checkStatus').innerHTML = list.length
+    ? `<span class="${done === list.length ? 'ok' : 'c-yellow'}">${done === list.length ? '✔' : '●'}</span> ${done} di ${list.length} fatte` +
+      `<span class="check-bar"><span style="width:${Math.round(done / list.length * 100)}%"></span></span>`
+    : 'La check-list è vuota: aggiungi le voci qui sotto o ricaricale dal modello.';
+  $('#checkList').innerHTML = groups.map(g => {
+    const items = list.filter(x => x.group === g), d = items.filter(x => x.done).length;
+    return `<div class="check-group">
+      <div class="check-head"><b>${esc(g)}</b> <span class="muted">${d}/${items.length}</span>
+        ${d ? `<button class="btn-link" data-cgreset="${esc(g)}">azzera</button>` : ''}</div>
+      ${items.map(x => `<label class="check-item ${x.done ? 'done' : ''}">
+        <input type="checkbox" data-cid="${esc(x.id)}" ${x.done ? 'checked' : ''}><span>${esc(x.text)}</span>
+        <button class="btn-icon" type="button" data-cdel="${esc(x.id)}" title="Togli questa voce">✕</button></label>`).join('')}
+    </div>`;
+  }).join('');
+  $('#checkGroups').innerHTML = groups.map(g => `<option value="${esc(g)}">`).join('');
+  $('#checkModelInfo').textContent = state.settings?.checklistCustom
+    ? 'Stai usando il tuo modello: vale per i viaggi nuovi e per "Ricarica dal modello".'
+    : 'Stai usando il modello predefinito dell\'app. "Salva come mio modello" lo sostituisce con questa lista.';
+}
+$('#checkList').addEventListener('change', e => {
+  const id = e.target.dataset.cid; if (!id) return;
+  const x = state.trip.checklist.find(i => i.id === id); if (!x) return;
+  x.done = e.target.checked; markDirty(); renderChecklist();
+});
+$('#checkList').addEventListener('click', e => {
+  const del = e.target.closest('[data-cdel]'), rg = e.target.closest('[data-cgreset]');
+  if (del) { e.preventDefault(); state.trip.checklist = state.trip.checklist.filter(i => i.id !== del.dataset.cdel); markDirty(); renderChecklist(); }
+  if (rg) { e.preventDefault(); state.trip.checklist.forEach(i => { if (i.group === rg.dataset.cgreset) i.done = false; }); markDirty(); renderChecklist(); }
+});
+$('#checkAdd').addEventListener('submit', e => {
+  e.preventDefault();
+  const text = $('#checkText').value.trim(); if (!text) return;
+  const group = $('#checkGroup').value.trim() || 'Altro';
+  const list = (state.trip.checklist ||= []);
+  // la nuova voce va in fondo al suo gruppo
+  let at = -1; list.forEach((x, i) => { if (x.group === group) at = i; });
+  const item = { id: uid(), group, text, done: false };
+  at < 0 ? list.push(item) : list.splice(at + 1, 0, item);
+  $('#checkText').value = ''; $('#checkText').focus(); markDirty(); renderChecklist();
+});
+$('#btnCheckReset').addEventListener('click', () => { (state.trip.checklist || []).forEach(i => (i.done = false)); markDirty(); renderChecklist(); });
+$('#btnCheckReload').addEventListener('click', () => {
+  if ((state.trip.checklist || []).some(i => i.done) && !confirm('Le spunte di questo viaggio si perdono. Ricaricare la check-list dal modello?')) return;
+  state.trip.checklist = checkFromModel(); markDirty(); renderChecklist(); toast('Check-list ricaricata dal modello');
+});
+$('#btnCheckSave').addEventListener('click', async () => {
+  const list = (state.trip.checklist || []).map(x => ({ group: x.group, text: x.text }));
+  if (!list.length) return toast('La check-list è vuota', true);
+  try { await api('/settings', { method: 'PUT', body: { checklist: list } }); await loadSettings(); renderChecklist(); toast('Salvata come tuo modello per i prossimi viaggi'); }
+  catch (x) { toast(x.message, true); }
 });
 
 (async function boot() {

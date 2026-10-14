@@ -472,3 +472,23 @@ code { font: 13px var(--mono); color: var(--accent-magenta); word-break: break-a
 .wx:empty { display: none; }
 .wx-icon { font-size: 14px; }
 .wx-warn { color: var(--accent-yellow); margin-top: 2px; }
+
+/* check-list di partenza */
+.check-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; margin: 8px 0; }
+.check-bar { flex: 1; min-width: 120px; height: 6px; background: var(--bg-tab-new); border-radius: 3px; overflow: hidden; }
+.check-bar span { display: block; height: 100%; background: var(--accent-green); }
+.check-group { margin: 10px 0; }
+.check-head { display: flex; align-items: baseline; gap: 8px; font-size: 13px; border-bottom: 1px solid var(--bg-tab-new); padding-bottom: 3px; margin-bottom: 2px; }
+.check-head b { color: var(--accent-cyan); }
+.check-item { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 4px 0; font: 13px var(--ui); color: var(--fg-default); cursor: pointer; text-align: left; }
+.check-item span { flex: 1; }
+.check-item input { width: 18px; height: 18px; accent-color: var(--accent-green); flex: none; }
+.check-item.done span { color: var(--fg-muted); text-decoration: line-through; }
+.check-item .btn-icon { opacity: .45; }
+.check-item:hover .btn-icon { opacity: 1; }
+.btn-link { background: none; border: 0; color: var(--accent-cyan); cursor: pointer; font: inherit; font-size: 12px; padding: 0; text-decoration: underline; }
+.check-add { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.check-add #checkText { flex: 2; min-width: 160px; }
+.check-add #checkGroup { flex: 1; min-width: 110px; }
+.print-check { columns: 2; font-size: 11px; }
+.print-check > div { break-inside: avoid; margin-bottom: 8px; }

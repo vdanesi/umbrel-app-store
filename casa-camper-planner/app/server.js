@@ -39,6 +39,19 @@ const OVERPASS_URLS = (process.env.OVERPASS_URL || 'https://overpass-api.de/api/
   .split(',').map(s => s.trim()).filter(Boolean);
 const USER_AGENT = `CamperPlanner/${VERSION} (self-hosted Umbrel app)`;
 
+// Check-list di partenza predefinita: ogni utente la può cambiare e salvare come proprio modello.
+const C = (group, items) => items.map(text => ({ group, text }));
+const DEFAULT_CHECKLIST = [
+  ...C('Documenti', ['Patente e carta d\'identità', 'Libretto di circolazione e assicurazione (carta verde per l\'estero)', 'Tessera sanitaria europea', 'CampingCard ACSI e tessere dei club', 'Vignette o pedaggi dei paesi esteri (Svizzera, Austria, Slovenia…)', 'Prenotazioni di campeggi e traghetti']),
+  ...C('Mezzo', ['Pressione delle gomme (anche la ruota di scorta)', 'Olio motore e liquido di raffreddamento', 'AdBlue e liquido lavavetri', 'Luci, frecce e stop', 'Batteria dei servizi carica', 'Portabici fissato con il pannello di segnalazione', 'Triangolo, giubbotti ed estintore']),
+  ...C('Acqua e gas', ['Serbatoio dell\'acqua pieno (o metà, se si è vicini al limite di peso)', 'Bombole del gas piene e regolatore controllato', 'Acque grigie e cassetta WC vuote', 'Prodotto per il WC chimico']),
+  ...C('A bordo', ['Frigorifero acceso il giorno prima', 'Farmaci e cassetta di pronto soccorso', 'Cavo corrente, adattatore CEE e prolunga', 'Cunei livellanti', 'Tubo e raccordi per l\'acqua', 'Torcia e attrezzi di base']),
+  ...C('Ogni partenza dalla sosta', ['Gradino rientrato', 'Antenna o parabola abbassata', 'Oblò, finestre e tendalino chiusi', 'Sportelli esterni chiusi a chiave', 'Gas chiuso (o frigo a 12 V)', 'Frigo, cassetti e pensili bloccati', 'Cavo della corrente staccato', 'Cunei recuperati', 'Giro completo intorno al mezzo'])
+];
+const sanitizeChecklist = (list, withDone) => (Array.isArray(list) ? list : []).slice(0, 300)
+  .map(x => ({ ...(withDone ? { id: str(x.id, 64) || crypto.randomUUID(), done: x.done === true } : {}), group: str(x.group, 60).trim() || 'Altro', text: str(x.text, 200).trim() }))
+  .filter(x => x.text);
+
 const DEFAULT_SETTINGS = {
   vehicle: {
     name: 'Il mio camper',
@@ -89,7 +102,7 @@ async function loadSettings() {
 
 function publicSettings(s) {
   const { orsApiKey, openPlacesKey, ...rest } = s;
-  return { ...rest, orsApiKeySet: Boolean(orsApiKey), openPlacesKeySet: Boolean(openPlacesKey) };
+  return { ...rest, checklist: rest.checklist?.length ? rest.checklist : DEFAULT_CHECKLIST, checklistCustom: Boolean(rest.checklist?.length), orsApiKeySet: Boolean(orsApiKey), openPlacesKeySet: Boolean(openPlacesKey) };
 }
 
 function num(v, fallback = 0) {
@@ -140,6 +153,7 @@ function sanitizeTrip(input, existing = {}) {
     plan: { maxKm: Math.max(0, Math.min(2000, num(t.plan?.maxKm, 250))), maxHours: Math.max(0, Math.min(24, num(t.plan?.maxHours, 0))) },
     notes: str(t.notes, 50000),
     stops, expenses, route,
+    checklist: sanitizeChecklist(t.checklist, true),
     createdAt: existing.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -321,6 +335,8 @@ app.put('/api/settings', wrap(async (req, res) => {
     fuelPrice: num(b.fuelPrice, cur.fuelPrice),
     durationFactor: Math.min(2, Math.max(1, num(b.durationFactor, cur.durationFactor)))
   };
+  if (Array.isArray(b.checklist)) next.checklist = sanitizeChecklist(b.checklist, false);
+  if (b.checklist === null) delete next.checklist;
   if (typeof b.orsApiKey === 'string') next.orsApiKey = b.orsApiKey.trim().slice(0, 300);
   if (typeof b.openPlacesKey === 'string') next.openPlacesKey = b.openPlacesKey.trim().slice(0, 300);
   await writeJsonAtomic(ctx().settingsFile, next);

@@ -64,6 +64,7 @@
       <button class="subtab active" data-pane="stops">Tappe</button>
       <button class="subtab" data-pane="pois">Aree sosta</button>
       <button class="subtab" data-pane="fuel">Carburante</button>
+      <button class="subtab" data-pane="check">Check-list</button>
       <button class="subtab" data-pane="diary">Diario e costi</button>
       <button class="subtab" data-pane="vehicle">Mezzo</button>
       <button class="subtab" data-pane="export">Esporta</button>
@@ -119,6 +120,25 @@
     </section>
 
     <!-- Aree sosta -->
+    <section class="pane" id="pane-check" hidden>
+      <h3 class="c-green">Check-list di partenza</h3>
+      <p class="hint">Cose da controllare prima di partire. Ogni viaggio ha la sua copia; il gruppo "Ogni partenza dalla sosta" si azzera con un tocco quando riparti.</p>
+      <div id="checkStatus" class="check-status"></div>
+      <div id="checkList" class="check-list"></div>
+      <form id="checkAdd" class="check-add">
+        <input id="checkText" placeholder="Nuova voce…" maxlength="200" autocomplete="off">
+        <input id="checkGroup" list="checkGroups" placeholder="Gruppo" maxlength="60" autocomplete="off">
+        <datalist id="checkGroups"></datalist>
+        <button class="btn" type="submit">Aggiungi</button>
+      </form>
+      <div class="row-actions">
+        <button class="btn" id="btnCheckReset">Togli tutte le spunte</button>
+        <button class="btn" id="btnCheckSave">Salva come mio modello</button>
+        <button class="btn" id="btnCheckReload">Ricarica dal modello</button>
+      </div>
+      <p class="hint" id="checkModelInfo"></p>
+    </section>
+
     <section class="pane" id="pane-pois" hidden>
       <h3 class="c-green">Cosa cercare</h3>
       <div class="poi-types" id="poiTypes"></div>
