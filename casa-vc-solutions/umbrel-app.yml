@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.25.1"
+version: "1.26.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,11 +34,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.25.1: caratteri leggermente più grandi in tutta la dashboard,
-  Personal Organizer e Compilatore Fibra. Testi piccoli e medi aumentati
-  di circa 2 px, titoli principali di 1 px. Colori e font monospaziato
-  mantenuti, menu e intestazioni adattati ai testi più leggibili.
-  Layout verificato su desktop e telefono. Dati esistenti conservati.
+  Versione 1.26.0: backup ZIP di Organizer, allegati, RailFiber, viaggi, POI,
+  progetti e dati del Compilatore presenti in questo browser. Verifica integrità,
+  anteprima, conferma di ripristino e protezione dalle modifiche intervenute
+  dopo la verifica. Recupero dei file precedenti in caso di errore.
+  Nuovo riepilogo personale in dashboard: appuntamenti di oggi, promemoria,
+  attività aperte e note recenti. Credenziali di accesso conservate.
 
 dependencies: []
 path: ""
