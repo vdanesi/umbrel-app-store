@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.31.0"
+version: "1.32.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,13 +34,13 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.31.0: avvisi di guasto e ripristino dei controlli applicativi.
-  Soglie configurabili, predefinite a 3 risposte non conformi e 2 conformi
-  consecutive. Stato persistente ai riavvii e storico fino a 30 giorni,
-  massimo 500 eventi. Notifiche browser attivabili sulla home e ntfy
-  opzionale configurabile dopo login, con invio dal server anche a pagina
-  chiusa. Esito invii riservato e tentativi limitati. Impostazioni, stato
-  ed eventi inclusi nel backup ZIP. Home pubblica e stile Dvsolutions mantenuti.
+  Versione 1.32.0: ricerca globale riservata con filtri per categoria e apertura
+  diretta delle schede. Cerca note, agenda, nomi degli allegati, siti, rack,
+  cassetti RailFiber, servizi, progetti, viaggi e POI. Ricerca senza distinzione
+  di accenti e maiuscole, con priorita ai titoli e massimo 50 risultati visibili.
+  Gli allegati sono cercati per nome, senza analizzarne il contenuto. Protezione
+  delle modifiche non salvate, accesso da menu, pulsante superiore e Ctrl+K.
+  Interfaccia mobile verificata. Home pubblica e stile Dvsolutions mantenuti.
 
 dependencies: []
 path: ""
