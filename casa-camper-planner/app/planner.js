@@ -2,6 +2,7 @@
 // dove serve una notte che il viaggio non prevede ancora.
 
 import { haversine, pointsEvery, lineLength } from './sources.js';
+import { tollKmBetween } from './tolls.js';
 
 // Posizione di ogni tappa lungo la linea del percorso (indici crescenti).
 function stopIndexes(geometry, stops) {
@@ -21,7 +22,7 @@ function stopIndexes(geometry, stops) {
   return idx;
 }
 
-export function planDays({ geometry, legs, stops, startDate, maxKm, maxHours }) {
+export function planDays({ geometry, legs, stops, startDate, maxKm, maxHours, tolls, routeDistance }) {
   geometry = geometry.slice();
   if (!Array.isArray(geometry) || geometry.length < 2 || !Array.isArray(stops) || stops.length < 2) return { days: [], nights: [] };
   const limKm = maxKm > 0 ? maxKm * 1000 : Infinity;
@@ -88,8 +89,11 @@ export function planDays({ geometry, legs, stops, startDate, maxKm, maxHours }) 
   }
   // punti per navigare ogni giornata: partenza, tappe di passaggio, arrivo
   const ptAt = i => { const k = sIdx.indexOf(i); return k >= 0 ? [stops[k].lat, stops[k].lon] : geometry[i]; };
+  // i tratti a pedaggio sono in metri del percorso calcolato: si riportano sulla linea qui
+  const k = routeDistance > 0 && D.at(-1) > 0 ? routeDistance / D.at(-1) : 1;
   for (const d of days) {
     if (d.rest) continue;
+    if (tolls) { const tk = tollKmBetween(tolls, D[d.fromIndex] * k, D[d.toIndex] * k); d.tollKm = Math.round(tk.it); d.tollKmAbroad = Math.round(tk.abroad); }
     d.nav = [ptAt(d.fromIndex)];
     for (let k = 1; k < stops.length - 1; k++) if (sIdx[k] > d.fromIndex && sIdx[k] < d.toIndex) d.nav.push([stops[k].lat, stops[k].lon]);
     d.nav.push(ptAt(d.toIndex));

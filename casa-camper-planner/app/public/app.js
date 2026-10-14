@@ -93,7 +93,18 @@ function totals(trip) {
   const fuelCost = fuelL * (state.settings?.fuelPrice || 0);
   const spent = trip.expenses.reduce((a, e) => a + (e.amount || 0), 0);
   const spentFuel = trip.expenses.filter(e => e.category === 'carburante').reduce((a, e) => a + e.amount, 0);
-  return { nights, days: trip.stops.length ? nights + 1 : 0, distance, duration: trip.route?.duration || 0, fuelL, fuelCost, spent, spentFuel };
+  const spentTolls = trip.expenses.filter(e => e.category === 'pedaggi').reduce((a, e) => a + e.amount, 0);
+  // pedaggi: solo con il percorso aggiornato che indica i tratti a pagamento
+  const tolls = trip.route?.tolls && trip.route.signature === routeSignature(trip) ? trip.route.tolls : null;
+  const tollKm = tolls ? tolls.reduce((a, r) => a + (r[2] ? r[1] - r[0] : 0), 0) / 1000 : null;
+  const tollKmAbroad = tolls ? tolls.reduce((a, r) => a + (r[2] ? 0 : r[1] - r[0]), 0) / 1000 : 0;
+  const tollCost = tollKm != null ? tollKm * tollRate() : null;
+  return { nights, days: trip.stops.length ? nights + 1 : 0, distance, duration: trip.route?.duration || 0, fuelL, fuelCost, spent, spentFuel, spentTolls, tollKm, tollKmAbroad, tollCost };
+}
+// €/km dei pedaggi: quello scelto nel Mezzo, altrimenti la stima per la classe
+function tollRate() {
+  const s = state.settings || {};
+  return s.tollRate > 0 ? s.tollRate : (s.tollRates?.[s.vehicle?.tollClass || 'B'] ?? 0.087);
 }
 const routeSignature = trip => trip.stops.map(s => `${s.lat.toFixed(5)},${s.lon.toFixed(5)}`).join(';');
 
@@ -148,6 +159,7 @@ async function openTrip(id) {
   fitAll();
   setSaveStatus('saved');
   if (state.trip.stops.length >= 2 && state.trip.route?.signature !== routeSignature(state.trip)) scheduleRoute(0);
+  else if (state.trip.route && !state.trip.route.tolls) scheduleRoute(0, true);   // percorsi delle versioni precedenti: servono i tratti a pedaggio
 }
 
 // ---------- home ----------
@@ -214,11 +226,12 @@ $$('.subtab').forEach(b => b.addEventListener('click', () => {
   $$('.pane').forEach(p => (p.hidden = p.id !== 'pane-' + b.dataset.pane));
   if (b.dataset.pane === 'fuel') renderFuelScope();
   if (b.dataset.pane === 'check') renderChecklist();
+  if (b.dataset.pane === 'export') renderShare();
   if (b.dataset.pane === 'pois') { renderPoiScope(); loadCollection(); if (!state.catalog) loadCatalog(); }
   if (b.dataset.pane === 'diary') renderDiary();
 }));
 
-function renderAll() { renderChecklist(); renderSummary(); renderStops(); renderMapStops(); renderRoute(); renderDiary(); renderPoiScope(); renderPois(); }
+function renderAll() { renderChecklist(); renderShare(); renderSummary(); renderStops(); renderMapStops(); renderRoute(); renderDiary(); renderPoiScope(); renderPois(); }
 
 function renderSummary() {
   const t = state.trip; if (!t) return;
@@ -285,7 +298,8 @@ function renderRouteInfo() {
   const el = $('#routeInfo');
   if (state.trip.stops.length < 2) { el.innerHTML = '<span class="muted">Aggiungi almeno due tappe per calcolare il percorso.</span>'; return; }
   if (!r || r.signature !== routeSignature(state.trip)) { el.innerHTML = '<span class="muted">Percorso da ricalcolare…</span>'; return; }
-  el.innerHTML = `Totale <span class="c-magenta">${fmtKm(r.distance)}</span> · <span class="c-magenta">${fmtDur(r.duration)}</span> di guida
+  const tk = r.tolls ? r.tolls.reduce((a, x) => a + x[1] - x[0], 0) : null;
+  el.innerHTML = `Totale <span class="c-magenta">${fmtKm(r.distance)}</span> · <span class="c-magenta">${fmtDur(r.duration)}</span> di guida${tk != null ? ` · ${tk >= 1000 ? `${fmtKm(tk)} a pedaggio` : 'senza pedaggi'}` : ''}
     <br><span class="muted">via ${esc(r.provider)}</span>${r.warning ? `<br><span class="warn">${esc(r.warning)}</span>` : ''}`;
 }
 
@@ -911,7 +925,8 @@ function renderDiary() {
   renderExpenseStops();
   const tt = totals(t);
   const fuelGap = Math.max(0, tt.fuelCost - tt.spentFuel);
-  const estimate = tt.spent + fuelGap;
+  const tollGap = Math.max(0, (tt.tollCost || 0) - tt.spentTolls);
+  const estimate = tt.spent + fuelGap + tollGap;
   const acsiStops = t.stops.filter(s => s.acsi && s.nights > 0);
   const acsiNights = acsiStops.reduce((a, s) => a + s.nights, 0);
   const acsiKnown = acsiStops.filter(s => s.acsi.price != null);
@@ -922,6 +937,7 @@ function renderDiary() {
     ['Guida', tt.duration ? fmtDur(tt.duration) : '—'],
     ['Giorni / notti', `${tt.days} / ${tt.nights}`],
     ['Carburante stimato', tt.distance ? `${Math.round(tt.fuelL)} l · ${fmtEur(tt.fuelCost)}` : '—'],
+    ['Pedaggi stimati', tt.tollCost != null ? `${Math.round(tt.tollKm)} km in Italia · ${fmtEur(tt.tollCost)}${tt.tollKmAbroad >= 1 ? ` <span class="muted">+ ${Math.round(tt.tollKmAbroad)} km all'estero non stimati</span>` : ''}` : (tt.distance ? '<span class="muted">ricalcolo del percorso…</span>' : '—')],
     ...(acsiStops.length ? [['Notti ACSI stimate', `${acsiNights} notti · ${acsiCost != null ? fmtEur(acsiCost) : '—'}${acsiUnknown ? ` <span class="muted">(${acsiUnknown} senza tariffa)</span>` : ''}`]] : []),
     ['Già speso', fmtEur(tt.spent)],
     ['Costo previsto', fmtEur(estimate)],
@@ -929,7 +945,7 @@ function renderDiary() {
     ...(t.budget ? [['Budget residuo', `<span class="${t.budget - estimate < 0 ? 'err' : 'ok'}">${fmtEur(t.budget - estimate)}</span>`]] : [])
   ];
   $('#stats').innerHTML = rows.map(([k, v]) => { const c = k === 'Costo previsto' ? ' class="total"' : ''; return `<dt${c}>${k}</dt><dd${c}>${v}</dd>`; }).join('') +
-    `<dt class="muted" style="grid-column:1/-1;font-size:12px">Il costo previsto somma le spese inserite e il carburante stimato non ancora registrato.</dt>`;
+    `<dt class="muted" style="grid-column:1/-1;font-size:12px">Il costo previsto somma le spese inserite e il carburante e i pedaggi stimati non ancora registrati. I pedaggi sono una stima a km per la classe del mezzo: il costo vero dipende dalla tratta.</dt>`;
 
   const byCat = {};
   t.expenses.forEach(e => (byCat[e.category] = (byCat[e.category] || 0) + e.amount));
@@ -966,8 +982,10 @@ const fld = (f, name) => f.querySelector(`[name="${name}"]`);
 async function loadSettings() {
   state.settings = await api('/settings');
   const f = $('#vehicleForm'), s = state.settings;
-  for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType']) fld(f, k).value = s.vehicle[k];
+  for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType', 'tollClass']) fld(f, k).value = s.vehicle[k];
   fld(f, 'fuelPrice').value = s.fuelPrice;
+  fld(f, 'tollRate').value = s.tollRate || '';
+  fld(f, 'tollRate').placeholder = `stima ${String(s.tollRates?.[s.vehicle.tollClass] ?? '').replace('.', ',')}`;
   fld(f, 'durationFactor').value = s.durationFactor;
   fld(f, 'orsApiKey').value = '';
   fld(f, 'openPlacesKey').value = '';
@@ -982,8 +1000,8 @@ async function loadSettings() {
 $('#vehicleForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target, v = {};
-  for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType']) v[k] = fld(f, k).value;
-  const body = { vehicle: v, fuelPrice: fld(f, 'fuelPrice').value, durationFactor: fld(f, 'durationFactor').value };
+  for (const k of ['name', 'length', 'width', 'height', 'weight', 'consumption', 'fuelType', 'tollClass']) v[k] = fld(f, k).value;
+  const body = { vehicle: v, fuelPrice: fld(f, 'fuelPrice').value, durationFactor: fld(f, 'durationFactor').value, tollRate: fld(f, 'tollRate').value || 0 };
   if (fld(f, 'orsApiKey').value.trim()) body.orsApiKey = fld(f, 'orsApiKey').value.trim();
   if (fld(f, 'openPlacesKey').value.trim()) body.openPlacesKey = fld(f, 'openPlacesKey').value.trim();
   try {
@@ -1046,6 +1064,7 @@ function buildPrint() {
     <h2>Costi</h2>
     <table>
       <tr><td>Carburante stimato</td><td class="r">${Math.round(tt.fuelL)} l · ${fmtEur(tt.fuelCost)}</td></tr>
+      ${tt.tollCost != null ? `<tr><td>Pedaggi stimati (classe ${esc(state.settings.vehicle.tollClass || 'B')})</td><td class="r">${Math.round(tt.tollKm)} km · ${fmtEur(tt.tollCost)}</td></tr>` : ''}
       ${Object.entries(byCat).map(([k, v]) => `<tr><td>${EXPENSE_CATS[k] || k}</td><td class="r">${fmtEur(v)}</td></tr>`).join('')}
       <tr><th>Totale speso</th><th class="r">${fmtEur(tt.spent)}</th></tr>
       ${t.budget ? `<tr><td>Budget</td><td class="r">${fmtEur(t.budget)}</td></tr>` : ''}
@@ -1086,7 +1105,7 @@ $('#btnPlan').addEventListener('click', async () => {
   $('#btnPlan').disabled = true;
   try {
     const sources = ['osm', ...(state.collection.total ? ['mine'] : [])];
-    state.plan = await api('/plan', { method: 'POST', body: { geometry: t.route.geometry, legs: t.route.legs, startDate: t.startDate,
+    state.plan = await api('/plan', { method: 'POST', body: { geometry: t.route.geometry, legs: t.route.legs, startDate: t.startDate, tolls: t.route.tolls, distance: t.route.distance,
       stops: t.stops.map(s => ({ lat: s.lat, lon: s.lon, nights: s.nights, name: s.name })), maxKm, maxHours, sources } });
     renderPlan();
   } catch (e) { $('#planStatus').innerHTML = `<span class="err">✘</span> ${esc(e.message)}`; }
@@ -1100,6 +1119,7 @@ function renderPlan() {
   const driving = p.days.filter(d => !d.rest);
   const longest = Math.max(0, ...driving.map(d => d.km));
   $('#planStatus').innerHTML = `<span class="ok">✔</span> ${p.days.length} giorni · ${driving.length} di guida · ${p.totalKm} km · ${fmtDur(p.totalHours * 3600)} di guida · giornata più lunga ${longest} km` +
+    (p.days.some(d => d.tollKm != null) ? ` · pedaggi circa ${fmtEur(p.days.reduce((a, d) => a + (d.tollKm || 0), 0) * tollRate())}` : '') +
     (p.nights.length ? `<br><span class="c-yellow">${p.nights.length} ${p.nights.length === 1 ? 'notte da scegliere' : 'notti da scegliere'}</span>` : '<br>Le notti che hai previsto bastano.') +
     (p.warnings || []).map(w => `<br><span class="c-yellow">⚠ ${esc(w)}</span>`).join('');
   $('#planDays').innerHTML = p.days.map(d => {
@@ -1117,6 +1137,7 @@ function renderPlan() {
     return `<div class="day ${night ? 'needs' : ''}">
       <div class="day-head"><span><b>Giorno ${d.day}</b> ${date} · ${esc(d.from)} → ${night ? '<span class="c-yellow">notte da scegliere</span>' : esc(d.to)}</span>
         <span class="day-km">${d.km} km · ${fmtDur(d.hours * 3600)}</span></div>
+      ${d.tollKm || d.tollKmAbroad ? `<div class="day-toll">🛣 ${d.tollKm ? `${d.tollKm} km a pedaggio · circa ${fmtEur(d.tollKm * tollRate())}` : ''}${d.tollKmAbroad ? `${d.tollKm ? ' · ' : ''}${d.tollKmAbroad} km a pedaggio all'estero` : ''}</div>` : (d.tollKm === 0 ? '<div class="day-toll muted">senza pedaggi</div>' : '')}
       ${wx}
       ${nav ? `<div class="navlinks"><a href="${nav}" target="_blank" rel="noopener">➤ Naviga la giornata con Google Maps</a></div>` : ''}
       ${cands}
@@ -1255,6 +1276,42 @@ $('#fuelList').addEventListener('click', e => {
   if (e.target.closest('a')) return;
   map.setView([s.lat, s.lon], Math.max(map.getZoom(), 14));
 });
+
+// ---------- condivisione in sola lettura ----------
+const shareUrl = sh => new URL(`v/${sh.token}`, location.href.split('#')[0].replace(/[^/]*$/, '')).href;
+function renderShare() {
+  const t = state.trip; if (!t) return;
+  const sh = t.share;
+  $('#shareBox').innerHTML = sh?.token ? `
+      <div class="share-link"><input id="shareUrl" readonly value="${esc(shareUrl(sh))}"><button class="btn btn-primary" id="btnShareCopy">Copia</button></div>
+      <label class="share-opt"><input type="checkbox" id="shareNotes" ${sh.notes !== false ? 'checked' : ''}> Mostra le note delle tappe</label>
+      <div class="row-actions">
+        <a class="btn" href="${esc(shareUrl(sh))}" target="_blank" rel="noopener">Apri come la vedono gli altri</a>
+        <button class="btn" id="btnShareRenew">Cambia link</button>
+        <button class="btn btn-danger" id="btnShareStop">Smetti di condividere</button>
+      </div>
+      <p class="hint">Le modifiche al viaggio si vedono subito anche dal link. "Cambia link" disattiva quello vecchio.</p>`
+    : `<button class="btn btn-primary" id="btnShareMake">Crea il link di condivisione</button>`;
+}
+async function shareCall(method, body) {
+  try {
+    if (state.dirty) await save();
+    const r = await api(`/trips/${state.trip.id}/share`, { method, body });
+    state.trip.share = r.share; renderShare(); return r.share;
+  } catch (e) { toast(e.message, true); }
+}
+$('#shareBox').addEventListener('click', async e => {
+  const id = e.target.id;
+  if (id === 'btnShareMake') { if (await shareCall('POST', {})) toast('Link creato: copialo e mandalo a chi viaggia con te'); }
+  if (id === 'btnShareRenew') { if (confirm('Il link attuale smetterà di funzionare. Crearne uno nuovo?') && await shareCall('POST', { renew: true, notes: state.trip.share?.notes !== false })) toast('Nuovo link creato'); }
+  if (id === 'btnShareStop') { if (confirm('Il link smetterà di funzionare per tutti. Continuare?')) { await shareCall('DELETE'); toast('Condivisione disattivata'); } }
+  if (id === 'btnShareCopy') {
+    const inp = $('#shareUrl');
+    try { await navigator.clipboard.writeText(inp.value); } catch { inp.select(); document.execCommand('copy'); }
+    toast('Link copiato');
+  }
+});
+$('#shareBox').addEventListener('change', e => { if (e.target.id === 'shareNotes') shareCall('POST', { notes: e.target.checked }); });
 
 // ---------- check-list di partenza ----------
 const checkFromModel = () => (state.settings?.checklist || []).map(x => ({ id: uid(), group: x.group, text: x.text, done: false }));

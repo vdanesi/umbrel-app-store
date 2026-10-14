@@ -234,6 +234,11 @@
           <select name="fuelType"><option value="diesel">Gasolio</option><option value="benzina">Benzina</option><option value="gpl">GPL</option></select>
         </label>
         <label>Prezzo carburante (€/l) <input name="fuelPrice" type="number" step="0.001" min="0"></label>
+        <label>Classe pedaggio
+          <select name="tollClass"><option value="A">A (muso sotto 1,30 m)</option><option value="B">B (2 assi, muso alto)</option><option value="3">3 (3 assi)</option><option value="4">4 (4 assi)</option><option value="5">5 (5+ assi)</option></select>
+        </label>
+        <label>Pedaggio €/km (vuoto = stima) <input name="tollRate" type="number" step="0.001" min="0" max="2"></label>
+        <p class="hint span2">Pedaggi: la classe dipende dagli assi e dall'altezza del mezzo misurata sull'asse anteriore. Quasi tutti i camper a 2 assi sono in classe B. La stima vale per le autostrade italiane (circa 8–9 € ogni 100 km in classe A, 2026); la tariffa vera cambia da tratta a tratta.</p>
         <label>Correzione tempi OSRM <input name="durationFactor" type="number" step="0.05" min="1" max="2"></label>
         <label class="span2">Chiave API OpenRouteService (facoltativa)
           <input name="orsApiKey" type="password" autocomplete="off" placeholder="lascia vuoto per non cambiarla">
@@ -260,6 +265,9 @@
         <button class="btn" id="btnJson">Backup JSON<small>da reimportare in seguito</small></button>
         <button class="btn" id="btnDuplicate">Duplica viaggio<small>per un'altra versione del percorso</small></button>
       </div>
+      <h3 class="c-green">Condividi con chi viaggia con te</h3>
+      <p class="hint">Un link in sola lettura: chi lo apre vede tappe, date, percorso e collegamenti per navigare, senza account. Non vede spese, diario e check-list. Il link funziona per chi raggiunge il tuo Umbrel (stessa rete di casa, oppure Tailscale o un altro accesso da fuori).</p>
+      <div id="shareBox" class="share-box"></div>
       <h3 class="c-yellow">Zona pericolosa</h3>
       <button class="btn btn-danger" id="btnDeleteTrip">✘ Elimina questo viaggio</button>
     </section>

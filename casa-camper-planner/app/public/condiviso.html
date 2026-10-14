@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Viaggio condiviso · Camper Planner</title>
+<link rel="icon" href="../img/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { overflow: auto; }
+  .sh-wrap { display: grid; grid-template-columns: minmax(320px, 440px) 1fr; height: calc(100vh - 38px); }
+  .sh-side { overflow: auto; padding: 14px 16px 24px; border-right: 1px solid var(--bg-tab-new); }
+  #shMap { height: 100%; min-height: 320px; }
+  .sh-head { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+  .sh-head img { width: 48px; height: 48px; border-radius: 6px; }
+  .sh-head h1 { font-size: 18px; margin: 0; color: var(--accent-green); }
+  .sh-stop { border-left: 3px solid var(--accent-cyan); padding: 6px 0 6px 10px; margin: 8px 0; }
+  .sh-stop b { color: var(--fg-default); }
+  .sh-meta { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
+  .sh-notes { font-size: 12px; white-space: pre-wrap; margin-top: 4px; color: var(--fg-icon); }
+  .sh-leg { font-size: 12px; color: var(--accent-magenta); margin: -2px 0 0 13px; }
+  .sh-foot { font-size: 12px; color: var(--fg-muted); margin-top: 16px; }
+  .sh-error { max-width: 520px; margin: 60px auto; padding: 0 16px; text-align: center; }
+  @media (max-width: 760px) {
+    .sh-wrap { grid-template-columns: 1fr; grid-template-rows: 45vh auto; height: auto; }
+    #shMap { order: -1; height: 45vh; }
+    .sh-side { border-right: 0; }
+  }
+</style>
+</head>
+<body>
+<header class="tabbar">
+  <div class="tab tab-active"><span class="tab-num">◉</span> <span id="shTab">Viaggio condiviso</span></div>
+  <div class="tabbar-spacer"></div>
+  <span class="save-status">sola lettura</span>
+</header>
+<main id="shMain" class="sh-wrap">
+  <aside class="sh-side">
+    <div class="sh-head"><img src="../img/vc-solutions-logo.jpg" alt="VC Solutions"><div><h1 id="shName">…</h1><div class="hint" id="shSummary"></div></div></div>
+    <div id="shStops"></div>
+    <p class="sh-foot" id="shFoot"></p>
+  </aside>
+  <div id="shMap"></div>
+</main>
+<script src="../vendor/leaflet/leaflet.js"></script>
+<script src="../condiviso.js"></script>
+</body>
+</html>

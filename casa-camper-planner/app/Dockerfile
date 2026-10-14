@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY server.js sources.js catalog.js auth.js osmtiles.js geocode.js planner.js fuel.js weather.js ./
+COPY server.js sources.js catalog.js auth.js osmtiles.js geocode.js planner.js fuel.js weather.js tolls.js ./
 COPY public ./public
 
 ENV NODE_ENV=production \

@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "2.6.0"
+version: "2.7.0"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -49,11 +49,13 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Nuova scheda Check-list in ogni viaggio: documenti, mezzo, acqua e gas, cose da
-  portare a bordo e i controlli da fare a ogni partenza dalla sosta (gradino, antenna,
-  oblò, gas, cunei…), da spuntare con la barra di avanzamento. Aggiungi o togli le voci,
-  azzera un gruppo quando riparti e salva la lista come tuo modello per i viaggi futuri.
-  La check-list compare anche nella stampa del viaggio.
+  Condividi un viaggio con chi viaggia con te: dalla scheda Esporta crei un link in sola
+  lettura con tappe, date, percorso e collegamenti per navigare, senza account e senza
+  spese, diario o check-list. Puoi nascondere le note, cambiare il link o revocarlo.
+  Stima dei pedaggi: l'app riconosce i tratti a pagamento del percorso e stima il costo
+  sulle autostrade italiane secondo la classe del camper (scheda Mezzo), per giornata,
+  nel diario dei costi e nella stampa. I viaggi già salvati ricalcolano il percorso da soli
+  la prima volta che li apri.
 dependencies: []
 path: ""
 defaultUsername: ""

@@ -16,6 +16,7 @@ import { createGeocoder, dominantCountry, centerOf } from './geocode.js';
 import { planDays, nightWindow, rankNight } from './planner.js';
 import { createFuel, FUELS } from './fuel.js';
 import { createWeather } from './weather.js';
+import { TOLL_RATES, TOLL_CLASSES, tollRangesFromOsrm, tollRangesFromOrs } from './tolls.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -60,8 +61,10 @@ const DEFAULT_SETTINGS = {
     height: 3.1,      // m
     weight: 3.5,      // t
     consumption: 11,  // l/100 km
-    fuelType: 'diesel'
+    fuelType: 'diesel',
+    tollClass: 'B'    // pedaggi: i camper a 2 assi con il muso alto oltre 1,30 m pagano la classe B
   },
+  tollRate: 0,         // €/km scelto a mano; 0 = stima secondo la classe
   fuelPrice: 1.75,     // €/l
   durationFactor: 1.15, // i tempi OSRM sono per auto: un camper è più lento
   orsApiKey: '',
@@ -102,7 +105,7 @@ async function loadSettings() {
 
 function publicSettings(s) {
   const { orsApiKey, openPlacesKey, ...rest } = s;
-  return { ...rest, checklist: rest.checklist?.length ? rest.checklist : DEFAULT_CHECKLIST, checklistCustom: Boolean(rest.checklist?.length), orsApiKeySet: Boolean(orsApiKey), openPlacesKeySet: Boolean(openPlacesKey) };
+  return { ...rest, tollRates: TOLL_RATES, checklist: rest.checklist?.length ? rest.checklist : DEFAULT_CHECKLIST, checklistCustom: Boolean(rest.checklist?.length), orsApiKeySet: Boolean(orsApiKey), openPlacesKeySet: Boolean(openPlacesKey) };
 }
 
 function num(v, fallback = 0) {
@@ -140,6 +143,7 @@ function sanitizeTrip(input, existing = {}) {
       distance: num(t.route.distance), duration: num(t.route.duration),
       legs: Array.isArray(t.route.legs) ? t.route.legs.map(l => ({ distance: num(l.distance), duration: num(l.duration) })) : [],
       geometry: t.route.geometry.slice(0, 200000).map(p => [num(p[0]), num(p[1])]),
+      tolls: Array.isArray(t.route.tolls) ? t.route.tolls.slice(0, 5000).map(r => [num(r[0]), num(r[1]), r[2] ? 1 : 0]) : undefined,
       provider: str(t.route.provider, 40),
       signature: str(t.route.signature, 20000),
       computedAt: str(t.route.computedAt, 40)
@@ -154,6 +158,7 @@ function sanitizeTrip(input, existing = {}) {
     notes: str(t.notes, 50000),
     stops, expenses, route,
     checklist: sanitizeChecklist(t.checklist, true),
+    share: existing.share || null,       // il link di condivisione lo gestisce solo il server
     createdAt: existing.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -194,7 +199,7 @@ async function fetchJson(url, opts = {}, timeoutMs = 25000) {
 
 async function routeOSRM(coords, settings) {
   const pts = coords.map(([lat, lon]) => `${lon.toFixed(6)},${lat.toFixed(6)}`).join(';');
-  const url = `${OSRM_URL}/route/v1/driving/${pts}?overview=full&geometries=geojson&steps=false`;
+  const url = `${OSRM_URL}/route/v1/driving/${pts}?overview=full&geometries=geojson&steps=true`;
   const data = await fetchJson(url);
   if (data.code !== 'Ok' || !data.routes?.length) throw new Error(data.message || 'Percorso non trovato');
   const r = data.routes[0];
@@ -203,7 +208,8 @@ async function routeOSRM(coords, settings) {
     provider: 'OSRM (auto, tempi corretti x' + f + ')',
     distance: r.distance, duration: r.duration * f,
     legs: r.legs.map(l => ({ distance: l.distance, duration: l.duration * f })),
-    geometry: r.geometry.coordinates.map(([lon, lat]) => [lat, lon])
+    geometry: r.geometry.coordinates.map(([lon, lat]) => [lat, lon]),
+    tolls: tollRangesFromOsrm(r)
   };
 }
 
@@ -211,6 +217,7 @@ async function routeORS(coords, settings) {
   const v = settings.vehicle;
   const body = {
     coordinates: coords.map(([lat, lon]) => [lon, lat]),
+    extra_info: ['tollways'],
     options: {
       vehicle_type: 'hgv',
       profile_params: { restrictions: {
@@ -230,7 +237,8 @@ async function routeORS(coords, settings) {
     provider: 'OpenRouteService (mezzo pesante, con dimensioni)',
     distance: p.summary.distance, duration: p.summary.duration,
     legs: (p.segments || []).map(s => ({ distance: s.distance, duration: s.duration })),
-    geometry: feat.geometry.coordinates.map(([lon, lat]) => [lat, lon])
+    geometry: feat.geometry.coordinates.map(([lon, lat]) => [lat, lon]),
+    tolls: tollRangesFromOrs(feat.geometry.coordinates.map(([lon, lat]) => [lat, lon]), p.extras?.tollways?.values, p.summary.distance)
   };
 }
 
@@ -308,6 +316,33 @@ const wrap = fn => (req, res) => fn(req, res).catch(e => {
 
 app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
 
+// ---------- viaggi condivisi in sola lettura (senza account) ----------
+const SHARES_FILE = path.join(DATA_DIR, 'condivisi.json');
+const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
+let sharesChain = Promise.resolve();
+// le modifiche all'elenco dei link una alla volta, per non perderne nessuna
+const updateShares = fn => (sharesChain = sharesChain.then(async () => {
+  const all = await readJson(SHARES_FILE, {}); const r = await fn(all); await writeJsonAtomic(SHARES_FILE, all); return r;
+}));
+// Solo ciò che serve a chi viaggia con te: niente spese, diario, check-list o dati dell'account.
+function publicTrip(t) {
+  return {
+    name: t.name, startDate: t.startDate,
+    stops: t.stops.map(s => ({ name: s.name, lat: s.lat, lon: s.lon, nights: s.nights, kind: s.kind, notes: t.share?.notes === false ? '' : s.notes, acsi: !!s.acsi })),
+    route: t.route ? { distance: t.route.distance, duration: t.route.duration, legs: t.route.legs, geometry: t.route.geometry, current: t.route.signature === t.stops.map(s => `${s.lat.toFixed(5)},${s.lon.toFixed(5)}`).join(';') } : null,
+    updatedAt: t.updatedAt
+  };
+}
+app.get(['/v/:token', '/v/:token/'], (req, res, next) => TOKEN_RE.test(req.params.token) ? sendPage('condiviso.html')(req, res, next) : res.status(404).end());
+app.get('/api/condiviso/:token', wrap(async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const tk = req.params.token;
+  const e = TOKEN_RE.test(tk) ? (await readJson(SHARES_FILE, {}))[tk] : null;
+  const t = e && validId(e.tripId) ? await readJson(path.join(auth.userDir(e.uid), 'trips', `${e.tripId}.json`), null) : null;
+  if (!t || t.share?.token !== tk) return res.status(404).json({ error: 'Questo link non è più attivo: chiedi a chi te l\'ha mandato di condividere di nuovo il viaggio.' });
+  res.json(publicTrip(t));
+}));
+
 auth.routes(app, { wrap, countData });
 
 // da qui in poi ogni API lavora sui dati dell'account che ha fatto l'accesso
@@ -330,8 +365,10 @@ app.put('/api/settings', wrap(async (req, res) => {
       length: num(v.length, cur.vehicle.length), width: num(v.width, cur.vehicle.width),
       height: num(v.height, cur.vehicle.height), weight: num(v.weight, cur.vehicle.weight),
       consumption: num(v.consumption, cur.vehicle.consumption),
-      fuelType: ['diesel', 'benzina', 'gpl'].includes(v.fuelType) ? v.fuelType : cur.vehicle.fuelType
+      fuelType: ['diesel', 'benzina', 'gpl'].includes(v.fuelType) ? v.fuelType : cur.vehicle.fuelType,
+      tollClass: TOLL_CLASSES.includes(String(v.tollClass)) ? String(v.tollClass) : cur.vehicle.tollClass
     },
+    tollRate: Math.max(0, Math.min(2, num(b.tollRate, cur.tollRate))),
     fuelPrice: num(b.fuelPrice, cur.fuelPrice),
     durationFactor: Math.min(2, Math.max(1, num(b.durationFactor, cur.durationFactor)))
   };
@@ -379,8 +416,34 @@ app.put('/api/trips/:id', wrap(async (req, res) => {
 
 app.delete('/api/trips/:id', wrap(async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ error: 'ID non valido' });
+  const t = await readJson(tripFile(req.params.id), null);
+  if (t?.share?.token) await updateShares(all => { delete all[t.share.token]; });
   await fs.rm(tripFile(req.params.id), { force: true });
   res.status(204).end();
+}));
+
+// Crea (o cambia) il link di sola lettura del viaggio, oppure lo revoca.
+app.post('/api/trips/:id/share', wrap(async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ error: 'ID non valido' });
+  const t = await readJson(tripFile(req.params.id), null);
+  if (!t) return res.status(404).json({ error: 'Viaggio non trovato' });
+  const notes = req.body?.notes !== false;
+  const renew = req.body?.renew === true || !t.share?.token;
+  const token = renew ? crypto.randomBytes(18).toString('base64url') : t.share.token;
+  const old = t.share?.token;
+  await updateShares(all => { if (old && old !== token) delete all[old]; all[token] = { uid: req.user.id, tripId: t.id, createdAt: new Date().toISOString() }; });
+  t.share = { token, notes, createdAt: renew ? new Date().toISOString() : t.share.createdAt };
+  await writeJsonAtomic(tripFile(t.id), t);
+  res.json({ share: t.share });
+}));
+app.delete('/api/trips/:id/share', wrap(async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ error: 'ID non valido' });
+  const t = await readJson(tripFile(req.params.id), null);
+  if (!t) return res.status(404).json({ error: 'Viaggio non trovato' });
+  if (t.share?.token) await updateShares(all => { delete all[t.share.token]; });
+  t.share = null;
+  await writeJsonAtomic(tripFile(t.id), t);
+  res.json({ share: null });
 }));
 
 app.get('/api/trips/:id/gpx', wrap(async (req, res) => {
@@ -884,7 +947,8 @@ app.post('/api/plan', wrap(async (req, res) => {
   if (geometry.length < 2 || stops.length < 2) return res.status(400).json({ error: 'Serve un percorso calcolato con almeno due tappe' });
   const maxKm = Math.max(0, Math.min(2000, num(b.maxKm))), maxHours = Math.max(0, Math.min(24, num(b.maxHours)));
   if (!maxKm && !maxHours) return res.status(400).json({ error: 'Indica i km o le ore di guida al giorno' });
-  const plan = planDays({ geometry, legs: Array.isArray(b.legs) ? b.legs : [], stops, startDate: str(b.startDate, 10), maxKm, maxHours });
+  const tolls = Array.isArray(b.tolls) ? b.tolls.slice(0, 5000).map(r => [num(r[0]), num(r[1]), r[2] ? 1 : 0]) : null;
+  const plan = planDays({ geometry, legs: Array.isArray(b.legs) ? b.legs : [], stops, startDate: str(b.startDate, 10), maxKm, maxHours, tolls, routeDistance: num(b.distance) });
   const sources = (Array.isArray(b.sources) ? b.sources : ['osm', 'mine']).filter(x => ['osm', 'mine'].includes(x));
   const warnings = [];
   const coll = sources.includes('mine') ? await loadCollection() : null;
