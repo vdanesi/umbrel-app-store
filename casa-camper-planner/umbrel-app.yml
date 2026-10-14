@@ -4,7 +4,7 @@ name: Camper Planner
 tagline: Itinerari in camper con aree sosta, diario e costi
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-camper-planner/app/public/img/icon-512.png
 category: files
-version: "2.4.0"
+version: "2.5.0"
 port: 3847
 description: >-
   Pianifica i viaggi in camper dal tuo Umbrel.
@@ -49,13 +49,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Giornate di viaggio: indica i km o le ore di guida al giorno e l'app divide il percorso
-  in giorni, segnala dove manca una notte e propone le aree camper e i campeggi vicini
-  (prima i tuoi ACSI e quelli della raccolta); "+ Notte qui" la aggiunge e ripianifica.
-  Nuova scheda Carburante con i prezzi ufficiali del Ministero (MIMIT) lungo il percorso
-  o vicino a una tappa, con il più conveniente ogni 50 km e la mediana da usare nella
-  stima dei costi. Collegamenti "Naviga" per aprire aree, tappe e distributori in Google
-  Maps, Waze, Apple Mappe o OsmAnd.
+  Meteo nelle giornate di viaggio: dopo "Pianifica le giornate" ogni giorno mostra il
+  tempo previsto nel posto dove passi la notte (temperature, pioggia, vento) con gli
+  avvisi utili in camper: raffiche forti, neve, ghiaccio, temporali, pioggia abbondante,
+  caldo. Le previsioni arrivano fino a 16 giorni, da Open-Meteo, gratuito e senza chiave.
 dependencies: []
 path: ""
 defaultUsername: ""

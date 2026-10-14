@@ -1102,7 +1102,8 @@ function renderPlan() {
     (p.warnings || []).map(w => `<br><span class="c-yellow">⚠ ${esc(w)}</span>`).join('');
   $('#planDays').innerHTML = p.days.map(d => {
     const date = d.date ? fmtDate(parseDate(d.date)) : '';
-    if (d.rest) return `<div class="day rest"><div class="day-head"><span><b>Giorno ${d.day}</b> ${date} · fermi a ${esc(d.to)}</span></div></div>`;
+    const wx = `<div class="wx" data-wx="${p.days.indexOf(d)}"></div>`;
+    if (d.rest) return `<div class="day rest"><div class="day-head"><span><b>Giorno ${d.day}</b> ${date} · fermi a ${esc(d.to)}</span></div>${wx}</div>`;
     const night = d.night != null ? p.nights[d.night] : null;
     const nav = dayNavUrl(d.nav || []);
     const cands = night ? (night.candidates.length ? night.candidates.map((c, ci) => `<div class="cand">
@@ -1114,6 +1115,7 @@ function renderPlan() {
     return `<div class="day ${night ? 'needs' : ''}">
       <div class="day-head"><span><b>Giorno ${d.day}</b> ${date} · ${esc(d.from)} → ${night ? '<span class="c-yellow">notte da scegliere</span>' : esc(d.to)}</span>
         <span class="day-km">${d.km} km · ${fmtDur(d.hours * 3600)}</span></div>
+      ${wx}
       ${nav ? `<div class="navlinks"><a href="${nav}" target="_blank" rel="noopener">➤ Naviga la giornata con Google Maps</a></div>` : ''}
       ${cands}
     </div>`;
@@ -1127,6 +1129,41 @@ function renderPlan() {
         .bindPopup(`<b>${esc(poiName(c))}</b><br>notte del giorno ${n.day}${poiDetails(c) ? '<br>' + poiDetails(c) : ''}<br>${navLinks(c.lat, c.lon)}`).addTo(planLayer);
     }
   }
+  loadPlanWeather();
+}
+// Meteo di ogni giornata, nel posto dove si dorme (o dove si resta fermi).
+async function loadPlanWeather() {
+  const p = state.plan, t = state.trip; if (!p) return;
+  const pts = p.days.map(d => {
+    const at = d.rest || !d.nav?.length ? [t.stops[d.stop]?.lat, t.stops[d.stop]?.lon] : d.nav.at(-1);
+    return { lat: at[0], lon: at[1], date: d.date };
+  });
+  if (!pts.some(x => x.date)) {
+    const el = $('#planDays [data-wx="0"]'); if (el) el.innerHTML = '<span class="muted">Imposta la data di partenza per vedere il meteo di ogni giornata.</span>';
+    return;
+  }
+  let r;
+  try { r = await api('/weather', { method: 'POST', body: { points: pts } }); }
+  catch (e) { const el = $('#planDays [data-wx="0"]'); if (el) el.innerHTML = `<span class="c-yellow">⚠ meteo non disponibile: ${esc(e.message)}</span>`; return; }
+  if (state.plan !== p) return;     // nel frattempo è cambiato il piano
+  let shownLater = false, alerts = 0;
+  r.days.forEach((w, i) => {
+    const el = $(`#planDays [data-wx="${i}"]`); if (!el) return;
+    if (w.missing === 'later') {
+      if (!shownLater) el.innerHTML = `<span class="muted">meteo dal ${esc(fmtDate(parseDate(w.from)))} (le previsioni arrivano a 16 giorni)</span>`;
+      shownLater = true; return;
+    }
+    if (w.missing === 'error') { el.innerHTML = '<span class="muted">meteo non disponibile</span>'; return; }
+    if (w.missing) return;
+    alerts += w.warnings.length ? 1 : 0;
+    el.innerHTML = `<span class="wx-icon" title="${esc(w.text)}">${w.icon}</span> <span>${esc(w.text)}</span>` +
+      ` · <span class="c-magenta">${w.tmax}°</span>/<span class="c-cyan">${w.tmin}°</span>` +
+      (w.rain > 0 || w.rainProb >= 30 ? ` · <span title="probabilità di precipitazioni">💧 ${w.rainProb ?? '—'}%</span>${w.rain > 0 ? ` ${String(w.rain).replace('.', ',')} mm` : ''}` : '') +
+      ` · vento ${w.wind} km/h${w.gusts >= 40 ? ` (raffiche ${w.gusts})` : ''}` +
+      w.warnings.map(x => `<div class="wx-warn">⚠ ${esc(x)}</div>`).join('');
+  });
+  if (alerts) $('#planStatus').insertAdjacentHTML('beforeend', `<br><span class="c-yellow">⚠ meteo: ${alerts} ${alerts === 1 ? 'giornata' : 'giornate'} da guardare con attenzione</span>`);
+  if (r.days.some(w => !w.missing)) $('#planDays').insertAdjacentHTML('beforeend', '<p class="hint">Meteo: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0), nel posto dove passi la notte.</p>');
 }
 $('#planDays').addEventListener('click', e => {
   const b = e.target.closest('[data-night]'); if (!b) return;

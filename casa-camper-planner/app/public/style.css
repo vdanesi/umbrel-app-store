@@ -466,3 +466,9 @@ code { font: 13px var(--mono); color: var(--accent-magenta); word-break: break-a
   .print-view .note { white-space: pre-wrap; font-size: 10pt; color: #333; }
   .print-view tr { break-inside: avoid; }
 }
+
+/* meteo delle giornate */
+.wx { font-size: 12px; color: var(--fg-muted); margin: 3px 0 2px; }
+.wx:empty { display: none; }
+.wx-icon { font-size: 14px; }
+.wx-warn { color: var(--accent-yellow); margin-top: 2px; }

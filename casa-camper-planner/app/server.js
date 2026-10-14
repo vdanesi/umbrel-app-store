@@ -15,6 +15,7 @@ import { createOsmTiles } from './osmtiles.js';
 import { createGeocoder, dominantCountry, centerOf } from './geocode.js';
 import { planDays, nightWindow, rankNight } from './planner.js';
 import { createFuel, FUELS } from './fuel.js';
+import { createWeather } from './weather.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -884,6 +885,15 @@ app.post('/api/plan', wrap(async (req, res) => {
   }
   const { cumKm, sIdx, geometry: _g, ...out } = plan;
   res.json({ ...out, warnings });
+}));
+
+// ---------- meteo delle giornate (Open-Meteo) ----------
+const weather = createWeather({ fetchJson });
+app.post('/api/weather', wrap(async (req, res) => {
+  const pts = (Array.isArray(req.body?.points) ? req.body.points : []).slice(0, 60)
+    .map(p => ({ lat: num(p.lat), lon: num(p.lon), date: /^\d{4}-\d{2}-\d{2}$/.test(p.date || '') ? p.date : '' }))
+    .filter(p => Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180);
+  res.json(await weather.forDays(pts));
 }));
 
 // ---------- prezzi dei carburanti (MIMIT) ----------
