@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.35.0"
+version: "1.36.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,14 +34,14 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.35.0: promemoria e attivita collegati a siti, rack, cassetti
-  RailFiber, servizi monitorati e progetti. Apertura diretta della scheda
-  associata e creazione di un promemoria dal relativo elemento. Scadenze
-  aperte e interventi completati visibili nelle schede, con data e nota
-  facoltativa del lavoro svolto. I siti e i rack includono le attivita degli
-  elementi contenuti. Collegamenti mantenuti nelle ricorrenze successive;
-  note intervento conservate sul completamento. Dati inclusi nel backup ZIP.
-  Logo originale, home pubblica e stile Dvsolutions mantenuti.
+  Versione 1.36.0: mappa RailFiber con 36 punti della Brescia-Iseo-Edolo:
+  30 stazioni e fermate del quadro passeggeri Trenord e 6 altri impianti
+  distinti in giallo. Ricerca per nome, filtri, elenco e inquadratura della
+  tratta. Clic sul punto per aprire il sito esistente, creare una scheda
+  con coordinate precompilate oppure associare un sito gia presente.
+  Controlli sulle associazioni duplicate e sulle revisioni. Coordinate e
+  note locali mantenute; nessuna importazione automatica nell'archivio fibra.
+  Fonti e attribuzioni consultabili dalla mappa. Logo originale mantenuto.
 
 dependencies: []
 path: ""
