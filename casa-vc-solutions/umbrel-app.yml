@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.38.0"
+version: "1.39.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,16 +34,12 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.38.0: editor Quadri integrato con grafica del sito e colori
-  Dvsolutions. Sedi e quadri, diagramma, tabella porte e dettaglio laterale
-  usano lo stesso archivio di quadri.dvso.net. Accesso con le credenziali
-  Quadri, dopo il login alla dashboard. Dalla mappa si apre una sede o si
-  prepara una nuova sede dal punto selezionato. Controllo del documento
-  remoto prima del salvataggio e verifica del risultato; conflitti ed errori
-  sospendono gli invii mantenendo le modifiche aperte. Aggiornamenti dal sito
-  rilevati quando non si sta compilando un campo. Interfaccia adattata al
-  telefono, token tecnico mantenuto sul server. Inventario locale e logo
-  originale conservati.
+  Versione 1.39.0: RailFiber diviso in Mappa, Compilazione Quadri e Inventario.
+  Pagina mappa a tutta finestra con pochi comandi, filtri e ricerca indirizzo
+  in un pannello richiudibile. I dettagli del punto si aprono a lato o in basso
+  sul telefono. Posizione e zoom restano stabili durante la selezione;
+  Vista standard ripristina la panoramica e chiude i pannelli.
+  Editor condiviso, dati esistenti, colori e logo originale conservati.
 
 dependencies: []
 path: ""
