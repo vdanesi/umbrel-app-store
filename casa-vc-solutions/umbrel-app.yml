@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.39.2"
+version: "1.40.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,9 +34,13 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.39.2: Host Umbrel e Container Docker - Stato dei processi
-  sono spostati alla fine della dashboard, dopo lo storico del monitoraggio.
-  I riepiloghi personali restano subito sotto il comando dashboard --overview.
+  Versione 1.40.0: gli elementi eliminati da Quadri vengono rimossi anche
+  dalla copia RailFiber al successivo aggiornamento automatico o manuale.
+  Rimossi anche i relativi rack, cassetti, porte e collegamenti dipendenti.
+  Le cancellazioni prevalgono sulle modifiche locali dei contenitori importati;
+  gli altri siti creati solo in RailFiber restano invariati.
+  Documenti incompleti o incoerenti non vengono applicati. Gli elementi
+  precedentemente segnalati come mancanti sono rimossi alla prima sincronizzazione valida.
 
 dependencies: []
 path: ""
