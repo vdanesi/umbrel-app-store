@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.36.0"
+version: "1.37.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,14 +34,16 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.36.0: mappa RailFiber con 36 punti della Brescia-Iseo-Edolo:
-  30 stazioni e fermate del quadro passeggeri Trenord e 6 altri impianti
-  distinti in giallo. Ricerca per nome, filtri, elenco e inquadratura della
-  tratta. Clic sul punto per aprire il sito esistente, creare una scheda
-  con coordinate precompilate oppure associare un sito gia presente.
-  Controlli sulle associazioni duplicate e sulle revisioni. Coordinate e
-  note locali mantenute; nessuna importazione automatica nell'archivio fibra.
-  Fonti e attribuzioni consultabili dalla mappa. Logo originale mantenuto.
+  Versione 1.37.0: la mappa RailFiber mantiene posizione e zoom durante
+  aggiornamenti, selezione e salvataggio. Il pulsante VISTA STANDARD
+  ripristina la rete completa. Aggiunto il ramo Iseo-Rovato con Cazzago
+  San Martino, Rovato Centro e Rovato FN. Catalogo con 108 PL e progressive
+  dal fascicolo Ferrovienord CT 25/2026, con origine Brescia o Bornato
+  esplicitata. Posizioni PL abbinate a OSM da verificare o stimate sul
+  tracciato, riconoscibili dal tratteggio. Aggiunte 23 gallerie cartografate,
+  con tracciato e chilometraggio stimato chiaramente indicato. Filtri per
+  tratta e categoria, ricerca per progressiva e fonti nelle schede.
+  Dati fibra e logo originale mantenuti.
 
 dependencies: []
 path: ""
