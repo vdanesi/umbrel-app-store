@@ -4,7 +4,7 @@ name: Dvsolutions
 tagline: IT, Homelab, Networking e Camper in un'unica dashboard
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-vc-solutions/icon.svg
 category: files
-version: "1.33.1"
+version: "1.34.0"
 port: 3959
 description: >-
   Dashboard personale Dvsolutions dedicata a IT, Homelab, Networking e Camper.
@@ -34,10 +34,13 @@ repo: https://github.com/vdanesi/vc-solutions-dashboard
 support: https://github.com/vdanesi/vc-solutions-dashboard/issues
 gallery: []
 releaseNotes: >-
-  Versione 1.33.1: ripristinato il logo originale fornito dall'utente,
-  mantenendo immagine e colori senza modifiche. Logo intero, senza ritagli,
-  nella barra laterale desktop e mobile. Scritta Dvsolutions mantenuta.
-  Aggiornata anche l'icona delle notifiche browser.
+  Versione 1.34.0: ricorrenze giornaliere, settimanali, mensili e annuali nel
+  Personal Organizer, con intervallo e preavviso configurabili. Completa e
+  passa alla prossima scadenza conserva lo storico e genera una sola nuova
+  occorrenza futura, senza duplicati. Gestione di fine mese e anni bisestili.
+  Nuove viste Oggi, Prossimi 7 giorni e Scaduti. Rimanda 1 ora sospende gli
+  avvisi senza spostare la cadenza. Ricorrenze e storico inclusi nel backup ZIP.
+  Logo originale, home pubblica e stile Dvsolutions mantenuti.
 
 dependencies: []
 path: ""
