@@ -1,0 +1,61 @@
+# CasaOS: app dello store "Casa" (aggiungi come sorgente lo zip del repository, vedi LEGGIMI.md)
+name: fn-gallerie
+services:
+  fn-gallerie:
+    image: ghcr.io/vdanesi/fn-gallerie:1.0.0
+    container_name: fn-gallerie
+    restart: unless-stopped
+    ports:
+      - target: 80
+        published: "8742"
+        protocol: tcp
+    environment:
+      FN_FORCE_HTTPS: "0"
+      TZ: Europe/Rome
+    volumes:
+      - type: bind
+        source: /DATA/AppData/fn-gallerie/data
+        target: /var/www/html/data
+    x-casaos:
+      envs:
+        - container: FN_FORCE_HTTPS
+          description:
+            en_us: "0 = http in local network / behind an https proxy; 1 = redirect to https"
+            it_it: "0 = http in rete locale o dietro un proxy https; 1 = reindirizza a https"
+        - container: TZ
+          description:
+            en_us: Time zone
+            it_it: Fuso orario
+      ports:
+        - container: "80"
+          description:
+            en_us: Web UI
+            it_it: Interfaccia web
+      volumes:
+        - container: /var/www/html/data
+          description:
+            en_us: "Data: data pack, project state, users, documents, backups"
+            it_it: "Dati: pacchetto dati, stato del progetto, utenti, documenti, copie di sicurezza"
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: fn-gallerie
+  store_app_id: fn-gallerie
+  author: VC Solutions
+  developer: VC Solutions
+  category: Utilities
+  icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/Apps/FNGallerie/icon.png
+  thumbnail: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/Apps/FNGallerie/icon.png
+  screenshot_link: []
+  title:
+    en_us: FN Avanzamento Gallerie
+  tagline:
+    en_us: TVCC tunnel works progress, panel configuration and fiber
+    it_it: Nuovi lavori TVCC nelle gallerie con avanzamento, quadri e fibra
+  description:
+    en_us: "Map of the Brescia–Iseo–Edolo line with TVCC tunnel works progress, panel configuration, cameras/IP database, level crossings, fiber management and documents. Users and roles. The repository contains only the program: on first start the admin uploads the private data pack (fn_datapack.json)."
+    it_it: "Mappa della linea Brescia–Iseo–Edolo con avanzamento lavori TVCC nelle gallerie, configurazione dei quadri, database telecamere/IP, PL e fermate, gestione fibra e documenti. Utenti e ruoli. Il repository contiene solo il programma: al primo avvio l'amministratore carica il pacchetto dati privato (fn_datapack.json)."
+  index: /
+  port_map: "8742"
+  scheme: http

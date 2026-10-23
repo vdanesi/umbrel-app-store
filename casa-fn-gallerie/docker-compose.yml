@@ -1,0 +1,23 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      # Format: <app-id>_<service-name>_1
+      APP_HOST: casa-fn-gallerie_web_1
+      APP_PORT: 80
+      # FN Avanzamento Gallerie ha utenti e ruoli suoi, quindi Umbrel non chiede anche la propria password.
+      # Per la doppia protezione cancella questa riga e aggiorna l'app.
+      PROXY_AUTH_ADD: "false"
+
+  web:
+    # Built by .github/workflows/fn-gallerie.yml. Change the tag together with "version" in umbrel-app.yml.
+    image: ghcr.io/vdanesi/fn-gallerie:1.0.0
+    init: true
+    restart: on-failure
+    stop_grace_period: 30s
+    environment:
+      FN_FORCE_HTTPS: "0"
+      TZ: Europe/Rome
+    volumes:
+      - ${APP_DATA_DIR}/data:/var/www/html/data

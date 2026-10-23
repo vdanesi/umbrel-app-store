@@ -218,3 +218,56 @@ Stessa procedura di Scontrinaio, con lo stesso numero di versione in:
 - `casa-rapportini/umbrel-app.yml` → `version`
 - `casa-rapportini/docker-compose.yml` → `image: ghcr.io/vdanesi/rapportini:<versione>`
 - `casa-rapportini/app/package.json` → `version` (è la versione mostrata da `/api/health`)
+
+---
+
+# FN Avanzamento Gallerie (Umbrel e CasaOS)
+
+Mappa della linea Brescia–Iseo–Edolo con l'avanzamento dei nuovi lavori TVCC nelle gallerie: box e lavorazioni, configurazione dei quadri, telecamere e IP, PL e fermate, fibra (quadri, porte, patch, collegamenti), documenti. Utenti con ruoli **amministratore**, **modifica**, **sola lettura**.
+
+```
+.github/workflows/fn-gallerie.yml  ← GitHub costruisce l'immagine ghcr.io/vdanesi/fn-gallerie:<versione>
+casa-fn-gallerie/
+  umbrel-app.yml                   ← scheda dell'app per Umbrel (porta 8742, versione)
+  docker-compose.yml               ← compose per Umbrel
+  app/Dockerfile                   ← PHP 8.3 + Apache
+  app/www/                         ← il programma (index.php, api.php, lib.php, private/app.html)
+  data/                            ← dati sull'Umbrel (resta vuota nel repository)
+Apps/FNGallerie/docker-compose.yml ← la stessa app per lo store di CasaOS
+```
+
+**Nel repository c'è solo il programma.** Mappe dello schema rete, schemi imbocchi, PDF, Excel iniziale, backup di Quadri & Fibra (IP, porte, fibre) e simboli dei PDF stanno nel **pacchetto dati** `fn_datapack.json`, che non va mai su GitHub (è anche in `.gitignore`). L'amministratore lo carica una volta dall'app e resta solo nella cartella `data` del server, protetta dal login.
+
+### Solo la prima volta: rendi pubblica l'immagine
+Dopo la prima costruzione riuscita in **Actions** ("Immagine Docker FN Gallerie"), apri **Packages → fn-gallerie → Package settings → Change visibility → Public**. L'immagine contiene solo il programma, nessun dato del progetto.
+
+### Installare su Umbrel
+Lo store "Casa" è già aggiunto: apri **Casa App Store → FN Avanzamento Gallerie → Install**, poi `http://umbrel.local:8742`.
+
+### Installare su CasaOS
+1. CasaOS → **App Store** → **More apps / sorgenti** (icona in alto a destra) → aggiungi la sorgente
+   `https://github.com/vdanesi/umbrel-app-store/archive/refs/heads/main.zip`
+2. Cerca **FN Avanzamento Gallerie** e installala. I dati vanno in `/DATA/AppData/fn-gallerie/data`.
+3. Apri `http://IP-DEL-CASAOS:8742`.
+
+In alternativa, senza sorgente: **App Store → + → Installa un'app personalizzata → Importa** e incolla `Apps/FNGallerie/docker-compose.yml`.
+
+### Primo avvio (Umbrel e CasaOS)
+1. La pagina chiede di creare l'**amministratore**.
+2. L'app mostra **"Pacchetto dati mancante"**: scegli `fn_datapack.json` e premi **Carica pacchetto**. L'app si ricarica con mappe, schemi, 28 box, sedi, PL e simboli.
+3. Da **👥 Utenti** crei gli altri utenti. Lì trovi anche il riquadro **Pacchetto dati** per caricarne uno nuovo: con "riparti dai dati del pacchetto" il progetto riparte da zero (lo stato attuale resta nelle copie di sicurezza); senza, cambiano solo mappe, schemi e simboli.
+
+Per portare il lavoro già fatto (dal PC o da Altervista): nella vecchia versione **💾 Salva** il progetto JSON, nella nuova **📂 Apri** lo stesso file.
+
+### Accesso
+- Umbrel non chiede anche la sua password (`PROXY_AUTH_ADD: "false"`): per la doppia protezione cancella quella riga e aggiorna l'app.
+- In rete locale si usa http (`FN_FORCE_HTTPS=0`). Da fuori casa usa Tailscale o un Cloudflare Tunnel con https; non aprire la porta 8742 sul router.
+- Dopo 6 password sbagliate l'accesso per quel nome si blocca per 15 minuti; la sessione scade dopo 8 ore di inattività.
+
+### Aggiornare FN Avanzamento Gallerie
+Stesso numero di versione in:
+- `casa-fn-gallerie/umbrel-app.yml` → `version`
+- `casa-fn-gallerie/docker-compose.yml` → `image: ghcr.io/vdanesi/fn-gallerie:<versione>`
+- `Apps/FNGallerie/docker-compose.yml` → `image: ghcr.io/vdanesi/fn-gallerie:<versione>`
+
+Il nuovo programma va in `casa-fn-gallerie/app/www/private/app.html` (sempre la **versione pulita**: l'Action si ferma se trova i dati del progetto). Su Umbrel compare l'aggiornamento; su CasaOS aggiorna l'app dal pannello. La cartella `data` non viene toccata.

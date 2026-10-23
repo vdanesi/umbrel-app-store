@@ -1,0 +1,5 @@
+
+# FN Gallerie: il pacchetto dati e i dati del server non vanno mai nel repository
+*datapack*.json
+casa-fn-gallerie/data/*
+!casa-fn-gallerie/data/.gitkeep
