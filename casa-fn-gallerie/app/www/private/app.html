@@ -116,6 +116,8 @@ table.t th{color:var(--cyan);font-weight:400;text-align:left;padding:5px 6px;bor
 table.t td{padding:4px 6px;border-bottom:1px solid #2a2a2a;vertical-align:middle}
 table.t td.r,table.t th.r{text-align:right}
 table.t tr.tot td{border-top:1px solid var(--border-tab);color:var(--fg);font-weight:700}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;max-width:1100px}
+.scard{border:1px solid var(--line);background:var(--bg-tabbar);padding:6px 9px;cursor:pointer}.scard:hover,.scard:focus{border-color:var(--green);outline:none}
 .files{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .file{border:1px solid var(--line);background:var(--bg-tabbar);cursor:pointer;display:flex;flex-direction:column}
 .file .th{height:96px;background:#111 center/contain no-repeat;display:flex;align-items:center;justify-content:center;color:var(--dim);font-family:var(--mono)}
@@ -158,7 +160,12 @@ table.t tr.tot td{border-top:1px solid var(--border-tab);color:var(--fg);font-we
 #leaf{position:absolute;inset:0;display:none;background:var(--bg-terminal)}
 #mapwrap.reale #leaf{display:block}
 #mapwrap.reale #pz-map{display:none}
-#mapsw{position:absolute;left:10px;top:10px;z-index:1100;display:flex}
+#side{display:none!important}
+#maplogo{position:absolute;left:10px;top:10px;z-index:1100;display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:var(--r-sm);padding:4px 10px 4px 4px;box-shadow:0 1px 6px rgba(0,0,0,.45)}
+#maplogo img{width:34px;height:34px;display:block}
+#maplogo span{color:#000;font:11px/1.2 var(--ui)}#maplogo span b{display:block;font-size:12px}
+#maplogo a{font-size:15px;text-decoration:none;color:#c10fb8;padding-left:6px;border-left:1px solid #ccc}
+#mapsw{position:absolute;left:10px;top:56px;z-index:1100;display:flex}
 #mapsw .btn{border-radius:0}
 #mapsw .btn+.btn{border-left:none}
 #b-addlayer{display:none;margin-left:6px;border-left:1px solid var(--border-tab)!important}
@@ -990,6 +997,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <ul class="tl" id="slist"></ul>
     </aside>
     <div id="mapwrap"><div class="pz" id="pz-map"></div><div id="leaf"></div>
+      <div id="maplogo" title="FERROVIENORD · Nuovi lavori TVCC gallerie · Avanzamento lavori"><img id="logo2" alt="VC Solutions"><span><b>FERROVIENORD</b>Nuovi lavori TVCC gallerie</span><a href="#" id="maplogo-tot" class="val mono" title="apri il riepilogo"></a></div>
       <div id="mapsw"><button class="btn sm on" data-mm="schema">Schema rete</button><button class="btn sm" data-mm="reale">Mappa reale</button><button class="btn sm on" id="b-sedi" title="Mostra / nascondi le sedi (stazioni) da Quadri & Fibra" style="margin-left:6px;border-left:1px solid var(--border-tab)">● Sedi</button><button class="btn sm on" id="b-pl" title="Mostra / nascondi i passaggi a livello">✕ PL</button><button class="btn sm on" id="b-cams" title="Mostra / nascondi le telecamere dello schema PDF">📷 TVCC</button><button class="btn sm" id="b-rail" title="Scarica il tracciato reale della ferrovia da OpenStreetMap e aggancia gallerie e POI ai binari">⟲ Allinea ferrovia</button><button class="btn sm" id="b-addlayer" title="Aggiungi uno sfondo gratuito (tessere XYZ o WMS, es. ortofoto regionale). Shift+clic per rimuovere quelli aggiunti">+ sfondo</button></div>
       <div class="hint" id="leafhint"></div></div>
     <aside id="drawer"></aside>
@@ -1274,11 +1282,12 @@ function addPOI(x,y){
 /* ======================= SIDEBAR ======================= */
 let renderSide; renderSide=function(){
   const p=totPct(), a=allBoxes(); const tot=S.tratte.reduce((s,t)=>{const c=trCounts(t);s.p+=c.pali;s.t+=c.tel;return s},{p:0,t:0});
-  $("#tot-pct").textContent=pctTxt(p); $("#tot-bar").style.width=(p*100)+"%"; $("#tot-sub").textContent=`${a.length} box · ${tot.p} pali · ${tot.t} tvcc`;
+  $("#tot-pct").textContent=pctTxt(p); $("#tot-bar").style.width=(p*100)+"%"; if($("#maplogo-tot")) $("#maplogo-tot").textContent=pctTxt(p); $("#tot-sub").textContent=`${a.length} box · ${tot.p} pali · ${tot.t} tvcc`;
   $("#tlist").innerHTML = S.tratte.map(t=>{ const q=trPct(t); return `<li data-id="${t.id}" class="${UI.sel===t.id?"sel":""}"><div class="row"><span>${esc(t.nome)}</span><span class="val">${pctTxt(q)}</span></div><div class="bar"><i style="width:${q*100}%"></i></div><div class="dim mono" style="font-size:11px;margin-top:3px">${esc(t.linea||"—")} · ${t.boxes.length} box</div></li>`; }).join("");
 }
 const _rs=renderSide; renderSide=function(){ _rs(); renderSedeList(); };
 $("#tlist").addEventListener("click",e=>{ const li=e.target.closest("li"); if(li) select(li.dataset.id, true); });
+$("#maplogo-tot").addEventListener("click",e=>{ e.preventDefault(); showView("riep"); });
 
 function cur(){ return S && S.tratte.find(t=>t.id===UI.sel); }
 function select(id, center){
@@ -1613,6 +1622,10 @@ $("#sch-tabs").addEventListener("click",e=>{ const k=e.target.closest("[data-sk]
 function initSch(){ renderSchTabs(); SCH=PanZoom($("#pz-sch"), ASSETS.sch[UI.sch], {fitPad:.99}); }
 
 /* ======================= RIEPILOGO ======================= */
+function riepSedi(){ const f=normN(UI.rsq||"");
+  const list=(S.sedi||[]).filter(s=>!f||normN(s.nome).includes(f)).sort((a,b)=>(b.quadri.length-a.quadri.length)||a.nome.localeCompare(b.nome));
+  return list.map(s=>{ const st=sedeStats(s); return `<div class="scard" data-sid="${s.id}" tabindex="0"><div class="row-flex"><span class="grow">${esc(s.nome)}</span>${st.quadri?`<span class="info mono" style="font-size:11.5px">${st.quadri} quadri</span>`:""}</div>
+    <div class="dim mono" style="font-size:11px">${st.quadri?`${st.panels} pannelli · ${st.uso}/${st.porte} porte in uso`:s.tipo==="fermata"?"fermata":"nessun quadro censito"}${s.lat==null?` · <span style="color:var(--yellow)">senza coordinate</span>`:""}</div></div>`; }).join("")||`<span class="dim">nessuna sede</span>`; }
 function renderRiep(){
   const tot=S.tratte.map(t=>({t,c:trCounts(t),p:trPct(t)})); const sum=tot.reduce((s,x)=>({box:s.box+x.c.box,pali:s.pali+x.c.pali,tel:s.tel+x.c.tel}),{box:0,pali:0,tel:0});
   const bx=allBoxes(); const cnt=(arr,fn)=>arr.filter(fn).length;
@@ -1620,7 +1633,7 @@ function renderRiep(){
   $("#v-riep").innerHTML = `<div class="welcome"><div class="h-green" style="font-size:16px">• Avanzamento Lavori Gallerie – TVCC imbocchi •</div><div class="h-yellow">(FERROVIENORD · linea Brescia – Iseo – Edolo)</div>
     <div class="kpis"><div><span>Totale lavorazione</span><b class="val big">${pctTxt(totPct())}</b></div><div><span>Box</span><b class="val big">${sum.box}</b></div><div><span>Totale pali (punti TVCC)</span><b class="val big">${sum.pali}</b></div><div><span>Totale TVCC</span><b class="val big">${sum.tel}</b></div></div>
     <div class="row-flex" style="margin-top:12px"><button class="btn" onclick="window.print()">🖶 Stampa riepilogo</button><button class="btn" id="r-exp">⇧ Esporta Excel</button><span class="dim mono" style="font-size:11.5px">aggiornato ${fmtD(now())}</span></div></div>
-    <div class="h-green" style="margin:6px 0">• Per tratta •</div>
+    <div class="h-green" style="margin:6px 0">• Per tratta <span class="dim" style="font-size:12px">(clic = apri sulla mappa)</span> •</div>
     <table class="t" style="max-width:1100px"><thead><tr><th>Tratta / POI</th><th>Linea</th><th class="r">Box</th><th class="r">Pali</th><th class="r">TVCC</th><th style="width:260px">Avanzamento</th><th class="r">%</th></tr></thead><tbody>
     ${tot.map(x=>`<tr style="cursor:pointer" data-id="${x.t.id}"><td>${esc(x.t.nome)}</td><td class="dim">${esc(x.t.linea)}</td><td class="r mono">${x.c.box}</td><td class="r mono">${x.c.pali}</td><td class="r mono">${x.c.tel}</td><td><div class="bar"><i style="width:${x.p*100}%"></i></div></td><td class="r val">${pctTxt(x.p)}</td></tr>`).join("")}
     <tr class="tot"><td>Totale</td><td></td><td class="r mono">${sum.box}</td><td class="r mono">${sum.pali}</td><td class="r mono">${sum.tel}</td><td><div class="bar"><i style="width:${totPct()*100}%"></i></div></td><td class="r val">${pctTxt(totPct())}</td></tr></tbody></table>
@@ -1629,6 +1642,9 @@ function renderRiep(){
     ${BOX_K.map(([k,l])=>{const y=cnt(bx,b=>b.checks[k]),n=bx.length;return `<tr><td><span class="info">BOX</span> ${l}</td><td class="r mono">${y}</td><td class="r mono">${n}</td><td><div class="bar"><i style="width:${n?y/n*100:0}%"></i></div></td><td class="r val">${n?pctTxt(y/n):"–"}</td></tr>`}).join("")}
     ${TV_K.map(([k,l])=>{const y=cnt(tvs,v=>v.checks[k]),n=tvs.length;return `<tr><td><span class="info">TVCC</span> ${l}</td><td class="r mono">${y}</td><td class="r mono">${n}</td><td><div class="bar"><i style="width:${n?y/n*100:0}%"></i></div></td><td class="r val">${n?pctTxt(y/n):"–"}</td></tr>`}).join("")}
     </tbody></table>
+    <div class="h-green" style="margin:22px 0 6px">• Sedi / stazioni <span class="dim">(${(S.sedi||[]).length})</span> <span class="dim" style="font-size:12px">(clic = apri sulla mappa)</span> •</div>
+    <div class="row-flex" style="max-width:1100px;margin-bottom:6px"><input class="f" id="rsq" placeholder="cerca sede…" style="max-width:320px" value="${esc(UI.rsq||"")}"><span class="dim" style="font-size:12px" id="rsn"></span></div>
+    <div class="sgrid" id="rslist">${riepSedi()}</div>
     <div class="h-green" style="margin:22px 0 6px">• Sedi e quadri (Quadri & Fibra) •</div>
     <table class="t" style="max-width:1100px"><thead><tr><th>Sede</th><th class="r">Quadri</th><th class="r">Pannelli</th><th class="r">Porte</th><th class="r">In uso</th><th class="r">Passanti</th><th class="r">Libere</th><th class="r">Guaste</th><th>Lavori collegati</th></tr></thead><tbody>
     ${(S.sedi||[]).filter(s=>s.quadri.length).map(s=>{const st=sedeStats(s); const tr=S.tratte.filter(t=>(t.sedi||[]).some(n=>normN(n)===normN(s.nome))); return `<tr style="cursor:pointer" data-sid="${s.id}"><td>${esc(s.nome)}</td><td class="r mono">${st.quadri}</td><td class="r mono">${st.panels}</td><td class="r mono">${st.porte}</td><td class="r val">${st.occupata+st.collegata}</td><td class="r mono">${st.passante}</td><td class="r mono">${st.libera}</td><td class="r mono">${st.guasto}</td><td class="dim">${tr.map(t=>esc(t.nome)).join(", ")||"—"}</td></tr>`;}).join("")||`<tr><td colspan="9" class="dim">nessun quadro censito</td></tr>`}
@@ -1638,7 +1654,8 @@ function renderRiep(){
     ${S.tratte.flatMap(t=>t.boxes.filter(b=>b.note).map(b=>`<tr><td>${esc(t.nome)}</td><td class="mono">BOX ${esc(b.n)}</td><td class="r val">${pctTxt(boxPct(b))}</td><td>${esc(b.note)}</td></tr>`)).join("")||`<tr><td colspan="4" class="dim">nessuna nota</td></tr>`}
     </tbody></table>`;
 }
-$("#v-riep").addEventListener("click",e=>{ if(e.target.id==="r-exp") return exportXlsx(); const sr=e.target.closest("tr[data-sid]"); if(sr) return openSede(sr.dataset.sid,true); const tr=e.target.closest("tr[data-id]"); if(tr) select(tr.dataset.id,true); });
+$("#v-riep").addEventListener("input",e=>{ if(e.target.id!=="rsq") return; UI.rsq=e.target.value; $("#rslist").innerHTML=riepSedi(); });
+$("#v-riep").addEventListener("click",e=>{ if(e.target.id==="r-exp") return exportXlsx(); const sr=e.target.closest("tr[data-sid],.scard[data-sid]"); if(sr) return openSede(sr.dataset.sid,true); const tr=e.target.closest("tr[data-id]"); if(tr) select(tr.dataset.id,true); });
 
 /* ======================= VIEWS ======================= */
 function showView(v){ UI.view=v; document.querySelectorAll("#tabbar .tab").forEach(t=>t.classList.toggle("active", t.dataset.view===v && !t.classList.contains("home"))); document.querySelectorAll(".view").forEach(s=>s.classList.toggle("active", s.id==="v-"+v));
@@ -2965,7 +2982,7 @@ document.addEventListener("click",e=>{ const o=e.target.closest("[data-openbox]"
   } });
 /* ======================= BOOT ======================= */
 (async function boot(){
-  $("#logo1").src=ASSETS.logo; tick(); setInterval(tick,15000);
+  $("#logo1").src=ASSETS.logo; $("#logo2").src=ASSETS.logo; tick(); setInterval(tick,15000);
   const ok=await DB.open(); srvToolbar();
   if(FN_CLEAN && !FN_PACK){ packGate(); return; }
   const saved=ok? await DB.get("state") : null;
