@@ -4,7 +4,7 @@ name: FN Avanzamento Gallerie
 tagline: Nuovi lavori TVCC nelle gallerie con avanzamento, quadri e fibra
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-fn-gallerie/icon.svg
 category: files
-version: "1.0.0"
+version: "1.1.0"
 port: 8742
 description: >-
   Mappa della linea Brescia–Iseo–Edolo con l'avanzamento dei nuovi lavori TVCC nelle gallerie.
@@ -31,7 +31,11 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Prima versione per Umbrel e CasaOS.
+  Inserimento dati dalla mappa: clicchi un box, una telecamera o un PL e a destra si apre
+  la sua scheda (Lavori, Quadro, Telecamere, Documenti, Note e storico). Frecce ← → per
+  passare al box successivo lungo la linea, "copia dal box precedente" per switch, subnet,
+  gateway e VLAN, controllo degli IP non validi o già usati, segnalazione dei dati mancanti
+  sulla mappa.
 dependencies: []
 path: ""
 defaultUsername: ""

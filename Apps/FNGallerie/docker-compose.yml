@@ -2,7 +2,7 @@
 name: fn-gallerie
 services:
   fn-gallerie:
-    image: ghcr.io/vdanesi/fn-gallerie:1.0.0
+    image: ghcr.io/vdanesi/fn-gallerie:1.1.0
     container_name: fn-gallerie
     restart: unless-stopped
     ports:

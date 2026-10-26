@@ -190,6 +190,14 @@ table.t tr.tot td{border-top:1px solid var(--border-tab);color:var(--fg);font-we
 .bmk b{color:var(--cyan);font-weight:400;margin-right:4px}
 .bmk.ok{border-color:var(--green)}.bmk.part{border-color:var(--yellow)}
 .bmk.sel{outline:1px solid var(--green)}
+.bmk.cur{background:var(--green);color:#000;border-color:var(--green);box-shadow:0 0 0 3px rgba(24,237,147,.35);z-index:5}.bmk.cur b,.bmk.cur .val{color:#000}
+.bmk .miss{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--yellow);margin-left:4px;vertical-align:1px}
+#drawer .dh{position:relative}.crumb{font-size:11.5px;color:var(--dim);padding-right:96px}.crumb .lnk{font-size:11.5px}
+.navb{position:absolute;right:46px;top:10px;display:flex;gap:4px;align-items:center}
+.brow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);margin-bottom:6px;cursor:pointer;background:var(--bg-tabbar)}
+.brow:hover,.brow:focus{border-color:var(--green);outline:none}.brow .bn{min-width:62px;white-space:nowrap}
+fieldset.qg{border:1px solid var(--line);margin:0 0 10px;padding:6px 10px 10px}fieldset.qg legend{color:var(--cyan);font-size:12px;padding:0 4px}
+.fh{font-size:11px;min-height:0;font-family:var(--mono)}.fh.err{color:var(--err)}.fh.warn{color:var(--yellow)}
 #leaf.placing .leaflet-marker-icon{pointer-events:none}
 #leaf.placing .leaflet-container,#leaf.placing{cursor:crosshair}
 .leaflet-control-layers-toggle{background-image:none!important;width:30px!important;height:30px!important;display:flex!important;align-items:center;justify-content:center;text-decoration:none}
@@ -266,7 +274,7 @@ input.f.bad{border-color:var(--err);color:var(--err)}
 .fblkw.sm .fblk{grid-template-rows:repeat(2,18px);grid-auto-columns:minmax(22px,auto);gap:2px}
 
 body.ro input:not(#dbq):not(#dbdq):not(#fsq):not(#sfilter):not(#dbnoip):not([type=password]),body.ro select:not(#dbtr):not(#dbst),body.ro textarea,body.ro .chk,body.ro .tv td.c{pointer-events:none}
-body.ro #b-edit,body.ro #b-imp,body.ro #b-open,body.ro #fib-imp,body.ro #b-rail,body.ro [data-act="delbox"],body.ro [data-act="addbox"],body.ro [data-act="addtv"],body.ro [data-act="deltv"],body.ro [data-act="allbox"],body.ro [data-act="addx"],body.ro [data-act="delx"],body.ro [data-act="addg"],body.ro [data-act="delg"],body.ro [data-act="delpoi"],body.ro [data-act="placet"],body.ro [data-act="placeb"],body.ro [data-act="placeg"],body.ro [data-act="autog"],body.ro [data-act="att"],body.ro [data-act="delf"],body.ro [data-act="addpdf"],body.ro [data-act="addlog"],body.ro [data-sact="place"],body.ro [data-dba],body.ro [data-deldoc],body.ro [data-docall],body.ro [data-pla],body.ro [data-addpdf],body.ro #docdrop,body.ro [data-fa]:not([data-fa="pdfq"]):not([data-fa="pdfsede"]):not([data-fa="goport"]){display:none!important}
+body.ro #b-edit,body.ro #b-imp,body.ro #b-open,body.ro #fib-imp,body.ro #b-rail,body.ro [data-act="delbox"],body.ro [data-act="addbox"],body.ro [data-act="addtv"],body.ro [data-act="deltv"],body.ro [data-act="allbox"],body.ro [data-act="addx"],body.ro [data-act="delx"],body.ro [data-act="addg"],body.ro [data-act="delg"],body.ro [data-act="delpoi"],body.ro [data-act="placet"],body.ro [data-act="placeb"],body.ro [data-act="placeg"],body.ro [data-act="autog"],body.ro [data-act="att"],body.ro [data-act="delf"],body.ro [data-act="addpdf"],body.ro [data-act="addlog"],body.ro [data-sact="place"],body.ro [data-dba],body.ro [data-deldoc],body.ro [data-docall],body.ro [data-pla],body.ro [data-nav="copyq"],body.ro [data-addpdf],body.ro #docdrop,body.ro [data-fa]:not([data-fa="pdfq"]):not([data-fa="pdfsede"]):not([data-fa="goport"]){display:none!important}
 body.srv #tools .lbl{display:none}
 body.srv #tools .btn{padding:0 8px}
 @media (max-width:1250px){#tools .lbl{display:none}}
@@ -1101,7 +1109,7 @@ const DEFAULT_POI = [
 /* ======================= STATE ======================= */
 let S = null;               // stato progetto
 let fileHandle = null;      // File System Access handle
-const UI = {view:"mappa", sel:null, dtab:"av", edit:false, sch:"brescia_iseo"};
+const UI = {view:"mappa", sel:null, dtab:"av", edit:false, sch:"brescia_iseo", box:null, btab:"lav", pl:null, ptab:"qu"};
 const $ = (s,el=document)=>el.querySelector(s);
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const uid = ()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
@@ -1274,18 +1282,21 @@ $("#tlist").addEventListener("click",e=>{ const li=e.target.closest("li"); if(li
 
 function cur(){ return S && S.tratte.find(t=>t.id===UI.sel); }
 function select(id, center){
-  UI.sede=null; UI.sel=id; showView("mappa"); openDrawer(); renderSide(); renderPOI(); setPath();
+  UI.sede=null; UI.sel=id; UI.box=null; UI.pl=null; showView("mappa"); openDrawer(); renderSide(); renderPOI(); setPath();
   const tt=cur(); if(center && UI.mm==="reale" && LM && tt && tt.lat!=null){ setTimeout(()=>{LM.invalidateSize(); LM.flyTo([tt.lat,tt.lng],Math.max(LM.getZoom(),13),{duration:.6});},60); return; }
   if(center && MAP && UI.mm!=="reale"){ const t=cur(), r=$("#pz-map").getBoundingClientRect(), st=MAP.st; if(t){ st.x = r.width*0.45 - t.ax/100*st.w*st.s; st.y = r.height/2 - t.ay/100*st.h*st.s; MAP.apply(); } }
 }
 
 /* ======================= DRAWER ======================= */
 function openDrawer(){ $("#drawer").classList.add("open"); renderDrawer(); renderLeaf(); }
-function closeDrawer(){ UI.sel=null; UI.sede=null; $("#drawer").classList.remove("open"); renderSide(); renderPOI(); renderLeaf(); setPath(); }
-const DTABS=[["av","Avanzamento"],["qu","Config. quadri"],["ga","Gallerie"],["ma","Mappe"],["st","Storico & note"]];
+function closeDrawer(){ UI.sel=null; UI.sede=null; UI.box=null; UI.pl=null; $("#drawer").classList.remove("open"); renderSide(); renderPOI(); renderLeaf(); setPath(); }
+const DTABS=[["av","Box"],["ga","Gallerie"],["ma","Mappe"],["st","Storico & note"]];
 function renderDrawer(){
+  if(UI.pl){ const p=(S.pl||[]).find(x=>x.id===UI.pl); if(p) return renderPLCard(p); UI.pl=null; }
   if(UI.sede) return renderSede();
   const t=cur(), dr=$("#drawer"); if(!t){ dr.classList.remove("open"); return; }
+  if(UI.box){ const b=t.boxes.find(x=>x.id===UI.box); if(b) return renderBoxCard(t,b); UI.box=null; }
+  if(!DTABS.some(x=>x[0]===UI.dtab)) UI.dtab="av";
   const keep = $(".db",dr)?.scrollTop||0, c=trCounts(t), p=trPct(t);
   dr.innerHTML = `<div class="dh"><div class="grow">
       <div class="h-green" style="font-size:15px">• ${esc(t.nome)} •</div>
@@ -1296,7 +1307,7 @@ function renderDrawer(){
       ${(t.sedi||[]).length?`<div class="row-flex" style="margin-top:6px"><span class="info" style="font-size:12px">Sedi:</span>${t.sedi.map(n=>{const s=sedeByName(n); if(!s) return `<span class="dim mono" style="font-size:11px">${esc(n)}</span>`; const st=sedeStats(s); return `<button class="btn sm" data-act="sede" data-sid="${s.id}" title="${st.quadri?st.quadri+" quadri":"nessun quadro"}">${st.quadri?"●":"○"} ${esc(s.nome)}</button>`;}).join("")}</div>`:""}
     </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
     <div class="dtabs">${DTABS.map(([k,l])=>`<div class="tab ${UI.dtab===k?"active":""}" data-dt="${k}" tabindex="0">${l}${k==="ma"?` <span class="dim">(${FILES.filter(f=>f.trattaId===t.id).length+(t.schema?1:0)})</span>`:""}</div>`).join("")}</div>
-    <div class="db">${({av:dAv,qu:dQu,ga:dGa,ma:dMa,st:dSt}[UI.dtab])(t)}</div>`;
+    <div class="db">${({av:dBoxList,ga:dGa,ma:dMa,st:dSt}[UI.dtab])(t)}</div>`;
   $(".db",dr).scrollTop=keep;
   if(UI.dtab==="ma") thumbs(t);
 }
@@ -1372,8 +1383,159 @@ function dSt(t){
   <div class="log">${(t.log||[]).map(l=>`<div><span class="d">${fmtD(l.d)}</span> ${esc(l.t)}</div>`).join("")||`<span class="dim">nessuna modifica registrata</span>`}</div>`;
 }
 
+/* ======================= SCHEDA DELL'OGGETTO SELEZIONATO (box / PL) ======================= */
+const BTABS=[["lav","Lavori"],["qu","Quadro"],["cam","Telecamere"],["doc","Documenti"],["note","Note e storico"]];
+const PTABS=[["qu","Quadro"],["doc","Documenti"],["note","Note"]];
+const Q_GROUPS=[["Identificazione",[["codice","Codice quadro","es. PL25ACC"],["progressiva","Progressiva km","es. 40+540"],["imbocco","Galleria / imbocco",""]]],
+  ["Alimentazione",[["alimFonte","Alimentazione da","es. FV Vello, casa cantoniera, PL 28"],["alimPotenza","Fornitura","es. Enel 220 V 6 kW"]]],
+  ["Rete",[["switchModello","Switch modello",""],["switchIP","IP switch","192.168.x.x"],["subnet","Subnet mask","255.255.255.0"],["gateway","Gateway","192.168.x.1"],["vlan","VLAN",""]]],
+  ["Fibra",[["cavoFO","Cavo F.O.","es. 24 fo SM"],["fibre","Fibre giuntate","es. 1-2 / 3-4"],["porte","Porte usate",""]]]];
+const Q_KEYS=Q_GROUPS.flatMap(g=>g[1].map(f=>f[0]));
+const Q_COPY=["switchModello","subnet","gateway","vlan","alimPotenza","cavoFO"];
+const qFill=q=>Q_KEYS.filter(k=>String((q||{})[k]||"").trim()).length;
+const isIPv4=v=>/^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(v);
+function boxMissing(b){ const q=b.quadro||{}, m=[]; if(!String(q.codice||"").trim()) m.push("manca codice quadro"); if(!String(q.switchIP||"").trim()) m.push("manca IP switch");
+  const nc=b.tvcc.reduce((s,v)=>s+(v.cams||[]).slice(0,Math.max(+v.ntelec||0,0)).filter(c=>!String(c.ip||"").trim()).length+Math.max(0,(+v.ntelec||0)-(v.cams||[]).length),0); if(nc) m.push(nc+" telecamere senza IP"); return m; }
+// controllo del campo mentre si scrive: formato e IP già usati
+function fieldCheck(k,v,self){ v=String(v||"").trim(); if(!v) return "";
+  if(k==="switchIP"||k==="gateway"||k==="ip"){ if(!isIPv4(v)) return "✘ IP non valido (es. 192.168.10.21)"; }
+  if(k==="subnet"){ if(!isIPv4(v)) return "✘ maschera non valida (es. 255.255.255.0)"; const n=v.split(".").reduce((a,x)=>a*256+(+x),0), inv=(4294967295-n); if(((inv+1)&inv)!==0) return "✘ maschera non valida (es. 255.255.255.0)"; }
+  if(k==="switchIP"||k==="ip"){ const o=(ipIndex().get(v)||[]).filter(w=>w.dove!==self); if(o.length) return "⚠ IP già usato da: "+o.map(w=>w.tipo+" "+w.dove).join(", "); }
+  if(k==="progressiva" && !/^\d+\s*\+\s*\d{1,3}$/.test(v)) return "⚠ scrivi km+metri, es. 40+540";
+  return ""; }
+const hintHTML=(k,v,self)=>{ const h=fieldCheck(k,v,self); return `<div class="fh ${h.startsWith("✘")?"err":h?"warn":""}" data-hint="${k}">${esc(h)}</div>`; };
+function boxSeq(){ const r=[]; for(const t of S.tratte) for(const b of t.boxes) r.push({t,b}); return r; }
+function openBox(tid,bid,tab,center){
+  const t=S.tratte.find(x=>x.id===tid); if(!t) return; const b=t.boxes.find(x=>x.id===bid); if(!b) return select(tid,center);
+  UI.sel=tid; UI.sede=null; UI.pl=null; UI.box=bid; if(tab) UI.btab=tab;
+  if(UI.view!=="mappa") showView("mappa"); openDrawer(); renderSide(); renderPOI(); setPath();
+  if(center && UI.mm==="reale" && LM && b.lat!=null) setTimeout(()=>{ LM.invalidateSize(); LM.flyTo([b.lat,b.lng],Math.max(LM.getZoom(),16),{duration:.5}); },60);
+}
+function openPL(id,center){ const p=(S.pl||[]).find(x=>x.id===id); if(!p) return; UI.pl=id; UI.sel=null; UI.sede=null; UI.box=null;
+  if(UI.view!=="mappa") showView("mappa"); $("#drawer").classList.add("open"); renderDrawer(); renderSide(); renderPOI(); renderLeaf(); setPath();
+  if(center && UI.mm==="reale" && LM && p.lat!=null) setTimeout(()=>{ LM.invalidateSize(); LM.flyTo([p.lat,p.lng],Math.max(LM.getZoom(),16),{duration:.5}); },60); }
+// elenco dei box della tratta: un clic apre la scheda
+function dBoxList(t){
+  const ex=pdfExtra(t);
+  return (ex.length?`<div class="card" style="border-color:var(--err)"><div class="cb"><span style="color:var(--err)">✘</span> Nello schema PDF ci sono box non presenti nell'avanzamento Excel${ex.some(p=>p.nuovo)?" (in rosso nel disegno = aggiunti)":""}:
+    <div class="row-flex" style="margin-top:6px">${ex.map(p=>`<button class="btn sm" data-act="addpdf" data-n="${esc(p.n)}" title="km ${kmTxt(p.km)} · ${pdfCamsOf(t.id,p.n).reduce((s,c)=>s+c.n,0)} telecamere">+ BOX ${esc(p.n)} <span class="dim">km ${kmTxt(p.km)}</span></button>`).join("")}</div></div></div>`:"")+
+  `<p class="dim" style="margin:0 0 8px;font-size:12.5px">Seleziona un box (qui o sulla mappa) per compilarne lavori, quadro, telecamere e documenti.</p>`+
+  (t.boxes.length?"":`<p class="dim">Nessun box. Aggiungine uno.</p>`)+
+  t.boxes.map(b=>{ const p=boxPct(b), pb=pdfBoxOf(t,b), mi=boxMissing(b), nc=b.tvcc.reduce((s,v)=>s+(+v.ntelec||0),0), nd=docsOf("box",t.id+"|"+b.id).length;
+    return `<div class="brow" data-nav="box" data-bid="${b.id}" tabindex="0"><span class="h-green mono bn">BOX ${esc(b.n)}</span>
+      <span class="grow"><span>${esc(b.etichetta||"")}</span><span class="dim mono" style="font-size:11px;display:block">${pb?"km "+kmTxt(pb.km)+" · ":""}quadro ${qFill(b.quadro)}/${Q_KEYS.length} · 📷 ${nc}${nd?" · 📎 "+nd:""}${b.lat==null?' · <span style="color:var(--yellow)">non posizionato</span>':""}</span>
+      ${mi.length?`<span class="mono" style="font-size:11px;color:var(--yellow)">⚠ ${esc(mi.join(" · "))}</span>`:""}</span>
+      <span class="val">${pctTxt(p)}</span><div class="bar" style="width:64px"><i style="width:${p*100}%"></i></div>${docBtn("box",t.id+"|"+b.id,`${t.nome} · BOX ${b.n}`)}<span class="dim">›</span></div>`; }).join("")+
+  `<button class="btn" data-act="addbox" style="margin-top:8px">+ Aggiungi box</button>`;
+}
+function navHead(crumb,si,n){ return `<div class="crumb mono">${crumb}</div>`+(n>1?`<div class="navb"><button class="btn sm" data-nav="prev" ${si<=0?"disabled":""} title="precedente lungo la linea (←)">←</button><span class="dim mono" style="font-size:11px">${si+1}/${n}</span><button class="btn sm" data-nav="next" ${si>=n-1?"disabled":""} title="successivo lungo la linea (→)">→</button></div>`:""); }
+function renderBoxCard(t,b){
+  const dr=$("#drawer"), bi=t.boxes.indexOf(b), p=boxPct(b), pb=pdfBoxOf(t,b), q=b.quadro, seq=boxSeq(), si=seq.findIndex(x=>x.b===b), ref=t.id+"|"+b.id;
+  if(!BTABS.some(x=>x[0]===UI.btab)) UI.btab="lav";
+  const nd=docsOf("box",ref).length, nc=b.tvcc.reduce((s,v)=>s+(+v.ntelec||0),0), mi=boxMissing(b);
+  const keep=UI._bkeep===b.id+UI.btab?($(".db",dr)?.scrollTop||0):0; UI._bkeep=b.id+UI.btab;
+  dr.innerHTML=`<div class="dh" data-b="${bi}"><div class="grow">
+      ${navHead(`<a class="lnk" href="#" data-nav="tratta">${esc(t.nome)}</a> › <span style="color:var(--fg)">BOX ${esc(b.n)}</span>`,si,seq.length)}
+      <div class="row-flex" style="margin-top:4px"><span class="h-green mono" style="font-size:18px;white-space:nowrap">BOX ${esc(b.n)}</span><input class="f" data-f="etichetta" value="${esc(b.etichetta)}" placeholder="etichetta / galleria"></div>
+      <div class="row-flex" style="margin-top:6px"><span class="val" style="font-size:22px">${pctTxt(p)}</span><div class="bar" style="flex:1"><i style="width:${p*100}%"></i></div></div>
+      <div class="dim mono" style="font-size:11.5px;margin-top:3px">${pb?"km "+kmTxt(pb.km)+" · ":""}${b.tvcc.length} punti TVCC · ${nc} telecamere · quadro ${qFill(q)}/${Q_KEYS.length}</div>
+      ${mi.length?`<div class="mono" style="font-size:11.5px;color:var(--yellow);margin-top:2px">⚠ ${esc(mi.join(" · "))}</div>`:""}
+      <div class="row-flex" style="margin-top:5px">${b.lat!=null?`<span class="mono dim" style="font-size:11px">${b.lat.toFixed(5)}, ${b.lng.toFixed(5)}</span>${gLinks(b.lat,b.lng)}`:`<span style="color:var(--yellow);font-size:12px">non posizionato sulla mappa reale</span>`}<button class="btn sm" data-act="placeb">📍 ${b.lat!=null?"sposta":"posiziona"}</button>${docBtn("box",ref,`${t.nome} · BOX ${b.n}`)}</div>
+    </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
+    <div class="dtabs">${BTABS.map(([k,l])=>`<div class="tab ${UI.btab===k?"active":""}" data-bt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="cam"?` <span class="dim">(${nc})</span>`:k==="qu"?` <span class="dim">${qFill(q)}/${Q_KEYS.length}</span>`:""}</div>`).join("")}</div>
+    <div class="db"><div data-b="${bi}">${({lav:bLav,qu:bQu,cam:bCam,doc:bDoc,note:bNote}[UI.btab])(t,b)}</div></div>`;
+  $(".db",dr).scrollTop=keep;
+}
+function bLav(t,b){
+  return `<div class="dim" style="font-size:11px;margin-bottom:4px">LAVORAZIONI DEL BOX</div>
+    <div class="chks">${BOX_K.map(([k,l])=>`<button class="chk ${b.checks[k]?"y":""}" data-act="bk" data-k="${k}"><span class="m">${chk(b.checks[k])}</span>${l}</button>`).join("")}</div>
+    <div class="dim" style="font-size:11px;margin:12px 0 4px">PUNTI TVCC</div>
+    <table class="tv"><thead><tr><th>Punto TVCC</th><th>N° telec.</th>${TV_K.map(k=>`<th>${k[1]}</th>`).join("")}<th></th></tr></thead><tbody>
+    ${b.tvcc.map((v,vi)=>`<tr data-v="${vi}"><td><input class="f num" data-f="punto" value="${esc(v.punto)}"></td><td><input class="f num" type="number" min="0" data-f="ntelec" value="${esc(v.ntelec)}"></td>
+      ${TV_K.map(([k])=>`<td class="c ${v.checks[k]?"y":""}" data-act="tk" data-k="${k}" title="${k}">${chk(v.checks[k])}</td>`).join("")}<td><button class="btn sm danger" data-act="deltv" title="Rimuovi punto">✕</button></td></tr>`).join("")}
+    </tbody></table>
+    <div class="row-flex" style="margin-top:6px"><button class="btn sm" data-act="addtv">+ punto TVCC</button><button class="btn sm" data-act="allbox">tutto ✔</button></div>
+    ${b.upd?`<div class="dim mono" style="font-size:11px;margin-top:8px">ultimo aggiornamento ${fmtD(b.upd)}</div>`:""}`;
+}
+function bQu(t,b){
+  const q=b.quadro, self=`${t.nome} · BOX ${b.n}`, seq=boxSeq(), si=seq.findIndex(x=>x.b===b), prev=si>0?seq[si-1]:null;
+  return `<div class="row-flex" style="margin-bottom:6px"><span class="dim" style="font-size:12px">Compila i campi: si salvano da soli.</span><span class="sp"></span>${prev?`<button class="btn sm" data-nav="copyq" title="copia ${Q_COPY.length} campi comuni (switch, subnet, gateway, VLAN, fornitura, cavo) solo dove sono vuoti">⧉ copia dal BOX ${esc(prev.b.n)}</button>`:""}</div>
+    ${Q_GROUPS.map(([g,fs])=>`<fieldset class="qg"><legend>${g}</legend><div class="grid2">${fs.map(([k,l,ph])=>`<label>${l}</label><div><input class="f ${/IP|gateway|subnet|vlan|progressiva/i.test(k)?"mono":""}" data-q="${k}" value="${esc(q[k]||"")}" placeholder="${esc(k==="progressiva"&&pdfBoxOf(t,b)?kmTxt(pdfBoxOf(t,b).km)+" (dallo schema)":ph)}">${hintHTML(k,q[k],self)}</div>`).join("")}</div>
+      ${g==="Fibra"?`<div style="margin-top:6px;font-size:12.5px"><span class="info">Percorso fibra:</span> ${boxPath(b)?`<span class="mono" style="font-size:11.5px">${esc(boxPath(b))}</span>`:`<span class="dim">non indicato</span>`} <a class="lnk" href="#" data-gofib="b">modifica in 5. Fibra</a></div>`:""}</fieldset>`).join("")}
+    <fieldset class="qg"><legend>Campi aggiuntivi</legend>
+    ${(q.extra||[]).map((x,xi)=>`<div class="kv" data-x="${xi}"><input class="f" data-xk="k" value="${esc(x.k)}" placeholder="campo"><input class="f" data-xk="v" value="${esc(x.v)}" placeholder="valore"><button class="btn sm danger" data-act="delx">✕</button></div>`).join("")||`<div class="dim" style="font-size:12px">nessuno</div>`}
+    <button class="btn sm" data-act="addx" style="margin-top:4px">+ campo</button></fieldset>`;
+}
+function bCam(t,b){
+  b.tvcc.forEach(v=>{ const n=Math.max(Number(v.ntelec)||0,0); v.cams ||= []; while(v.cams.length<n) v.cams.push({ip:"",modello:"",seriale:""}); });
+  const rows=allCams().filter(r=>r.b===b);
+  if(!rows.length) return `<p class="dim">Nessuna telecamera: indica il numero di telecamere dei punti TVCC nella scheda <a class="lnk" href="#" data-bt="lav">Lavori</a>.</p>`;
+  return `<table class="t"><thead><tr><th>Telecamera</th><th>IP</th><th>Modello</th><th>Seriale</th><th>MAC</th><th>Stato</th></tr></thead><tbody>
+    ${rows.map(r=>{ const c=r.c; return `<tr data-v="${r.vi}" data-c="${r.ci}"><td class="mono" style="white-space:nowrap">${esc(r.cod)}</td>
+      <td><input class="f mono" data-cam="ip" value="${esc(c.ip||"")}" placeholder="192.168.x.x" style="min-width:120px">${hintHTML("ip",c.ip,`${t.nome} · BOX ${b.n} · ${r.cod}`)}</td>
+      <td><select class="f" data-cam="modelId"><option value="">${c.modello?esc(c.modello)+" (testo)":"—"}</option>${(S.modelli||[]).map(m=>`<option value="${m.id}" ${c.modelId===m.id?"selected":""}>${esc(m.marca+" "+m.modello)}</option>`).join("")}</select></td>
+      <td><input class="f" data-cam="seriale" value="${esc(c.seriale||"")}" placeholder="S/N"></td><td><input class="f mono" data-cam="mac" value="${esc(c.mac||"")}" placeholder="MAC"></td>
+      <td><select class="f" data-cam="stato"><option value="">—</option>${CAM_STATI.map(s=>`<option ${c.stato===s?"selected":""}>${s}</option>`).join("")}</select></td></tr>`; }).join("")}</tbody></table>
+    <div class="dim" style="font-size:11.5px;margin-top:6px">Modelli e VLAN/note delle telecamere: <a class="lnk" href="#" data-godb="1">4. Database</a>.</div>`;
+}
+function bDoc(t,b){ return docList("box",t.id+"|"+b.id,docsOf("box",t.id+"|"+b.id)); }
+function bNote(t,b){
+  const re=new RegExp("BOX "+String(b.n).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(\\s|$|·)");
+  const lg=(t.log||[]).filter(l=>re.test(l.t));
+  return `<div class="info" style="font-size:12px">Note del box</div><textarea class="f" data-f="note" style="min-height:90px" placeholder="note">${esc(b.note||"")}</textarea>
+    <div class="info" style="font-size:12px;margin-top:12px">Storico del box</div>
+    <div class="log">${lg.map(l=>`<div><span class="d">${fmtD(l.d)}</span> ${esc(l.t)}</div>`).join("")||`<span class="dim">nessuna modifica registrata</span>`}</div>
+    <div class="row-flex" style="margin-top:16px"><span class="sp"></span><button class="btn sm danger" data-act="delbox">✕ Elimina BOX ${esc(b.n)}</button></div>`;
+}
+// scheda del PL
+function renderPLCard(p){
+  const dr=$("#drawer"); if(!PTABS.some(x=>x[0]===UI.ptab)) UI.ptab="qu";
+  const all=(S.pl||[]).filter(x=>x.lat!=null||x.km!=null).slice().sort((a,b)=>(a.km??1e9)-(b.km??1e9)), si=all.indexOf(p), q=plQ(p), nd=docsOf("pl",p.id).length;
+  dr.innerHTML=`<div data-plid="${p.id}" data-plq="${p.id}" style="display:flex;flex-direction:column;height:100%;min-height:0"><div class="dh"><div class="grow">
+      ${navHead(`<span class="dim">Passaggi a livello</span> › <span style="color:var(--fg)">${esc(p.nome||"PL")}</span>`,si,all.length)}
+      <div class="row-flex" style="margin-top:4px;flex-wrap:nowrap"><span class="mono" style="color:var(--p-path);font-size:16px;white-space:nowrap">✕ PL</span><input class="f mono" data-pf="nome" value="${esc(p.nome||"")}" placeholder="n° PL" style="font-size:15px;flex:1"></div>
+      <div class="dim mono" style="font-size:11.5px;margin-top:4px">${p.ramo?esc(p.ramo):p.km!=null?"km "+kmTxt(p.km):"progressiva non nota"} · fonte ${esc(p.fonte||"")}${p.geoKm?" · posizione stimata":""}${p.barriere?" · barriere "+esc(p.barriere):""}${p.luci?" · luci":""} · quadro ${qFill(q)}/${Q_KEYS.length}</div>
+      <div class="row-flex" style="margin-top:5px">${p.lat!=null?`<span class="mono dim" style="font-size:11px">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span>${gLinks(p.lat,p.lng)}<span class="dim" style="font-size:11.5px">· per spostarlo trascina il ✕ in modalità Modifica POI</span>`:`<span style="color:var(--yellow);font-size:12px">senza coordinate</span>`}</div>
+    </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
+    <div class="dtabs">${PTABS.map(([k,l])=>`<div class="tab ${UI.ptab===k?"active":""}" data-pt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="qu"?` <span class="dim">${qFill(q)}/${Q_KEYS.length}</span>`:""}</div>`).join("")}</div>
+    <div class="db">${UI.ptab==="qu"?plQuFields(p):UI.ptab==="doc"?docList("pl",p.id,docsOf("pl",p.id)):`<div class="info" style="font-size:12px">Note</div><textarea class="f" data-pf="note" style="min-height:120px">${esc(p.note||"")}</textarea>
+      <div class="row-flex" style="margin-top:16px"><span class="sp"></span><button class="btn sm danger" data-pla="del">✕ Elimina ${esc(p.nome||"PL")}</button></div>`}</div></div>`;
+}
+function plQuFields(p){ const q=plQ(p), self=`PL ${p.nome}`;
+  return `<p class="dim" style="margin:0 0 6px;font-size:12px">Il n° PL e la progressiva sono il codice e la km del quadro. I campi si salvano da soli.</p>
+    ${Q_GROUPS.map(([g,fs])=>`<fieldset class="qg"><legend>${g}</legend><div class="grid2">${fs.map(([k,l,ph])=>`<label>${k==="codice"?"Codice quadro / n° PL":k==="imbocco"?"Galleria / località":l}</label><div><input class="f ${/IP|gateway|subnet|vlan|progressiva/i.test(k)?"mono":""}" data-plqf="${k}" value="${esc(q[k]||"")}" placeholder="${esc(ph)}">${hintHTML(k,q[k],self)}</div>`).join("")}</div></fieldset>`).join("")}
+    <fieldset class="qg"><legend>Campi aggiuntivi</legend>${(q.extra||[]).map((x,xi)=>`<div class="kv" data-plx="${xi}"><input class="f" data-plxk="k" value="${esc(x.k)}" placeholder="campo"><input class="f" data-plxk="v" value="${esc(x.v)}" placeholder="valore"><button class="btn sm danger" data-pla="delx">✕</button></div>`).join("")||`<div class="dim" style="font-size:12px">nessuno</div>`}
+    <button class="btn sm" data-pla="addx" style="margin-top:4px">+ campo</button></fieldset>`; }
+
 /* ---------- drawer events ---------- */
 const dr=$("#drawer");
+
+// navigazione della scheda: schede interne, percorso, ← →, copia dal precedente
+dr.addEventListener("click",e=>{
+  if(e.target.closest("#d-close") && UI.pl){ e.stopImmediatePropagation(); return closeDrawer(); }
+  const bt=e.target.closest("[data-bt]"); if(bt){ e.preventDefault(); e.stopImmediatePropagation(); UI.btab=bt.dataset.bt; return renderDrawer(); }
+  const pt=e.target.closest("[data-pt]"); if(pt){ e.stopImmediatePropagation(); UI.ptab=pt.dataset.pt; return renderDrawer(); }
+  if(e.target.closest("[data-docs],[data-dba],a[href^=http]")) return;
+  const n=e.target.closest("[data-nav]"); if(!n) return; e.preventDefault(); e.stopImmediatePropagation();
+  const k=n.dataset.nav;
+  if(k==="tratta"){ UI.box=null; UI.dtab="av"; renderDrawer(); renderLeaf(); return; }
+  if(k==="box"){ return openBox(UI.sel,n.dataset.bid,null,true); }
+  if(k==="prev"||k==="next"){ const d=k==="prev"?-1:1;
+    if(UI.pl){ const all=(S.pl||[]).filter(x=>x.lat!=null||x.km!=null).slice().sort((a,b)=>(a.km??1e9)-(b.km??1e9)); const i=all.findIndex(x=>x.id===UI.pl); const o=all[i+d]; if(o) openPL(o.id,true); return; }
+    const seq=boxSeq(), i=seq.findIndex(x=>x.b.id===UI.box), o=seq[i+d]; if(o) openBox(o.t.id,o.b.id,null,true); return; }
+  if(k==="copyq"){ const seq=boxSeq(), i=seq.findIndex(x=>x.b.id===UI.box); if(i<1) return; const src=seq[i-1].b.quadro, dst=seq[i].b.quadro; let c=0;
+    for(const f of Q_COPY) if(!String(dst[f]||"").trim() && String(src[f]||"").trim()){ dst[f]=src[f]; c++; }
+    seq[i].b.upd=now(); if(c) logEv(cur(),`BOX ${seq[i].b.n} · quadro: copiati ${c} campi dal BOX ${seq[i-1].b.n}`); changed(c?`copiati ${c} campi dal BOX ${seq[i-1].b.n}`:"nessun campo da copiare: sono già compilati o vuoti anche nel box precedente"); renderDrawer(); renderLeaf(); return; }
+},true);
+// avviso sotto il campo mentre si scrive
+dr.addEventListener("input",e=>{ const el=e.target, k=el.dataset.q||el.dataset.plqf||(el.dataset.cam==="ip"?"ip":null); if(!k) return;
+  const box=el.parentElement.querySelector(".fh"); if(!box) return; let self="";
+  if(UI.pl){ const p=S.pl.find(x=>x.id===UI.pl); self=`PL ${p&&p.nome}`; } else { const t=cur(), b=t&&t.boxes.find(x=>x.id===UI.box); if(!b) return; self=`${t.nome} · BOX ${b.n}`; if(k==="ip"){ const tr=el.closest("[data-v]"); const r=allCams().find(r=>r.b===b&&r.vi==+tr.dataset.v&&r.ci==+tr.dataset.c); self+=" · "+(r?r.cod:""); } }
+  const h=fieldCheck(k,el.value,self); box.textContent=h; box.className="fh "+(h.startsWith("✘")?"err":h?"warn":""); });
+// ← → sulla tastiera quando il pannello è aperto e non stai scrivendo
+document.addEventListener("keydown",e=>{ if(!(UI.box||UI.pl)||UI.view!=="mappa"||e.altKey||e.ctrlKey||e.metaKey) return; if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")) return;
+  if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ const b=$(`#drawer [data-nav="${e.key==="ArrowLeft"?"prev":"next"}"]`); if(b&&!b.disabled){ e.preventDefault(); b.click(); } }
+  if(e.key==="Escape" && !$("#modal.open")) closeDrawer(); });
 dr.addEventListener("click",async e=>{
   const t=cur(); if(!t) return;
   if(e.target.closest("#d-close")) return closeDrawer();
@@ -1386,12 +1548,12 @@ dr.addEventListener("click",async e=>{
     case "allbox": { const all=BOX_K.every(([k])=>b.checks[k])&&b.tvcc.every(x=>TV_K.every(([k])=>x.checks[k])); BOX_K.forEach(([k])=>b.checks[k]=!all); b.tvcc.forEach(x=>TV_K.forEach(([k])=>x.checks[k]=!all)); b.upd=now(); logEv(t,`BOX ${b.n} · tutte le lavorazioni ${!all?"✔ completate":"✘ azzerate"}`); break; }
     case "addtv": b.tvcc.push({id:uid(),punto:b.tvcc.length+1,ntelec:1,checks:Object.fromEntries(TV_K.map(k=>[k[0],false])),cams:[]}); logEv(t,`BOX ${b.n} · aggiunto punto TVCC`); break;
     case "deltv": if(!confirm("Rimuovere il punto TVCC "+v.punto+"?")) return; b.tvcc.splice(+tr.dataset.v,1); logEv(t,`BOX ${b.n} · rimosso punto TVCC`); break;
-    case "addbox": { const nums=allBoxes().map(x=>parseInt(x.n)).filter(n=>!isNaN(n)); const n=prompt("Numero / nome del nuovo box:", String((Math.max(0,...nums))+1)); if(!n) return; t.boxes.push(normBox({n,checks:{},tvcc:[{punto:1,ntelec:1,checks:{}}]})); logEv(t,`aggiunto BOX ${n}`); break; }
+    case "addbox": { const nums=allBoxes().map(x=>parseInt(x.n)).filter(n=>!isNaN(n)); const n=prompt("Numero / nome del nuovo box:", String((Math.max(0,...nums))+1)); if(!n) return; const nb=normBox({n,checks:{},tvcc:[{punto:1,ntelec:1,checks:{}}]}); t.boxes.push(nb); logEv(t,`aggiunto BOX ${n}`); UI.box=nb.id; UI.btab="lav"; break; }
     case "placet": startPlace({tid:t.id}); return;
     case "addpdf": addPdfBox(t,a.dataset.n); break;
     case "sede": openSede(a.dataset.sid,true); return;
     case "placeb": startPlace({tid:t.id,bid:b.id}); return;
-    case "delbox": if(!confirm(`Eliminare il BOX ${b.n} e tutti i suoi dati?`)) return; t.boxes.splice(+card.dataset.b,1); logEv(t,`eliminato BOX ${b.n}`); break;
+    case "delbox": if(!confirm(`Eliminare il BOX ${b.n} e tutti i suoi dati?`)) return; t.boxes.splice(+card.dataset.b,1); logEv(t,`eliminato BOX ${b.n}`); UI.box=null; renderLeaf(); break;
     case "addx": b.quadro.extra.push({k:"",v:""}); break;
     case "delx": b.quadro.extra.splice(+a.closest("[data-x]").dataset.x,1); break;
     case "addg": t.gallerie.push(G("","","","")); break;
@@ -1404,7 +1566,7 @@ dr.addEventListener("click",async e=>{
     case "sch": openViewer(SCH_LABEL[t.schema], ASSETS.sch[t.schema], "image/png", "schema_"+t.schema+".png"); return;
     case "delf": e.stopPropagation(); if(!confirm("Eliminare il file?")) return; await DB.delFile(a.dataset.fid); FILES=FILES.filter(f=>f.id!==a.dataset.fid); MEMFILES=MEMFILES.filter(f=>f.id!==a.dataset.fid); logEv(t,"rimosso allegato"); break;
   }
-  changed(); renderDrawer();
+  changed(); renderDrawer(); if(UI.box) renderLeaf();
 });
 dr.addEventListener("click",e=>{ const f=e.target.closest(".file[data-fid]"); if(f && !e.target.closest("[data-act]")){ const x=FILES.find(q=>q.id===f.dataset.fid); if(x) openViewer(x.name, fileURL(x), x.type, x.name); } });
 dr.addEventListener("input",e=>{
@@ -1743,9 +1905,9 @@ function renderLeaf(){
     LG.addLayer(m); }
   for(const t of S.tratte){
     for(const b of t.boxes){ if(b.lat==null) continue; const p=boxPct(b);
-      const m=L.marker([b.lat,b.lng],{draggable:!!UI.edit,zIndexOffset:1000,icon:L.divIcon({className:"lm-wrap",iconSize:null,html:`<div class="bmk ${p>=1?"ok":p>0?"part":""} ${UI.sel===t.id?"sel":""}"><b>BOX</b>${esc(b.n)} <span class="val">${pctTxt(p)}</span></div>`})});
+      const m=L.marker([b.lat,b.lng],{draggable:!!UI.edit,zIndexOffset:1000,icon:L.divIcon({className:"lm-wrap",iconSize:null,html:`<div class="bmk ${p>=1?"ok":p>0?"part":""} ${UI.sel===t.id?"sel":""} ${UI.box===b.id?"cur":""}" title="${esc(boxMissing(b).join(" · ")||"dati del quadro compilati")}"><b>BOX</b>${esc(b.n)} <span class="val">${pctTxt(p)}</span>${boxMissing(b).length?`<i class="miss"></i>`:""}</div>`})});
       m.bindPopup(()=>boxPopup(t,b),{maxWidth:460,minWidth:300,autoPanPaddingTopLeft:[20,80],autoPanPaddingBottomRight:[20,60]});
-      m.on("click",()=>{ if(UI.sel!==t.id){ UI.sel=t.id; UI.dtab="av"; UI.popBox=b.id; openDrawer(); renderSide(); renderPOI(); setPath(); } });
+      m.on("click",()=>{ if(UI.place) return; UI.popBox=b.id; openBox(t.id,b.id,null,false); });
       m.on("dragend",()=>{ const ll=m.getLatLng(); b.lat=ll.lat; b.lng=ll.lng; b.geoPdf=false; logEv(t,`BOX ${b.n} spostato su mappa reale`); changed("posizione box aggiornata"); renderDrawer(); });
       LG.addLayer(m); if(UI.popBox===b.id){ UI.popBox=null; setTimeout(()=>m.openPopup(),0); }
     }
@@ -1879,7 +2041,7 @@ $("#slist").addEventListener("click",e=>{ const li=e.target.closest("li[data-sid
 $("#sfilter").addEventListener("input",renderSedeList);
 
 function openSede(id, center){
-  UI.sede=id; UI.sel=null; showView("mappa"); $("#drawer").classList.add("open"); renderDrawer(); renderSide(); renderPOI(); renderLeaf(); setPath();
+  UI.sede=id; UI.sel=null; UI.box=null; UI.pl=null; showView("mappa"); $("#drawer").classList.add("open"); renderDrawer(); renderSide(); renderPOI(); renderLeaf(); setPath();
   const s=curSede(); if(!center||!s) return;
   if(UI.mm==="reale" && LM && s.lat!=null){ setTimeout(()=>{LM.invalidateSize(); LM.flyTo([s.lat,s.lng],Math.max(LM.getZoom(),14),{duration:.6});},60); }
   else if(UI.mm!=="reale" && MAP && s.ax!=null){ const r=$("#pz-map").getBoundingClientRect(), st=MAP.st; st.x=r.width*0.45 - s.ax/100*st.w*st.s; st.y=r.height/2 - s.ay/100*st.h*st.s; MAP.apply(); }
@@ -2108,8 +2270,8 @@ function renderPdfLayer(){
     m.bindPopup(()=>{ const eb=t&&t.boxes.find(x=>pdfKey(t.id,x.n)===pdfKey(c.tratta,c.box));
       return `<div class="h-green mono">TVCC ${c.n>1?c.n+" telecamere (doppia)":"1 telecamera"}</div><div class="h-yellow">(${t?esc(t.nome):""} · collegata al BOX ${esc(c.box)})</div><div>km ${kmTxt(c.km)} ${c.nuovo?`· <span style="color:var(--err)">in rosso nello schema (aggiunta)</span>`:""}</div><div class="dim" style="font-size:11px">posizione dallo schema imbocchi; collegamento al box ${c.via==="cavo"?"dal cavo disegnato":"stimato"}</div>
       ${eb?`<div class="pp-sep"></div>${boxPopup(t,eb,true)}`:""}<div class="row-flex" style="margin-top:4px">${gLinks(ll[0],ll[1])}</div>`; },{maxWidth:460,minWidth:300,autoPanPaddingTopLeft:[20,80],autoPanPaddingBottomRight:[20,60]});
-    m.on("click",()=>{ if(t && UI.sel!==t.id && !UI.place){ UI.sede=null; UI.sel=t.id; UI.dtab="av"; openDrawer(); renderSide(); renderPOI(); setPath(); } });
-    LG.addLayer(m); }
+    m.on("click",()=>{ if(!t||UI.place) return; const eb=t.boxes.find(x=>pdfKey(t.id,x.n)===pdfKey(c.tratta,c.box)); if(eb){ UI.popCam=c; openBox(t.id,eb.id,"cam",false); } else if(UI.sel!==t.id){ UI.sede=null; UI.box=null; UI.pl=null; UI.sel=t.id; UI.dtab="av"; openDrawer(); renderSide(); renderPOI(); setPath(); } });
+    LG.addLayer(m); if(UI.popCam===c){ UI.popCam=null; setTimeout(()=>m.openPopup(),0); } }
 }
 const CAM_SVG=`<svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><circle cx="5" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 6 L17 1 L17 11 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-addpdf]"); if(!b) return; const [tid,n]=b.dataset.addpdf.split("|"); const t=S.tratte.find(x=>x.id===tid); if(!t) return;
@@ -2193,7 +2355,7 @@ function dbCam(cams,ipx){
     <label class="row-flex" style="gap:4px"><input type="checkbox" id="dbnoip" ${f.noip?"checked":""}> solo senza IP</label><span class="dim mono" style="font-size:11.5px">${rows.length} righe</span></div>
   <table class="t dbt"><thead><tr><th>Codice</th><th>Tratta</th><th>Box</th><th>Modello</th><th>IP</th><th>MAC</th><th>Seriale</th><th>VLAN</th><th>Stato</th><th>Note</th><th>Doc</th></tr></thead><tbody>
   ${rows.map(r=>{ const c=r.c, dup=c.ip&&(ipx.get(c.ip)||[]).length>1, bad=c.ip&&!IPRE.test(c.ip);
-    return `<tr data-cref="${r.id}"><td class="mono" style="white-space:nowrap">${esc(r.cod)}</td><td class="dim">${esc(r.t.nome)}</td><td class="mono"><a class="lnk" href="#" data-gobox="${r.t.id}">BOX ${esc(r.b.n)}</a></td>
+    return `<tr data-cref="${r.id}"><td class="mono" style="white-space:nowrap">${esc(r.cod)}</td><td class="dim">${esc(r.t.nome)}</td><td class="mono"><a class="lnk" href="#" data-gobox="${r.t.id}" data-bid="${r.b.id}" data-btab="cam">BOX ${esc(r.b.n)}</a></td>
       <td><select class="f" data-cf="modelId" style="min-width:150px">${mopts(c.modelId)}</select>${!c.modelId&&c.modello?`<div class="dim" style="font-size:11px">${esc(c.modello)}</div>`:""}</td>
       <td><input class="f mono ${dup||bad?"bad":""}" data-cf="ip" value="${esc(c.ip)}" placeholder="0.0.0.0" style="width:125px" title="${bad?"IP non valido":dup?"IP usato anche da: "+esc((ipx.get(c.ip)||[]).filter(x=>x.ref!==r).map(x=>x.dove).join(" / ")):""}"></td>
       <td><input class="f mono" data-cf="mac" value="${esc(c.mac)}" placeholder="00:00:00:00:00:00" style="width:140px"></td>
@@ -2281,7 +2443,7 @@ $("#v-db").addEventListener("change",e=>{
 $("#v-db").addEventListener("click",async e=>{
   const tab=e.target.closest("[data-dbt]"); if(tab){ UI.dbt=tab.dataset.dbt; return renderDB(); }
   if(e.target.id==="db-exp") return exportXlsx();
-  const gb=e.target.closest("[data-gobox]"); if(gb){ e.preventDefault(); UI.dtab="qu"; return select(gb.dataset.gobox,true); }
+  const gb=e.target.closest("[data-gobox]"); if(gb){ e.preventDefault(); return openBox(gb.dataset.gobox,gb.dataset.bid,gb.dataset.btab||"qu",true); }
   const a=e.target.closest("[data-dba]"); if(!a) return;
   if(a.dataset.dba==="addmod"){ S.modelli.push({id:uid(),marca:"",modello:"Nuovo modello",tipo:"",risoluzione:"",ottica:"",alim:"",firmware:"",ip_rating:"",note:""}); changed("modello aggiunto"); return renderDB(); }
   if(a.dataset.dba==="delmod"){ const id=a.closest("[data-mid]").dataset.mid; const n=allCams().filter(r=>r.c.modelId===id).length; if(!confirm(`Eliminare il modello?${n?` È assegnato a ${n} telecamere, che resteranno senza modello.`:""}`)) return;
@@ -2348,6 +2510,8 @@ function renderPLLayer(){
   for(const p of (S.pl||[])){ if(p.lat==null) continue;
     const m=L.marker([p.lat,p.lng],{zIndexOffset:700,draggable:!!UI.edit,icon:L.divIcon({className:"lm-wrap",iconSize:null,html:`<div class="plk ${p.geoKm?"est":""}" title="${esc(p.nome)}">✕</div><div class="pll">${esc(p.nome||"PL")}</div>`})});
     m.bindPopup(()=>plPopup(p),{maxWidth:420,minWidth:280,autoPanPaddingTopLeft:[20,80]});
+    m.on("click",()=>{ if(UI.place) return; UI.popPL=p.id; openPL(p.id,false); });
+    if(UI.popPL===p.id){ UI.popPL=null; setTimeout(()=>m.openPopup(),0); }
     m.on("dragend",()=>{ const ll=m.getLatLng(); p.lat=ll.lat; p.lng=ll.lng; p.geoKm=false; p.fonte=p.fonte==="OSM"?"OSM (spostato)":p.fonte; changed("posizione PL aggiornata"); });
     LG.addLayer(m); }
 }
@@ -2393,8 +2557,8 @@ document.addEventListener("click",e=>{
   const a=e.target.closest("[data-pla]"); if(!a) return;
   if(a.dataset.pla==="add"){ showView("mappa"); startPlace({pl:true}); }
   if(a.dataset.pla==="addx"||a.dataset.pla==="delx"){ const p=(S.pl||[]).find(x=>x.id===a.closest("[data-plq]").dataset.plq); p.quadro ||= emptyQuadro(); p.quadro.extra ||= [];
-    if(a.dataset.pla==="addx") p.quadro.extra.push({k:"",v:""}); else p.quadro.extra.splice(+a.closest("[data-plx]").dataset.plx,1); changed(); renderDB(); return; }
-  if(a.dataset.pla==="del"){ const id=a.closest("[data-plid]").dataset.plid; const p=S.pl.find(x=>x.id===id); if(!confirm(`Eliminare ${p.nome||"il PL"}?`)) return; S.pl=S.pl.filter(x=>x.id!==id); changed("PL eliminato"); renderDB(); }
+    if(a.dataset.pla==="addx") p.quadro.extra.push({k:"",v:""}); else p.quadro.extra.splice(+a.closest("[data-plx]").dataset.plx,1); changed(); if(UI.view==="db") renderDB(); if(UI.pl) renderDrawer(); return; }
+  if(a.dataset.pla==="del"){ const id=a.closest("[data-plid]").dataset.plid; const p=S.pl.find(x=>x.id===id); if(!confirm(`Eliminare ${p.nome||"il PL"}?`)) return; S.pl=S.pl.filter(x=>x.id!==id); changed("PL eliminato"); if(UI.pl===id) closeDrawer(); if(UI.view==="db") renderDB(); renderLeaf(); }
 });
 document.addEventListener("input",e=>{ const tr=e.target.closest("[data-plid]"); if(!tr||!e.target.dataset.pf) return; const p=S.pl.find(x=>x.id===tr.dataset.plid); if(p){ if(e.target.dataset.pf==="nome"&&p.quadro&&(!p.quadro.codice||p.quadro.codice===p.nome)) p.quadro.codice=e.target.value; p[e.target.dataset.pf]=e.target.value; const qi=document.querySelector(`tr[data-plq="${p.id}"] [data-plqf="codice"]`); if(qi&&e.target.dataset.pf==="nome") qi.value=p.quadro.codice; clearTimeout(saveT); saveT=setTimeout(()=>DB.set("state",JSON.stringify(S)),400); } });
 
@@ -2509,7 +2673,7 @@ function portEditor(p){
     <div style="margin-top:10px;font-size:12.5px"><span class="info">Patch:</span> ${p.connTo?`<span class="val mono" style="font-size:11.5px">→ ${esc(portWhere(p.connTo))}</span> <button class="btn sm" data-fa="goport" data-to="${p.connTo}">vai</button> <button class="btn sm danger" data-fa="unlink">scollega</button>`:`<span class="dim">nessuna</span>`}</div>
     <div class="row-flex" style="margin-top:6px"><button class="btn sm ${UI.link===p.id?"on":""}" data-fa="link">🔗 Collega a…</button></div>
     ${p.linkPortId?`<div style="margin-top:8px;font-size:12.5px"><span class="info">Cavo tra sedi:</span> <span class="mono" style="font-size:11.5px">↔ ${esc(portWhere(p.linkPortId))}</span> <button class="btn sm" data-fa="goport" data-to="${p.linkPortId}">vai</button></div>`:""}
-    ${boxes.length?`<div style="margin-top:8px;font-size:12.5px"><span class="info">Box TVCC:</span> ${boxes.map(([t,b])=>`<a class="lnk" href="#" data-fbox="${t.id}">${esc(t.nome)} · BOX ${esc(b.n)}</a>`).join(", ")}</div>`:""}
+    ${boxes.length?`<div style="margin-top:8px;font-size:12.5px"><span class="info">Box TVCC:</span> ${boxes.map(([t,b])=>`<a class="lnk" href="#" data-fbox="${t.id}" data-bid="${b.id}">${esc(t.nome)} · BOX ${esc(b.n)}</a>`).join(", ")}</div>`:""}
     <div class="dim" style="font-size:11px;margin-top:8px">${esc(q?q.name:"")} · stato attuale: ${k}</div></div></div>`;
 }
 /* ---------- cavi tra sedi ---------- */
@@ -2584,7 +2748,7 @@ $("#v-fib").addEventListener("click",e=>{
   if(e.target.id==="fib-imp") return $("#f-json").click();
   if(e.target.id==="fib-link-x"){ UI.link=null; return renderFib(); }
   const sd=e.target.closest("[data-fsede]"); if(sd){ UI.fsede=sd.dataset.fsede; UI.fport=null; return renderFib(); }
-  const fb=e.target.closest("[data-fbox]"); if(fb){ e.preventDefault(); UI.dtab="qu"; return select(fb.dataset.fbox,true); }
+  const fb=e.target.closest("[data-fbox]"); if(fb){ e.preventDefault(); return openBox(fb.dataset.fbox,fb.dataset.bid,"qu",true); }
   const pt=e.target.closest("[data-port]");
   if(pt){ const id=pt.dataset.port;
     if(UI.link && UI.link!==id){ const a=qfPort(UI.link), b=qfPort(id);
@@ -2775,9 +2939,9 @@ function plPopup(p){
   return `<div class="pp"><div class="h-green mono">${esc(p.nome||"Passaggio a livello")}</div><div class="h-yellow">(${p.ramo?esc(p.ramo):p.km!=null?"km "+kmTxt(p.km):"progressiva non nota"} · fonte ${esc(p.fonte)}${p.geoKm?" · posizione stimata da km":""})</div>${p.barriere?`<div>barriere: ${esc(p.barriere)}${p.luci?" · segnali luminosi":""}</div>`:""}
     <div class="info" style="font-size:11.5px;margin-top:5px">Config. quadro</div>${quadroKV(plQ(p))}
     ${p.note?`<div style="font-size:11.5px;margin-top:4px"><span class="info">Note:</span> ${esc(p.note)}</div>`:""}
-    <div class="row-flex" style="margin-top:6px"><button class="btn sm" data-openpl="${p.id}">✎ config. quadro</button>${docBtn("pl",p.id,p.nome||"Passaggio a livello")}${gLinks(p.lat,p.lng)}</div></div>`; }
-document.addEventListener("click",e=>{ const o=e.target.closest("[data-openpl]"); if(!o) return; e.preventDefault(); UI.plOpen=o.dataset.openpl; if(LM) LM.closePopup(); showView("db"); UI.dbt="pl"; renderDB();
-  setTimeout(()=>{ const r=document.querySelector(`tr[data-plq="${UI.plOpen}"]`); if(r){ r.scrollIntoView({block:"center"}); r.classList.add("flash"); setTimeout(()=>r.classList.remove("flash"),1600);} },80); });
+    <div class="row-flex" style="margin-top:6px">${docBtn("pl",p.id,p.nome||"Passaggio a livello")}${gLinks(p.lat,p.lng)}</div></div>`; }
+document.addEventListener("click",e=>{ const o=e.target.closest("[data-openpl]"); if(!o) return; e.preventDefault(); if(LM) LM.closePopup(); openPL(o.dataset.openpl,false); if(false){
+  } });
 function boxPopup(t,b,compact){
   const p=boxPct(b), q=b.quadro||{}, pb=pdfBoxOf(t,b), mk=v=>v?`<span style="color:var(--ok)">✔</span>`:`<span class="dim">·</span>`;
   const cams=allCams().filter(r=>r.b===b), path=boxPath(b), nd=docsOf("box",t.id+"|"+b.id).length;
@@ -2793,12 +2957,12 @@ function boxPopup(t,b,compact){
     ${path?`<div style="font-size:11.5px;margin-top:4px"><span class="info">Fibra:</span> <span class="mono">${esc(path)}</span></div>`:""}
     ${b.note?`<div style="font-size:11.5px;margin-top:4px"><span class="info">Note:</span> ${esc(b.note)}</div>`:""}
     ${b.upd?`<div class="dim mono" style="font-size:10.5px;margin-top:3px">ultimo aggiornamento ${fmtD(b.upd)}</div>`:""}
-    ${compact?"":`<div class="row-flex" style="margin-top:6px"><button class="btn sm" data-openbox="${t.id}|${b.id}">✎ apri scheda</button>${docBtn("box",t.id+"|"+b.id,`${t.nome} · BOX ${b.n}`)}${b.lat!=null?gLinks(b.lat,b.lng):""}</div>`}
-    ${compact?`<div class="row-flex" style="margin-top:4px"><button class="btn sm" data-openbox="${t.id}|${b.id}">✎ apri scheda box</button><span class="dim mono" style="font-size:11px">📎 ${nd}</span></div>`:""}
+    ${compact?"":`<div class="row-flex" style="margin-top:6px">${docBtn("box",t.id+"|"+b.id,`${t.nome} · BOX ${b.n}`)}${b.lat!=null?gLinks(b.lat,b.lng):""}</div>`}
+    ${compact?`<div class="row-flex" style="margin-top:4px"><span class="dim mono" style="font-size:11px">📎 ${nd}</span></div>`:""}
   </div>`;
 }
-document.addEventListener("click",e=>{ const o=e.target.closest("[data-openbox]"); if(!o) return; e.preventDefault(); const [tid,bid]=o.dataset.openbox.split("|"); UI.dtab="qu"; if(LM) LM.closePopup(); select(tid);
-  setTimeout(()=>{ const t=S.tratte.find(x=>x.id===tid); const bi=t?t.boxes.findIndex(x=>x.id===bid):-1; const card=document.querySelector(`#drawer .card[data-b="${bi}"]`); if(card){ card.scrollIntoView({block:"start"}); card.classList.add("flash"); setTimeout(()=>card.classList.remove("flash"),1600); } },80); });
+document.addEventListener("click",e=>{ const o=e.target.closest("[data-openbox]"); if(!o) return; e.preventDefault(); const [tid,bid]=o.dataset.openbox.split("|"); if(LM) LM.closePopup(); openBox(tid,bid,null,false); if(false){
+  } });
 /* ======================= BOOT ======================= */
 (async function boot(){
   $("#logo1").src=ASSETS.logo; tick(); setInterval(tick,15000);
