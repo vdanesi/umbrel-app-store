@@ -4,7 +4,7 @@ name: FN Avanzamento Gallerie
 tagline: Nuovi lavori TVCC nelle gallerie con avanzamento, quadri e fibra
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-fn-gallerie/icon.svg
 category: files
-version: "1.2.0"
+version: "1.3.0"
 port: 8742
 description: >-
   Mappa della linea Brescia–Iseo–Edolo con l'avanzamento dei nuovi lavori TVCC nelle gallerie.
@@ -31,9 +31,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Mappa a tutto schermo: tolta la colonna di sinistra, resta solo il logo piccolo in alto
-  con la percentuale totale (un clic apre il riepilogo). Elenco delle tratte e delle sedi,
-  con la ricerca, ora nel Riepilogo: un clic le apre sulla mappa.
+  Schema imbocchi TVCC: al posto delle tavole c'è il PDF originale in sola visualizzazione,
+  con zoom (rotella, pulsanti o due dita) e testo nitido anche ingrandendo. Chi può
+  modificare può sostituire il PDF o tornare all'originale; le posizioni di box e
+  telecamere sulla mappa non cambiano.
 dependencies: []
 path: ""
 defaultUsername: ""
