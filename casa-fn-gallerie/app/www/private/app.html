@@ -251,6 +251,10 @@ a.lnk:hover{text-decoration:underline}
 input.f.bad{border-color:var(--err);color:var(--err)}
 .dbt td{white-space:nowrap}
 
+.vgk{position:absolute;transform:translate(-50%,-50%);width:15px;height:15px;border:2px solid #ff9f1c;background:#2a1d08;box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px #ff9f1c}
+.vgk.ok{border-color:var(--green);box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px var(--green)}.vgk.cur{outline:3px solid rgba(255,159,28,.45)}
+.vgl{position:absolute;left:11px;top:-7px;font:11px/14px var(--mono);color:#ff9f1c;background:rgba(20,20,20,.78);padding:0 3px;white-space:nowrap;pointer-events:none}
+#leaf.gl-off .vgl,#leaf.gl-big .vgl{display:none}
 .plk{position:absolute;transform:translate(-50%,-50%);width:16px;height:16px;border:2px solid var(--p-path);background:var(--bg-terminal);color:var(--p-path);font:bold 11px/12px var(--mono);text-align:center}
 .plk.est{border-style:dashed}
 .pll{position:absolute;left:11px;top:-7px;font:11px/14px var(--mono);color:var(--p-path);background:rgba(20,20,20,.78);padding:0 3px;white-space:nowrap;pointer-events:none}
@@ -282,7 +286,7 @@ input.f.bad{border-color:var(--err);color:var(--err)}
 .fblkw.sm .fblk{grid-template-rows:repeat(2,18px);grid-auto-columns:minmax(22px,auto);gap:2px}
 
 body.ro input:not(#dbq):not(#dbdq):not(#fsq):not(#sfilter):not(#dbnoip):not([type=password]),body.ro select:not(#dbtr):not(#dbst),body.ro textarea,body.ro .chk,body.ro .tv td.c{pointer-events:none}
-body.ro #b-edit,body.ro #b-imp,body.ro #b-open,body.ro #fib-imp,body.ro #b-rail,body.ro [data-act="delbox"],body.ro [data-act="addbox"],body.ro [data-act="addtv"],body.ro [data-act="deltv"],body.ro [data-act="allbox"],body.ro [data-act="addx"],body.ro [data-act="delx"],body.ro [data-act="addg"],body.ro [data-act="delg"],body.ro [data-act="delpoi"],body.ro [data-act="placet"],body.ro [data-act="placeb"],body.ro [data-act="placeg"],body.ro [data-act="autog"],body.ro [data-act="att"],body.ro [data-act="delf"],body.ro [data-act="addpdf"],body.ro [data-act="addlog"],body.ro [data-sact="place"],body.ro [data-dba],body.ro [data-deldoc],body.ro [data-docall],body.ro [data-pla],body.ro [data-schpdf],body.ro [data-nav="copyq"],body.ro [data-addpdf],body.ro #docdrop,body.ro [data-fa]:not([data-fa="pdfq"]):not([data-fa="pdfsede"]):not([data-fa="goport"]){display:none!important}
+body.ro #b-edit,body.ro #b-imp,body.ro #b-open,body.ro #fib-imp,body.ro #b-rail,body.ro [data-act="delbox"],body.ro [data-act="addbox"],body.ro [data-act="addtv"],body.ro [data-act="deltv"],body.ro [data-act="allbox"],body.ro [data-act="addx"],body.ro [data-act="delx"],body.ro [data-act="addg"],body.ro [data-act="delg"],body.ro [data-act="delpoi"],body.ro [data-act="placet"],body.ro [data-act="placeb"],body.ro [data-act="placeg"],body.ro [data-act="autog"],body.ro [data-act="att"],body.ro [data-act="delf"],body.ro [data-act="addpdf"],body.ro [data-act="addlog"],body.ro [data-sact="place"],body.ro [data-dba],body.ro [data-deldoc],body.ro [data-docall],body.ro [data-pla],body.ro [data-vga],body.ro [data-schpdf],body.ro [data-nav="copyq"],body.ro [data-addpdf],body.ro #docdrop,body.ro [data-fa]:not([data-fa="pdfq"]):not([data-fa="pdfsede"]):not([data-fa="goport"]){display:none!important}
 body.srv #tools .lbl{display:none}
 body.srv #tools .btn{padding:0 8px}
 @media (max-width:1250px){#tools .lbl{display:none}}
@@ -999,7 +1003,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </aside>
     <div id="mapwrap"><div class="pz" id="pz-map"></div><div id="leaf"></div>
       <div id="maplogo" title="FERROVIENORD · Nuovi lavori TVCC gallerie · Avanzamento lavori"><img id="logo2" alt="VC Solutions"><span><b>FERROVIENORD</b>Nuovi lavori TVCC gallerie</span><a href="#" id="maplogo-tot" class="val mono" title="apri il riepilogo"></a></div>
-      <div id="mapsw"><button class="btn sm on" data-mm="schema">Schema rete</button><button class="btn sm" data-mm="reale">Mappa reale</button><button class="btn sm on" id="b-sedi" title="Mostra / nascondi le sedi (stazioni) da Quadri & Fibra" style="margin-left:6px;border-left:1px solid var(--border-tab)">● Sedi</button><button class="btn sm on" id="b-pl" title="Mostra / nascondi i passaggi a livello">✕ PL</button><button class="btn sm on" id="b-cams" title="Mostra / nascondi le telecamere dello schema PDF">📷 TVCC</button><button class="btn sm" id="b-rail" title="Scarica il tracciato reale della ferrovia da OpenStreetMap e aggancia gallerie e POI ai binari">⟲ Allinea ferrovia</button><button class="btn sm" id="b-addlayer" title="Aggiungi uno sfondo gratuito (tessere XYZ o WMS, es. ortofoto regionale). Shift+clic per rimuovere quelli aggiunti">+ sfondo</button></div>
+      <div id="mapsw"><button class="btn sm on" data-mm="schema">Schema rete</button><button class="btn sm" data-mm="reale">Mappa reale</button><button class="btn sm on" id="b-sedi" title="Mostra / nascondi le sedi (stazioni) da Quadri & Fibra" style="margin-left:6px;border-left:1px solid var(--border-tab)">● Sedi</button><button class="btn sm on" id="b-pl" title="Mostra / nascondi i passaggi a livello">✕ PL</button><button class="btn sm on" id="b-cams" title="Mostra / nascondi le telecamere dello schema PDF">📷 TVCC</button><button class="btn sm on" id="b-vg" title="Mostra / nascondi le vasche di giunzione">▣ Vasche</button><button class="btn sm" id="b-rail" title="Scarica il tracciato reale della ferrovia da OpenStreetMap e aggancia gallerie e POI ai binari">⟲ Allinea ferrovia</button><button class="btn sm" id="b-addlayer" title="Aggiungi uno sfondo gratuito (tessere XYZ o WMS, es. ortofoto regionale). Shift+clic per rimuovere quelli aggiunti">+ sfondo</button></div>
       <div class="hint" id="leafhint"></div></div>
     <aside id="drawer"></aside>
   </section>
@@ -1162,7 +1166,7 @@ const DEFAULT_POI = [
 /* ======================= STATE ======================= */
 let S = null;               // stato progetto
 let fileHandle = null;      // File System Access handle
-const UI = {view:"mappa", sel:null, dtab:"av", edit:false, sch:"brescia_iseo", box:null, btab:"lav", pl:null, ptab:"qu"};
+const UI = {view:"mappa", sel:null, dtab:"av", edit:false, sch:"brescia_iseo", box:null, btab:"lav", pl:null, ptab:"qu", vg:null, vtab:"dati"};
 const $ = (s,el=document)=>el.querySelector(s);
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const uid = ()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
@@ -1343,16 +1347,17 @@ $("#maplogo-tot").addEventListener("click",e=>{ e.preventDefault(); showView("ri
 
 function cur(){ return S && S.tratte.find(t=>t.id===UI.sel); }
 function select(id, center){
-  UI.sede=null; UI.sel=id; UI.box=null; UI.pl=null; showView("mappa"); openDrawer(); renderSide(); renderPOI(); setPath();
+  UI.sede=null; UI.sel=id; UI.box=null; UI.pl=null; UI.vg=null; showView("mappa"); openDrawer(); renderSide(); renderPOI(); setPath();
   const tt=cur(); if(center && UI.mm==="reale" && LM && tt && tt.lat!=null){ setTimeout(()=>{LM.invalidateSize(); LM.flyTo([tt.lat,tt.lng],Math.max(LM.getZoom(),13),{duration:.6});},60); return; }
   if(center && MAP && UI.mm!=="reale"){ const t=cur(), r=$("#pz-map").getBoundingClientRect(), st=MAP.st; if(t){ st.x = r.width*0.45 - t.ax/100*st.w*st.s; st.y = r.height/2 - t.ay/100*st.h*st.s; MAP.apply(); } }
 }
 
 /* ======================= DRAWER ======================= */
 function openDrawer(){ $("#drawer").classList.add("open"); renderDrawer(); renderLeaf(); }
-function closeDrawer(){ UI.sel=null; UI.sede=null; UI.box=null; UI.pl=null; $("#drawer").classList.remove("open"); renderSide(); renderPOI(); renderLeaf(); setPath(); }
+function closeDrawer(){ UI.sel=null; UI.sede=null; UI.box=null; UI.pl=null; UI.vg=null; $("#drawer").classList.remove("open"); renderSide(); renderPOI(); renderLeaf(); setPath(); }
 const DTABS=[["av","Box"],["ga","Gallerie"],["ma","Mappe"],["st","Storico & note"]];
 function renderDrawer(){
+  if(UI.vg){ const v=(S.vasche||[]).find(x=>x.id===UI.vg); if(v) return renderVGCard(v); UI.vg=null; }
   if(UI.pl){ const p=(S.pl||[]).find(x=>x.id===UI.pl); if(p) return renderPLCard(p); UI.pl=null; }
   if(UI.sede) return renderSede();
   const t=cur(), dr=$("#drawer"); if(!t){ dr.classList.remove("open"); return; }
@@ -1364,7 +1369,7 @@ function renderDrawer(){
       <div class="h-yellow" style="font-size:12px">(${esc(t.linea||"linea non indicata")}${t.staz?" · "+esc(t.staz):""})</div>
       <div class="row-flex" style="margin-top:6px"><span class="val" style="font-size:22px">${pctTxt(p)}</span><div class="bar" style="flex:1"><i style="width:${p*100}%"></i></div></div>
       <div class="dim mono" style="font-size:11.5px;margin-top:3px">${c.box} box · ${c.pali} punti TVCC · ${c.tel} telecamere</div>
-      <div class="row-flex" style="margin-top:5px">${t.lat!=null?`<span class="mono dim" style="font-size:11px">${t.lat.toFixed(5)}, ${t.lng.toFixed(5)}</span>${gLinks(t.lat,t.lng)}`:`<span class="dim" style="font-size:12px">non posizionato sulla mappa reale</span>`}<button class="btn sm" data-act="placet">📍 ${t.lat!=null?"sposta":"posiziona"} su mappa reale</button></div>
+      <div class="row-flex" style="margin-top:5px">${t.lat!=null?`<span class="mono dim" style="font-size:11px">${t.lat.toFixed(5)}, ${t.lng.toFixed(5)}</span>${gLinks(t.lat,t.lng)}`:`<span class="dim" style="font-size:12px">non posizionato sulla mappa reale</span>`}<button class="btn sm" data-act="placet">📍 ${t.lat!=null?"sposta":"posiziona"} su mappa reale</button><span class="sp"></span><button class="btn sm danger" data-act="delpoi" title="Elimina il POI con tutti i suoi box">🗑 Elimina POI</button></div>
       ${(t.sedi||[]).length?`<div class="row-flex" style="margin-top:6px"><span class="info" style="font-size:12px">Sedi:</span>${t.sedi.map(n=>{const s=sedeByName(n); if(!s) return `<span class="dim mono" style="font-size:11px">${esc(n)}</span>`; const st=sedeStats(s); return `<button class="btn sm" data-act="sede" data-sid="${s.id}" title="${st.quadri?st.quadri+" quadri":"nessun quadro"}">${st.quadri?"●":"○"} ${esc(s.nome)}</button>`;}).join("")}</div>`:""}
     </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
     <div class="dtabs">${DTABS.map(([k,l])=>`<div class="tab ${UI.dtab===k?"active":""}" data-dt="${k}" tabindex="0">${l}${k==="ma"?` <span class="dim">(${FILES.filter(f=>f.trattaId===t.id).length+1})</span>`:""}</div>`).join("")}</div>
@@ -1468,11 +1473,11 @@ const hintHTML=(k,v,self)=>{ const h=fieldCheck(k,v,self); return `<div class="f
 function boxSeq(){ const r=[]; for(const t of S.tratte) for(const b of t.boxes) r.push({t,b}); return r; }
 function openBox(tid,bid,tab,center){
   const t=S.tratte.find(x=>x.id===tid); if(!t) return; const b=t.boxes.find(x=>x.id===bid); if(!b) return select(tid,center);
-  UI.sel=tid; UI.sede=null; UI.pl=null; UI.box=bid; if(tab) UI.btab=tab;
+  UI.sel=tid; UI.sede=null; UI.pl=null; UI.vg=null; UI.box=bid; if(tab) UI.btab=tab;
   if(UI.view!=="mappa") showView("mappa"); openDrawer(); renderSide(); renderPOI(); setPath();
   if(center && UI.mm==="reale" && LM && b.lat!=null) setTimeout(()=>{ LM.invalidateSize(); LM.flyTo([b.lat,b.lng],Math.max(LM.getZoom(),16),{duration:.5}); },60);
 }
-function openPL(id,center){ const p=(S.pl||[]).find(x=>x.id===id); if(!p) return; UI.pl=id; UI.sel=null; UI.sede=null; UI.box=null;
+function openPL(id,center){ const p=(S.pl||[]).find(x=>x.id===id); if(!p) return; UI.pl=id; UI.vg=null; UI.sel=null; UI.sede=null; UI.box=null;
   if(UI.view!=="mappa") showView("mappa"); $("#drawer").classList.add("open"); renderDrawer(); renderSide(); renderPOI(); renderLeaf(); setPath();
   if(center && UI.mm==="reale" && LM && p.lat!=null) setTimeout(()=>{ LM.invalidateSize(); LM.flyTo([p.lat,p.lng],Math.max(LM.getZoom(),16),{duration:.5}); },60); }
 // elenco dei box della tratta: un clic apre la scheda
@@ -1501,7 +1506,7 @@ function renderBoxCard(t,b){
       <div class="row-flex" style="margin-top:6px"><span class="val" style="font-size:22px">${pctTxt(p)}</span><div class="bar" style="flex:1"><i style="width:${p*100}%"></i></div></div>
       <div class="dim mono" style="font-size:11.5px;margin-top:3px">${pb?"km "+kmTxt(pb.km)+" · ":""}${b.tvcc.length} punti TVCC · ${nc} telecamere · quadro ${qFill(q)}/${Q_KEYS.length}</div>
       ${mi.length?`<div class="mono" style="font-size:11.5px;color:var(--yellow);margin-top:2px">⚠ ${esc(mi.join(" · "))}</div>`:""}
-      <div class="row-flex" style="margin-top:5px">${b.lat!=null?`<span class="mono dim" style="font-size:11px">${b.lat.toFixed(5)}, ${b.lng.toFixed(5)}</span>${gLinks(b.lat,b.lng)}`:`<span style="color:var(--yellow);font-size:12px">non posizionato sulla mappa reale</span>`}<button class="btn sm" data-act="placeb">📍 ${b.lat!=null?"sposta":"posiziona"}</button>${docBtn("box",ref,`${t.nome} · BOX ${b.n}`)}</div>
+      <div class="row-flex" style="margin-top:5px">${b.lat!=null?`<span class="mono dim" style="font-size:11px">${b.lat.toFixed(5)}, ${b.lng.toFixed(5)}</span>${gLinks(b.lat,b.lng)}`:`<span style="color:var(--yellow);font-size:12px">non posizionato sulla mappa reale</span>`}<button class="btn sm" data-act="placeb">📍 ${b.lat!=null?"sposta":"posiziona"}</button>${docBtn("box",ref,`${t.nome} · BOX ${b.n}`)}<span class="sp"></span><button class="btn sm danger" data-act="delbox" title="Elimina il BOX ${esc(b.n)} con tutti i suoi dati">🗑 Elimina box</button></div>
     </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
     <div class="dtabs">${BTABS.map(([k,l])=>`<div class="tab ${UI.btab===k?"active":""}" data-bt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="cam"?` <span class="dim">(${nc})</span>`:k==="qu"?` <span class="dim">${qFill(q)}/${Q_KEYS.length}</span>`:""}</div>`).join("")}</div>
     <div class="db"><div data-b="${bi}">${({lav:bLav,qu:bQu,cam:bCam,doc:bDoc,note:bNote}[UI.btab])(t,b)}</div></div>`;
@@ -1556,7 +1561,7 @@ function renderPLCard(p){
       ${navHead(`<span class="dim">Passaggi a livello</span> › <span style="color:var(--fg)">${esc(p.nome||"PL")}</span>`,si,all.length)}
       <div class="row-flex" style="margin-top:4px;flex-wrap:nowrap"><span class="mono" style="color:var(--p-path);font-size:16px;white-space:nowrap">✕ PL</span><input class="f mono" data-pf="nome" value="${esc(p.nome||"")}" placeholder="n° PL" style="font-size:15px;flex:1"></div>
       <div class="dim mono" style="font-size:11.5px;margin-top:4px">${p.ramo?esc(p.ramo):p.km!=null?"km "+kmTxt(p.km):"progressiva non nota"} · fonte ${esc(p.fonte||"")}${p.geoKm?" · posizione stimata":""}${p.barriere?" · barriere "+esc(p.barriere):""}${p.luci?" · luci":""} · quadro ${qFill(q)}/${Q_KEYS.length}</div>
-      <div class="row-flex" style="margin-top:5px">${p.lat!=null?`<span class="mono dim" style="font-size:11px">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span>${gLinks(p.lat,p.lng)}<span class="dim" style="font-size:11.5px">· per spostarlo trascina il ✕ in modalità Modifica POI</span>`:`<span style="color:var(--yellow);font-size:12px">senza coordinate</span>`}</div>
+      <div class="row-flex" style="margin-top:5px">${p.lat!=null?`<span class="mono dim" style="font-size:11px">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span>${gLinks(p.lat,p.lng)}<span class="dim" style="font-size:11.5px">· per spostarlo trascina il ✕ in modalità Modifica POI</span>`:`<span style="color:var(--yellow);font-size:12px">senza coordinate</span>`}<span class="sp"></span><button class="btn sm danger" data-pla="del" title="Elimina il PL">🗑 Elimina PL</button></div>
     </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
     <div class="dtabs">${PTABS.map(([k,l])=>`<div class="tab ${UI.ptab===k?"active":""}" data-pt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="qu"?` <span class="dim">${qFill(q)}/${Q_KEYS.length}</span>`:""}</div>`).join("")}</div>
     <div class="db">${UI.ptab==="qu"?plQuFields(p):UI.ptab==="doc"?docList("pl",p.id,docsOf("pl",p.id)):`<div class="info" style="font-size:12px">Note</div><textarea class="f" data-pf="note" style="min-height:120px">${esc(p.note||"")}</textarea>
@@ -1568,12 +1573,91 @@ function plQuFields(p){ const q=plQ(p), self=`PL ${p.nome}`;
     <fieldset class="qg"><legend>Campi aggiuntivi</legend>${(q.extra||[]).map((x,xi)=>`<div class="kv" data-plx="${xi}"><input class="f" data-plxk="k" value="${esc(x.k)}" placeholder="campo"><input class="f" data-plxk="v" value="${esc(x.v)}" placeholder="valore"><button class="btn sm danger" data-pla="delx">✕</button></div>`).join("")||`<div class="dim" style="font-size:12px">nessuno</div>`}
     <button class="btn sm" data-pla="addx" style="margin-top:4px">+ campo</button></fieldset>`; }
 
+/* ======================= VASCHE DI GIUNZIONE ======================= */
+const VG_STATI=["da realizzare","realizzata","cavi posati","giuntata","collaudata"];
+const VTABS=[["dati","Dati"],["doc","Documenti"],["note","Note"]];
+const VG_GROUPS=[["Identificazione",[["nome","Codice / n° vasca","es. VG 12"],["progressiva","Progressiva km","es. 40+540"],["tratta","Tratta",""]]],
+  ["Manufatto",[["tipo","Tipo / dimensioni","es. pozzetto 125×80"],["chiusino","Chiusino","es. ghisa D400"],["profondita","Profondità","es. 1,20 m"]]],
+  ["Fibra",[["cavi","Cavi presenti","es. 24 fo SM + 12 fo SM"],["muffola","Muffola / giunto","modello e n°"],["fibre","Fibre giuntate","es. 1-12 → 13-24"],["collegata","Collegata a","es. BOX 6, sede Marone"]]],
+  ["Stato",[["stato","Stato",""],["data","Data giunzione","gg/mm/aaaa"],["ditta","Ditta / operatore",""]]]];
+function nearTratta(ll){ let best=null,bd=1e18; for(const t of S.tratte){ for(const b of t.boxes){ if(b.lat==null) continue; const d=(b.lat-ll[0])**2+(b.lng-ll[1])**2; if(d<bd){ bd=d; best=t; } } if(t.lat!=null){ const d=(t.lat-ll[0])**2+(t.lng-ll[1])**2; if(d<bd){ bd=d; best=t; } } } return best?best.id:""; }
+function vgKm(v){ const m=String(v.progressiva||"").match(/^(\d+)\s*\+\s*(\d{1,3})$/); return m?(+m[1])+(+m[2])/1000:null; }
+function vgSorted(){ return (S.vasche||[]).slice().sort((a,b)=>(vgKm(a)??1e9)-(vgKm(b)??1e9)||String(a.nome).localeCompare(String(b.nome))); }
+function openVG(id,center){ const v=(S.vasche||[]).find(x=>x.id===id); if(!v) return; UI.vg=id; UI.pl=null; UI.sel=null; UI.sede=null; UI.box=null;
+  if(UI.view!=="mappa") showView("mappa"); $("#drawer").classList.add("open"); renderDrawer(); renderSide(); renderPOI(); renderLeaf(); setPath();
+  if(center && LM && v.lat!=null){ if(UI.mm!=="reale") setMapMode("reale"); setTimeout(()=>{ LM.invalidateSize(); LM.flyTo([v.lat,v.lng],Math.max(LM.getZoom(),16),{duration:.5}); },80); } }
+function vgPopup(v){ const t=S.tratte.find(x=>x.id===v.tratta);
+  const rows=VG_GROUPS.flatMap(g=>g[1]).filter(([k])=>k!=="nome"&&k!=="tratta").map(([k,l])=>[l,v[k]]).filter(r=>r[1]);
+  return `<div class="pp"><div class="mono" style="color:#ff9f1c">▣ ${esc(v.nome||"Vasca di giunzione")}</div><div class="h-yellow">(${t?esc(t.nome):"tratta non indicata"})</div>
+    ${rows.length?`<table class="pt kv">${rows.map(([k,x])=>`<tr><th>${esc(k)}</th><td>${esc(x)}</td></tr>`).join("")}</table>`:`<div class="dim" style="font-size:11.5px">dati non ancora compilati</div>`}
+    ${v.note?`<div style="font-size:11.5px;margin-top:4px"><span class="info">Note:</span> ${esc(v.note)}</div>`:""}
+    <div class="row-flex" style="margin-top:6px">${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}${gLinks(v.lat,v.lng)}</div></div>`; }
+function renderVGLayer(){
+  if(!LM||!LG||S.showVG===false) return;
+  for(const v of (S.vasche||[])){ if(v.lat==null) continue;
+    const ok=v.stato==="giuntata"||v.stato==="collaudata";
+    const m=L.marker([v.lat,v.lng],{zIndexOffset:650,draggable:!!UI.edit,icon:L.divIcon({className:"lm-wrap",iconSize:null,html:`<div class="vgk ${ok?"ok":""} ${UI.vg===v.id?"cur":""}" title="${esc(v.nome)}"></div><div class="vgl">${esc(v.nome||"VG")}</div>`})});
+    m.bindPopup(()=>vgPopup(v),{maxWidth:380,minWidth:240,autoPanPaddingTopLeft:[20,80]});
+    m.on("click",()=>{ if(UI.place) return; UI.popVG=v.id; openVG(v.id,false); });
+    if(UI.popVG===v.id){ UI.popVG=null; setTimeout(()=>m.openPopup(),0); }
+    m.on("dragend",()=>{ const ll=m.getLatLng(); v.lat=ll.lat; v.lng=ll.lng; v.upd=now(); changed("posizione vasca aggiornata"); if(UI.vg===v.id) renderDrawer(); });
+    LG.addLayer(m); }
+}
+function renderVGCard(v){
+  const dr=$("#drawer"); if(!VTABS.some(x=>x[0]===UI.vtab)) UI.vtab="dati";
+  const all=vgSorted(), si=all.indexOf(v), nd=docsOf("vasca",v.id).length, t=S.tratte.find(x=>x.id===v.tratta);
+  const fill=VG_GROUPS.flatMap(g=>g[1]).filter(([k])=>String(v[k]||"").trim()).length, tot=VG_GROUPS.flatMap(g=>g[1]).length;
+  dr.innerHTML=`<div data-vgid="${v.id}" style="display:flex;flex-direction:column;height:100%;min-height:0"><div class="dh"><div class="grow">
+      ${navHead(`<span class="dim">Vasche di giunzione</span> › <span style="color:var(--fg)">${esc(v.nome||"VG")}</span>`,si,all.length)}
+      <div class="row-flex" style="margin-top:4px;flex-wrap:nowrap"><span class="mono" style="color:#ff9f1c;font-size:16px;white-space:nowrap">▣ VG</span><input class="f mono" data-vf="nome" value="${esc(v.nome||"")}" placeholder="codice vasca" style="font-size:15px;flex:1"></div>
+      <div class="dim mono" style="font-size:11.5px;margin-top:4px">${v.progressiva?"km "+esc(v.progressiva):"progressiva non indicata"} · ${t?esc(t.nome):"tratta non indicata"} · ${esc(v.stato||"")} · dati ${fill}/${tot}</div>
+      <div class="row-flex" style="margin-top:5px">${v.lat!=null?`<span class="mono dim" style="font-size:11px">${v.lat.toFixed(5)}, ${v.lng.toFixed(5)}</span>${gLinks(v.lat,v.lng)}`:`<span style="color:var(--yellow);font-size:12px">senza coordinate</span>`}<button class="btn sm" data-vga="place">📍 ${v.lat!=null?"sposta":"posiziona"}</button>${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}<span class="sp"></span><button class="btn sm danger" data-vga="del" title="Elimina la vasca">🗑 Elimina vasca</button></div>
+    </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
+    <div class="dtabs">${VTABS.map(([k,l])=>`<div class="tab ${UI.vtab===k?"active":""}" data-vt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="dati"?` <span class="dim">${fill}/${tot}</span>`:""}</div>`).join("")}</div>
+    <div class="db">${UI.vtab==="dati"?vgFields(v):UI.vtab==="doc"?docList("vasca",v.id,docsOf("vasca",v.id)):`<div class="info" style="font-size:12px">Note</div><textarea class="f" data-vf="note" style="min-height:140px">${esc(v.note||"")}</textarea>
+      ${v.upd?`<div class="dim mono" style="font-size:11px;margin-top:6px">ultimo aggiornamento ${fmtD(v.upd)}</div>`:""}`}</div></div>`;
+}
+function vgFields(v){
+  const inp=(k,ph)=>k==="stato"?`<select class="f" data-vf="stato">${VG_STATI.map(s=>`<option ${v.stato===s?"selected":""}>${s}</option>`).join("")}</select>`
+    :k==="tratta"?`<select class="f" data-vf="tratta"><option value="">—</option>${S.tratte.map(t=>`<option value="${t.id}" ${v.tratta===t.id?"selected":""}>${esc(t.nome)}</option>`).join("")}</select>`
+    :`<input class="f ${k==="progressiva"?"mono":""}" data-vf="${k}" value="${esc(v[k]||"")}" placeholder="${esc(ph)}">${k==="progressiva"?hintHTML("progressiva",v.progressiva,""):""}`;
+  return `<p class="dim" style="margin:0 0 6px;font-size:12px">I campi si salvano da soli.</p>`+VG_GROUPS.map(([g,fs])=>`<fieldset class="qg"><legend>${g}</legend><div class="grid2">${fs.map(([k,l,ph])=>`<label>${l}</label><div>${inp(k,ph)}</div>`).join("")}</div></fieldset>`).join("");
+}
+// salvataggio dei campi della vasca
+document.addEventListener("input",e=>{ const w=e.target.closest("[data-vgid]"); if(!w||!e.target.dataset.vf) return; const v=(S.vasche||[]).find(x=>x.id===w.dataset.vgid); if(!v) return;
+  const k=e.target.dataset.vf; v[k]=e.target.value; v.upd=now();
+  if(k==="progressiva"){ const h=e.target.parentElement.querySelector(".fh"); if(h){ const m=fieldCheck("progressiva",v.progressiva,""); h.textContent=m; h.className="fh "+(m?"warn":""); } }
+  clearTimeout(saveT); saveT=setTimeout(()=>DB.set("state",JSON.stringify(S)),400); });
+document.addEventListener("change",e=>{ const w=e.target.closest("[data-vgid]"); if(!w||!e.target.dataset.vf) return; changed(); renderLeaf(); if(e.target.tagName==="SELECT") renderDrawer(); if(UI.view==="db") renderDB(); });
+document.addEventListener("click",e=>{
+  if(e.target.id==="lh-addvg"){ return startPlace({vg:true}); }
+  if(e.target.id==="lh-addpl"){ return startPlace({pl:true}); }
+  const tb=e.target.closest("[data-vt]"); if(tb){ UI.vtab=tb.dataset.vt; return renderDrawer(); }
+  const go=e.target.closest("[data-govg]"); if(go){ e.preventDefault(); return openVG(go.dataset.govg,true); }
+  const a=e.target.closest("[data-vga]"); if(!a) return; e.preventDefault();
+  if(a.dataset.vga==="add"){ showView("mappa"); return startPlace({vg:true}); }
+  const id=a.closest("[data-vgid]")?.dataset.vgid; const v=(S.vasche||[]).find(x=>x.id===id); if(!v) return;
+  if(a.dataset.vga==="place"){ return startPlace({vg:true,vid:v.id}); }
+  if(a.dataset.vga==="del"){ if(!confirm(`Eliminare la vasca ${v.nome||""} e i suoi dati?`)) return; S.vasche=S.vasche.filter(x=>x!==v); if(UI.vg===v.id) closeDrawer(); changed("vasca eliminata"); renderLeaf(); if(UI.view==="db") renderDB(); }
+});
+// scheda database: elenco delle vasche
+function dbVG(){
+  const vs=vgSorted(), cnt=s=>vs.filter(v=>v.stato===s).length;
+  return `<div class="welcome" style="max-width:none"><div class="h-green">• Vasche di giunzione •</div><div class="h-yellow">(una scheda per vasca: manufatto, cavi, muffola, fibre giuntate, documenti)</div>
+    <div class="kpis"><div><span>Vasche</span><b class="val big">${vs.length}</b></div>${VG_STATI.map(s=>`<div><span>${s}</span><b class="val big">${cnt(s)}</b></div>`).join("")}</div>
+    <div class="row-flex" style="margin-top:10px"><button class="btn" data-vga="add">+ Vasca (clic sulla mappa reale)</button><span class="dim" style="font-size:12px">oppure in modalità ✎ Modifica POI → "+ vasca"</span></div></div>
+  <table class="t"><thead><tr><th>Vasca</th><th>Progressiva</th><th>Tratta</th><th>Tipo</th><th>Cavi</th><th>Fibre giuntate</th><th>Stato</th><th>Doc</th><th></th></tr></thead><tbody>
+  ${vs.map(v=>{ const t=S.tratte.find(x=>x.id===v.tratta); return `<tr data-vgid="${v.id}"><td><a class="lnk mono" href="#" data-govg="${v.id}">${esc(v.nome||"VG")}</a></td><td class="mono">${esc(v.progressiva||"—")}</td><td class="dim">${t?esc(t.nome):"—"}</td><td>${esc(v.tipo||"")}</td><td>${esc(v.cavi||"")}</td><td class="mono">${esc(v.fibre||"")}</td>
+    <td>${esc(v.stato||"")}</td><td>${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}</td><td><button class="btn sm danger" data-vga="del">✕</button></td></tr>`; }).join("")||`<tr><td colspan="9" class="dim">nessuna vasca: aggiungine una con il pulsante qui sopra</td></tr>`}
+  </tbody></table>`;
+}
+
 /* ---------- drawer events ---------- */
 const dr=$("#drawer");
 
 // navigazione della scheda: schede interne, percorso, ← →, copia dal precedente
 dr.addEventListener("click",e=>{
-  if(e.target.closest("#d-close") && UI.pl){ e.stopImmediatePropagation(); return closeDrawer(); }
+  if(e.target.closest("#d-close") && (UI.pl||UI.vg)){ e.stopImmediatePropagation(); return closeDrawer(); }
   const bt=e.target.closest("[data-bt]"); if(bt){ e.preventDefault(); e.stopImmediatePropagation(); UI.btab=bt.dataset.bt; return renderDrawer(); }
   const pt=e.target.closest("[data-pt]"); if(pt){ e.stopImmediatePropagation(); UI.ptab=pt.dataset.pt; return renderDrawer(); }
   if(e.target.closest("[data-docs],[data-dba],a[href^=http]")) return;
@@ -1582,6 +1666,7 @@ dr.addEventListener("click",e=>{
   if(k==="tratta"){ UI.box=null; UI.dtab="av"; renderDrawer(); renderLeaf(); return; }
   if(k==="box"){ return openBox(UI.sel,n.dataset.bid,null,true); }
   if(k==="prev"||k==="next"){ const d=k==="prev"?-1:1;
+    if(UI.vg){ const all=vgSorted(), i=all.findIndex(x=>x.id===UI.vg), o=all[i+d]; if(o) openVG(o.id,true); return; }
     if(UI.pl){ const all=(S.pl||[]).filter(x=>x.lat!=null||x.km!=null).slice().sort((a,b)=>(a.km??1e9)-(b.km??1e9)); const i=all.findIndex(x=>x.id===UI.pl); const o=all[i+d]; if(o) openPL(o.id,true); return; }
     const seq=boxSeq(), i=seq.findIndex(x=>x.b.id===UI.box), o=seq[i+d]; if(o) openBox(o.t.id,o.b.id,null,true); return; }
   if(k==="copyq"){ const seq=boxSeq(), i=seq.findIndex(x=>x.b.id===UI.box); if(i<1) return; const src=seq[i-1].b.quadro, dst=seq[i].b.quadro; let c=0;
@@ -1594,7 +1679,7 @@ dr.addEventListener("input",e=>{ const el=e.target, k=el.dataset.q||el.dataset.p
   if(UI.pl){ const p=S.pl.find(x=>x.id===UI.pl); self=`PL ${p&&p.nome}`; } else { const t=cur(), b=t&&t.boxes.find(x=>x.id===UI.box); if(!b) return; self=`${t.nome} · BOX ${b.n}`; if(k==="ip"){ const tr=el.closest("[data-v]"); const r=allCams().find(r=>r.b===b&&r.vi==+tr.dataset.v&&r.ci==+tr.dataset.c); self+=" · "+(r?r.cod:""); } }
   const h=fieldCheck(k,el.value,self); box.textContent=h; box.className="fh "+(h.startsWith("✘")?"err":h?"warn":""); });
 // ← → sulla tastiera quando il pannello è aperto e non stai scrivendo
-document.addEventListener("keydown",e=>{ if(!(UI.box||UI.pl)||UI.view!=="mappa"||e.altKey||e.ctrlKey||e.metaKey) return; if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")) return;
+document.addEventListener("keydown",e=>{ if(!(UI.box||UI.pl||UI.vg)||UI.view!=="mappa"||e.altKey||e.ctrlKey||e.metaKey) return; if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")) return;
   if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ const b=$(`#drawer [data-nav="${e.key==="ArrowLeft"?"prev":"next"}"]`); if(b&&!b.disabled){ e.preventDefault(); b.click(); } }
   if(e.key==="Escape" && !$("#modal.open")) closeDrawer(); });
 dr.addEventListener("click",async e=>{
@@ -1621,7 +1706,7 @@ dr.addEventListener("click",async e=>{
     case "placeg": startPlace({tid:t.id,gidx:+a.closest("[data-g]").dataset.g,step:1}); return;
     case "autog": { const g=t.gallerie[+a.closest("[data-g]").dataset.g]; delete g.match; delete g.geom; if(S.rail) alignGallerie(); break; }
     case "delg": t.gallerie.splice(+a.closest("[data-g]").dataset.g,1); break;
-    case "delpoi": if(!confirm(`Eliminare il POI "${t.nome}" con tutti i box?`)) return; S.tratte=S.tratte.filter(x=>x!==t); for(const f of FILES.filter(f=>f.trattaId===t.id)) await DB.delFile(f.id); FILES=FILES.filter(f=>f.trattaId!==t.id); closeDrawer(); return changed("POI eliminato");
+    case "delpoi": if(!confirm(`Eliminare il POI "${t.nome}" con ${t.boxes.length} box e tutti i loro dati?`)) return; S.tratte=S.tratte.filter(x=>x!==t); for(const f of FILES.filter(f=>f.trattaId===t.id)) await DB.delFile(f.id); FILES=FILES.filter(f=>f.trattaId!==t.id); closeDrawer(); return changed("POI eliminato");
     case "addlog": { const v=$("#lognote").value.trim(); if(!v) return; logEv(t,"📝 "+v); break; }
     case "att": $("#f-att").click(); return;
     case "sch": showView("schemi"); return;
@@ -1851,10 +1936,13 @@ function exportXlsx(){
   allCams().forEach(r=>c.push([r.cod,r.t.nome,r.b.n,r.v.punto,r.ci+1,modName(r.c.modelId)||r.c.modello,r.c.ip,r.c.mac,r.c.seriale,r.c.vlan,r.c.stato,r.c.note]));
   { const mo=[["Marca","Modello","Tipo","Risoluzione","Ottica","Alimentazione","Firmware","Protezione","Telecamere","Note"]]; (S.modelli||[]).forEach(m=>mo.push([m.marca,m.modello,m.tipo,m.risoluzione,m.ottica,m.alim,m.firmware,m.ip_rating,allCams().filter(r=>r.c.modelId===m.id).length,m.note]));
     const wmo=XLSX.utils.aoa_to_sheet(mo); wmo["!cols"]=mo[0].map(()=>({wch:16})); XLSX.utils.book_append_sheet(wb,wmo,"Modelli_telecamere");
-    const dl=[["Riferimento","Categoria","File","Dimensione kB","Caricato il","Per tutti"]]; FILES.filter(f=>f.scope&&f.scope!=="schema").forEach(f=>{ let r=f.ref; if(f.scope==="box"){ const [tid,bid]=f.ref.split("|"); const t=S.tratte.find(x=>x.id===tid), b=t&&t.boxes.find(x=>x.id===bid); r=t&&b?`${t.nome} · BOX ${b.n}`:r; } else if(f.scope==="sede"){ const [sid,qid]=f.ref.split("|"); const s=(S.sedi||[]).find(x=>x.id===sid), q=s&&s.quadri.find(x=>x.id===qid); r=s&&q?`${s.nome} · ${q.nome}`:r; } else if(f.scope==="modello") r="Modello "+modName(f.ref); if(f.scope==="cam"){ const rr=allCams().find(x=>x.id===f.ref); r=rr?`Telecamera ${rr.cod}`:r; } if(f.ref==="__all__") r="Comune"; dl.push([r,f.cat,f.name,Math.round(f.size/1024),fmtD(f.added),f.all?(DOC_ALL[f.scope]||"sì"):""]); });
+    const dl=[["Riferimento","Categoria","File","Dimensione kB","Caricato il","Per tutti"]]; FILES.filter(f=>f.scope&&f.scope!=="schema").forEach(f=>{ let r=f.ref; if(f.scope==="box"){ const [tid,bid]=f.ref.split("|"); const t=S.tratte.find(x=>x.id===tid), b=t&&t.boxes.find(x=>x.id===bid); r=t&&b?`${t.nome} · BOX ${b.n}`:r; } else if(f.scope==="sede"){ const [sid,qid]=f.ref.split("|"); const s=(S.sedi||[]).find(x=>x.id===sid), q=s&&s.quadri.find(x=>x.id===qid); r=s&&q?`${s.nome} · ${q.nome}`:r; } else if(f.scope==="modello") r="Modello "+modName(f.ref); if(f.scope==="cam"){ const rr=allCams().find(x=>x.id===f.ref); r=rr?`Telecamera ${rr.cod}`:r; } if(f.scope==="pl"){ const x=(S.pl||[]).find(q=>q.id===f.ref); r=x?x.nome:r; } if(f.scope==="vasca"){ const x=(S.vasche||[]).find(q=>q.id===f.ref); r=x?"Vasca "+x.nome:r; } if(f.ref==="__all__") r="Comune"; dl.push([r,f.cat,f.name,Math.round(f.size/1024),fmtD(f.added),f.all?(DOC_ALL[f.scope]||"sì"):""]); });
     const wdl=XLSX.utils.aoa_to_sheet(dl); wdl["!cols"]=[{wch:36},{wch:24},{wch:40},{wch:12},{wch:18}]; XLSX.utils.book_append_sheet(wb,wdl,"Documenti"); }
   const wq=XLSX.utils.aoa_to_sheet(q); for(let i=1;i<q.length;i++){ const a=XLSX.utils.encode_cell({r:i,c:3}); if(wq[a]) wq[a].z="0%"; } wq["!cols"]=q[0].map(()=>({wch:16}));
   XLSX.utils.book_append_sheet(wb,wq,"Config_quadri");
+  { const vg=[["Vasca","Progressiva","Tratta","Tipo / dimensioni","Chiusino","Profondità","Cavi presenti","Muffola / giunto","Fibre giuntate","Collegata a","Stato","Data giunzione","Ditta","Latitudine","Longitudine","Note"]];
+    vgSorted().forEach(v=>{ const t=S.tratte.find(x=>x.id===v.tratta); vg.push([v.nome,v.progressiva,t?t.nome:"",v.tipo,v.chiusino,v.profondita,v.cavi,v.muffola,v.fibre,v.collegata,v.stato,v.data,v.ditta,v.lat,v.lng,v.note]); });
+    const wv=XLSX.utils.aoa_to_sheet(vg); wv["!cols"]=vg[0].map(()=>({wch:16})); XLSX.utils.book_append_sheet(wb,wv,"Vasche_giunzione"); }
   const wc=XLSX.utils.aoa_to_sheet(c); wc["!cols"]=c[0].map(()=>({wch:16})); XLSX.utils.book_append_sheet(wb,wc,"Telecamere");
   const g=[["Tratta","Galleria","Km inizio","Km fine","Lunghezza"]]; S.tratte.forEach(t=>t.gallerie.forEach(x=>g.push([t.nome,x.nome,x.kin,x.kout,x.len])));
   const wg=XLSX.utils.aoa_to_sheet(g); wg["!cols"]=[{wch:26},{wch:28},{wch:11},{wch:11},{wch:22}]; XLSX.utils.book_append_sheet(wb,wg,"Gallerie");
@@ -1929,7 +2017,7 @@ function setMapMode(m){
   if(m==="reale"){ if(typeof L==="undefined"){ status("libreria mappa non disponibile","err"); return; } if(!LM) initLeaf(); else { LM.invalidateSize(); renderLeaf(); } }
   updLeafHint(); setPath();
 }
-$("#mapsw").addEventListener("click",e=>{ if(e.target.closest("#b-pl")){ S.showPL = S.showPL===false; $("#b-pl").classList.toggle("on",S.showPL!==false); DB.set("state",JSON.stringify(S)); renderLeaf(); return; } if(e.target.closest("#b-cams")){ S.showCams = S.showCams===false; $("#b-cams").classList.toggle("on",S.showCams!==false); DB.set("state",JSON.stringify(S)); renderLeaf(); return; } if(e.target.closest("#b-rail")) return alignRail(true); if(e.target.closest("#b-sedi")){ S.showSedi = S.showSedi===false; applySediVis(); DB.set("state",JSON.stringify(S)); renderLeaf(); return; } if(e.target.id==="b-addlayer") return e.shiftKey?removeCustomLayers():addCustomLayer(); const b=e.target.closest("[data-mm]"); if(b) setMapMode(b.dataset.mm); });
+$("#mapsw").addEventListener("click",e=>{ if(e.target.closest("#b-vg")){ S.showVG = S.showVG===false; $("#b-vg").classList.toggle("on",S.showVG!==false); DB.set("state",JSON.stringify(S)); renderLeaf(); return; } if(e.target.closest("#b-pl")){ S.showPL = S.showPL===false; $("#b-pl").classList.toggle("on",S.showPL!==false); DB.set("state",JSON.stringify(S)); renderLeaf(); return; } if(e.target.closest("#b-cams")){ S.showCams = S.showCams===false; $("#b-cams").classList.toggle("on",S.showCams!==false); DB.set("state",JSON.stringify(S)); renderLeaf(); return; } if(e.target.closest("#b-rail")) return alignRail(true); if(e.target.closest("#b-sedi")){ S.showSedi = S.showSedi===false; applySediVis(); DB.set("state",JSON.stringify(S)); renderLeaf(); return; } if(e.target.id==="b-addlayer") return e.shiftKey?removeCustomLayers():addCustomLayer(); const b=e.target.closest("[data-mm]"); if(b) setMapMode(b.dataset.mm); });
 function initLeaf(){
   LM=L.map("leaf",{zoomControl:false,attributionControl:true}).setView([45.95,10.2],10);
   L.control.zoom({position:"bottomright"}).addTo(LM);
@@ -1959,6 +2047,10 @@ function initLeaf(){
   LM.on("zoomend",()=>{ $("#leaf").classList.toggle("compact",LM.getZoom()<12); setGLabZoom(); });
   LM.on("moveend zoomend",()=>setTimeout(declutterGLab,0)); setGLabZoom();
   LM.on("click",e=>{
+    if(UI.place && UI.place.vg){ const ll=[e.latlng.lat,e.latlng.lng], km=S.rail&&S.rail.path?dToKm(railProject(ll)):null; S.vasche ||= [];
+      if(UI.place.vid){ const v=S.vasche.find(x=>x.id===UI.place.vid); if(v){ v.lat=ll[0]; v.lng=ll[1]; if(km!=null&&!v.progressiva) v.progressiva=kmTxt(km); v.upd=now(); } endPlace(); changed("vasca spostata"); if(v) openVG(v.id,false); return; }
+      const v={id:uid(),nome:"VG"+(km!=null?" km "+kmTxt(km):""),progressiva:km!=null?kmTxt(km):"",lat:ll[0],lng:ll[1],tratta:nearTratta(ll),tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"da realizzare",data:"",ditta:"",note:"",upd:now()};
+      S.vasche.push(v); endPlace(); changed("vasca di giunzione aggiunta"); openVG(v.id,false); return; }
     if(UI.place && UI.place.pl){ const ll=[e.latlng.lat,e.latlng.lng], km=S.rail&&S.rail.path?dToKm(railProject(ll)):null; S.pl ||= [];
       S.pl.push({id:uid(),nome:"PL"+(km!=null?" km "+kmTxt(km):""),km,lat:ll[0],lng:ll[1],fonte:"manuale",note:"",barriere:""}); S.pl.sort((a,b)=>(a.km??999)-(b.km??999)); endPlace(); changed("PL aggiunto"); return; }
     if(UI.place && UI.place.gidx!=null){ const p=UI.place, t=S.tratte.find(x=>x.id===p.tid), g=t&&t.gallerie[p.gidx]; if(!g) return endPlace();
@@ -2049,7 +2141,7 @@ function renderLeaf(){
     m.on("dragend",()=>{ const ll=m.getLatLng(); t.lat=ll.lat; t.lng=ll.lng; t.geoAuto=false; logEv(t,"POI spostato su mappa reale"); changed("posizione POI aggiornata"); if(UI.sel===t.id) renderDrawer(); });
     LG.addLayer(m);
   }
-  renderPdfLayer(); renderPLLayer(); renderCableLayer();
+  renderPdfLayer(); renderPLLayer(); renderVGLayer(); renderCableLayer();
   updLeafHint();
 }
 function startPlace(p){ UI.place=p; if(UI.mm!=="reale") setMapMode("reale"); const t=S.tratte.find(x=>x.id===p.tid);
@@ -2058,13 +2150,14 @@ function startPlace(p){ UI.place=p; if(UI.mm!=="reale") setMapMode("reale"); con
   $("#leaf").style.cursor="crosshair"; $("#leaf").classList.add("placing"); updLeafHint(); }
 function endPlace(){ UI.place=null; $("#leaf").style.cursor=""; $("#leaf").classList.remove("placing"); updLeafHint(); }
 function updLeafHint(){ const h=$("#leafhint"); if(!h) return; let html="";
-  if(UI.place && UI.place.pl){ html=`► clicca sulla mappa nel punto del passaggio a livello  <button class="btn sm" id="lh-cancel">annulla</button>`; h.className="hint edit show"; }
+  if(UI.place && UI.place.vg){ html=`► clicca sulla mappa nel punto della vasca di giunzione  <button class="btn sm" id="lh-cancel">annulla</button>`; h.className="hint edit show"; }
+  else if(UI.place && UI.place.pl){ html=`► clicca sulla mappa nel punto del passaggio a livello  <button class="btn sm" id="lh-cancel">annulla</button>`; h.className="hint edit show"; }
   else if(UI.place && UI.place.gidx!=null){ const t=S.tratte.find(x=>x.id===UI.place.tid), g=t&&t.gallerie[UI.place.gidx];
     html=`► ${esc(g?g.nome:"galleria")}: clicca ${UI.place.step===1?"sull'imbocco di INIZIO":"sull'imbocco di FINE"}${S.rail?" (si aggancia al binario)":""}  <button class="btn sm" id="lh-cancel">annulla</button>`; h.className="hint edit show"; }
   else if(UI.place && UI.place.sid){ const s=(S.sedi||[]).find(x=>x.id===UI.place.sid); html=`► clicca sulla mappa nel punto della sede ${esc(s?s.nome:"")}  <button class="btn sm" id="lh-cancel">annulla</button>`; h.className="hint edit show"; }
   else if(UI.place){ const t=S.tratte.find(x=>x.id===UI.place.tid), b=UI.place.bid&&t?t.boxes.find(x=>x.id===UI.place.bid):null;
     html=`► clicca sulla mappa nel punto ${b?"del BOX "+esc(b.n):"del POI "+esc(t?t.nome:"")}  <button class="btn sm" id="lh-cancel">annulla</button>`; h.className="hint edit show"; }
-  else if(UI.edit){ html=UI.addModeLeaf? `► clicca sulla mappa nel punto del nuovo POI  <button class="btn sm" id="lh-cancel">annulla</button>` : `► modifica: trascina POI e box  <button class="btn sm" id="lh-add">+ nuovo POI</button>`; h.className="hint edit show"; }
+  else if(UI.edit){ html=UI.addModeLeaf? `► clicca sulla mappa nel punto del nuovo POI  <button class="btn sm" id="lh-cancel">annulla</button>` : `► modifica: trascina POI, box, PL e vasche  <button class="btn sm" id="lh-add">+ nuovo POI</button><button class="btn sm" id="lh-addvg">+ vasca</button><button class="btn sm" id="lh-addpl">+ PL</button>`; h.className="hint edit show"; }
   else { html=railInfo(); h.className="hint show"; }
   h.innerHTML=html; }
 document.addEventListener("click",e=>{ if(e.target.id==="lh-cancel"){ UI.addModeLeaf=false; endPlace(); } if(e.target.id==="lh-add"){ UI.addModeLeaf=true; updLeafHint(); } });
@@ -2172,7 +2265,7 @@ $("#slist").addEventListener("click",e=>{ const li=e.target.closest("li[data-sid
 $("#sfilter").addEventListener("input",renderSedeList);
 
 function openSede(id, center){
-  UI.sede=id; UI.sel=null; UI.box=null; UI.pl=null; showView("mappa"); $("#drawer").classList.add("open"); renderDrawer(); renderSide(); renderPOI(); renderLeaf(); setPath();
+  UI.sede=id; UI.sel=null; UI.box=null; UI.pl=null; UI.vg=null; showView("mappa"); $("#drawer").classList.add("open"); renderDrawer(); renderSide(); renderPOI(); renderLeaf(); setPath();
   const s=curSede(); if(!center||!s) return;
   if(UI.mm==="reale" && LM && s.lat!=null){ setTimeout(()=>{LM.invalidateSize(); LM.flyTo([s.lat,s.lng],Math.max(LM.getZoom(),14),{duration:.6});},60); }
   else if(UI.mm!=="reale" && MAP && s.ax!=null){ const r=$("#pz-map").getBoundingClientRect(), st=MAP.st; st.x=r.width*0.45 - s.ax/100*st.w*st.s; st.y=r.height/2 - s.ay/100*st.h*st.s; MAP.apply(); }
@@ -2443,7 +2536,7 @@ function ipIndex(){ // tutti gli IP noti (telecamere + switch + gateway) per tro
 }
 const modName=id=>{ const m=(S.modelli||[]).find(x=>x.id===id); return m? `${m.marca} ${m.modello}`.trim() : ""; };
 // documenti propri dell'elemento + documenti marcati "per tutti" dello stesso tipo (box, PL, telecamere)
-const DOC_ALL={box:"tutti i box",pl:"tutti i PL",cam:"tutte le telecamere"};
+const DOC_ALL={box:"tutti i box",pl:"tutti i PL",cam:"tutte le telecamere",vasca:"tutte le vasche di giunzione"};
 function docsOf(scope,ref){
   let own;
   if(ref==="__all__") own=[];
@@ -2465,11 +2558,11 @@ function renderDB(){
   S.modelli ||= [];
   const cams=allCams(), ipx=ipIndex(), dupIPs=[...ipx.entries()].filter(([ip,l])=>l.length>1).map(([ip])=>ip);
   const nDocs=FILES.filter(f=>f.scope&&f.scope!=="schema").length;
-  const sub=[["cam",`Telecamere (${cams.length})`],["mod",`Modelli (${S.modelli.length})`],["doc",`Documenti (${nDocs})`],["pl",`PL e fermate (${(S.pl||[]).length})`],["ip",`Indirizzi IP${dupIPs.length?` <span style="color:var(--err)">✘${dupIPs.length}</span>`:""}`]];
+  const sub=[["cam",`Telecamere (${cams.length})`],["mod",`Modelli (${S.modelli.length})`],["doc",`Documenti (${nDocs})`],["pl",`PL e fermate (${(S.pl||[]).length})`],["vg",`Vasche di giunzione (${(S.vasche||[]).length})`],["ip",`Indirizzi IP${dupIPs.length?` <span style="color:var(--err)">✘${dupIPs.length}</span>`:""}`]];
   const keep=$("#db-body")?.scrollTop||0;
   $("#v-db").innerHTML=`<div class="subtabs">${sub.map(([k,l])=>`<div class="tab ${UI.dbt===k?"active":""}" data-dbt="${k}" tabindex="0">${l}</div>`).join("")}
     <span class="row-flex" style="margin:auto 10px 4px auto"><button class="btn sm" id="db-exp">⇧ Esporta database Excel</button></span></div>
-    <div id="db-body" style="flex:1;overflow:auto;padding:14px 18px 40px">${({cam:dbCam,mod:dbMod,doc:dbDoc,pl:dbPL,ip:dbIP}[UI.dbt])(cams,ipx,dupIPs)}</div>`;
+    <div id="db-body" style="flex:1;overflow:auto;padding:14px 18px 40px">${({cam:dbCam,mod:dbMod,doc:dbDoc,pl:dbPL,vg:dbVG,ip:dbIP}[UI.dbt])(cams,ipx,dupIPs)}</div>`;
   $("#db-body").scrollTop=keep;
 }
 function dbCam(cams,ipx){
@@ -2997,7 +3090,7 @@ if(SRV){
   setInterval(async()=>{ if(SRV.dirty||saving||document.hidden) return; try{ const v=await jfetch("ver"); if(v.ok && v.version>SRV.version){ await reloadFromServer(true); status(`dati aggiornati con le modifiche di ${v.savedBy||"un altro utente"}`,"ok"); } }catch(_){} },45000);
 }
 function applyServerState(st){
-  S=st; S.tratte.forEach(t=>{t.boxes=t.boxes.map(normBox); t.gallerie ||= []; t.log ||= [];});
+  S=st; S.vasche ||= []; S.tratte.forEach(t=>{t.boxes=t.boxes.map(normBox); t.gallerie ||= []; t.log ||= [];});
   if(!S.sedi) mergeSedi(convertQF(QF_INIT), QF_INIT.exportedAt); qfInit(); qfRebuild(); S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); applySediVis();
 }
 // file dal server: URL diretto (il server controlla il login)
@@ -3105,7 +3198,7 @@ document.addEventListener("click",e=>{ const o=e.target.closest("[data-openbox]"
   FILES = ok? await DB.allFiles() : [];
   if(!S.sedi){ mergeSedi(convertQF(QF_INIT), QF_INIT.exportedAt); if(ok) DB.set("state",JSON.stringify(S)); }
   qfInit(); qfRebuild();
-  S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); $("#b-pl").classList.toggle("on",S.showPL!==false); applySediVis(); $("#b-cams").classList.toggle("on",S.showCams!==false); initMap(); renderSide(); setPath();
+  S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); $("#b-pl").classList.toggle("on",S.showPL!==false); S.vasche ||= []; $("#b-vg").classList.toggle("on",S.showVG!==false); applySediVis(); $("#b-cams").classList.toggle("on",S.showCams!==false); initMap(); renderSide(); setPath();
   let mm="schema"; try{ mm=localStorage.getItem("fn-mapmode")||"schema"; }catch(e){} setMapMode(mm);
   if(SRV) status(SRV.role==="viewer"?"connesso in sola lettura":"connesso al server · le modifiche si salvano da sole e sono visibili a tutti gli utenti","ok");
   else status(ok? "pronto · i dati restano nel browser, usa 💾 Salva per una copia su file" : "attenzione: archivio del browser non disponibile, salva spesso su file", ok?null:"err");
