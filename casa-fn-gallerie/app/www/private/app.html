@@ -255,6 +255,7 @@ input.f.bad{border-color:var(--err);color:var(--err)}
 .vgk.ok{border-color:var(--green);box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px var(--green)}.vgk.cur{outline:3px solid rgba(255,159,28,.45)}
 .vgl{position:absolute;left:11px;top:-7px;font:11px/14px var(--mono);color:#ff9f1c;background:rgba(20,20,20,.78);padding:0 3px;white-space:nowrap;pointer-events:none}
 #leaf.gl-off .vgl,#leaf.gl-big .vgl{display:none}
+.cpin{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;border:2px solid var(--cyan);background:rgba(58,177,239,.2);color:var(--cyan);font:bold 15px/18px var(--mono);text-align:center}
 .plk{position:absolute;transform:translate(-50%,-50%);width:16px;height:16px;border:2px solid var(--p-path);background:var(--bg-terminal);color:var(--p-path);font:bold 11px/12px var(--mono);text-align:center}
 .plk.est{border-style:dashed}
 .pll{position:absolute;left:11px;top:-7px;font:11px/14px var(--mono);color:var(--p-path);background:rgba(20,20,20,.78);padding:0 3px;white-space:nowrap;pointer-events:none}
@@ -1003,7 +1004,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </aside>
     <div id="mapwrap"><div class="pz" id="pz-map"></div><div id="leaf"></div>
       <div id="maplogo" title="FERROVIENORD · Nuovi lavori TVCC gallerie · Avanzamento lavori"><img id="logo2" alt="VC Solutions"><span><b>FERROVIENORD</b>Nuovi lavori TVCC gallerie</span><a href="#" id="maplogo-tot" class="val mono" title="apri il riepilogo"></a></div>
-      <div id="mapsw"><button class="btn sm on" data-mm="schema">Schema rete</button><button class="btn sm" data-mm="reale">Mappa reale</button><button class="btn sm on" id="b-sedi" title="Mostra / nascondi le sedi (stazioni) da Quadri & Fibra" style="margin-left:6px;border-left:1px solid var(--border-tab)">● Sedi</button><button class="btn sm on" id="b-pl" title="Mostra / nascondi i passaggi a livello">✕ PL</button><button class="btn sm on" id="b-cams" title="Mostra / nascondi le telecamere dello schema PDF">📷 TVCC</button><button class="btn sm on" id="b-vg" title="Mostra / nascondi le vasche di giunzione">▣ Vasche</button><button class="btn sm" id="b-rail" title="Scarica il tracciato reale della ferrovia da OpenStreetMap e aggancia gallerie e POI ai binari">⟲ Allinea ferrovia</button><button class="btn sm" id="b-addlayer" title="Aggiungi uno sfondo gratuito (tessere XYZ o WMS, es. ortofoto regionale). Shift+clic per rimuovere quelli aggiunti">+ sfondo</button></div>
+      <div id="mapsw"><button class="btn sm on" data-mm="schema">Schema rete</button><button class="btn sm" data-mm="reale">Mappa reale</button><button class="btn sm on" id="b-sedi" title="Mostra / nascondi le sedi (stazioni) da Quadri & Fibra" style="margin-left:6px;border-left:1px solid var(--border-tab)">● Sedi</button><button class="btn sm on" id="b-pl" title="Mostra / nascondi i passaggi a livello">✕ PL</button><button class="btn sm on" id="b-cams" title="Mostra / nascondi le telecamere dello schema PDF">📷 TVCC</button><button class="btn sm on" id="b-vg" title="Mostra / nascondi le vasche di giunzione">▣ Vasche</button><button class="btn sm" id="b-coord" title="Trova la km della linea da coordinate GPS o da una foto">⌖ km da GPS</button><button class="btn sm" id="b-rail" title="Scarica il tracciato reale della ferrovia da OpenStreetMap e aggancia gallerie e POI ai binari">⟲ Allinea ferrovia</button><button class="btn sm" id="b-addlayer" title="Aggiungi uno sfondo gratuito (tessere XYZ o WMS, es. ortofoto regionale). Shift+clic per rimuovere quelli aggiunti">+ sfondo</button></div>
       <div class="hint" id="leafhint"></div></div>
     <aside id="drawer"></aside>
   </section>
@@ -1651,6 +1652,78 @@ function dbVG(){
     <td>${esc(v.stato||"")}</td><td>${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}</td><td><button class="btn sm danger" data-vga="del">✕</button></td></tr>`; }).join("")||`<tr><td colspan="9" class="dim">nessuna vasca: aggiungine una con il pulsante qui sopra</td></tr>`}
   </tbody></table>`;
 }
+
+/* ======================= COORDINATE GPS → KM DELLA LINEA ======================= */
+// legge la posizione GPS dai dati EXIF di una foto JPEG (se il telefono l'ha salvata)
+async function exifGPS(file){ try{
+  const buf=await file.slice(0,262144).arrayBuffer(), v=new DataView(buf); if(v.getUint16(0)!==0xFFD8) return null;
+  let o=2; while(o<v.byteLength-4){ const m=v.getUint16(o), len=v.getUint16(o+2); if(m===0xFFE1 && v.getUint32(o+4)===0x45786966){ return tiffGPS(v,o+10); } if((m&0xFF00)!==0xFF00) return null; o+=2+len; }
+  return null; }catch(e){ return null; } }
+function tiffGPS(v,b){ const le=v.getUint16(b)===0x4949, u16=x=>v.getUint16(x,le), u32=x=>v.getUint32(x,le);
+  const ifd0=b+u32(b+4), n=u16(ifd0); let gps=0; for(let i=0;i<n;i++){ const e=ifd0+2+i*12; if(u16(e)===0x8825) gps=b+u32(e+8); } if(!gps) return null;
+  const tags={}, m=u16(gps); for(let i=0;i<m;i++){ const e=gps+2+i*12, tag=u16(e), type=u16(e+2), cnt=u32(e+4);
+    if(type===2) tags[tag]=String.fromCharCode(v.getUint8(e+8));
+    if(type===5){ const off=b+u32(e+8), r=[]; for(let k=0;k<cnt;k++){ const d=u32(off+k*8+4); r.push(d?u32(off+k*8)/d:0); } tags[tag]=r; } }
+  if(!tags[2]||!tags[4]) return null; const dec=r=>r[0]+(r[1]||0)/60+(r[2]||0)/3600;
+  let lat=dec(tags[2]), lng=dec(tags[4]); if(tags[1]==="S") lat=-lat; if(tags[3]==="W") lng=-lng; if(!lat&&!lng) return null; return {lat:+lat.toFixed(7),lng:+lng.toFixed(7)}; }
+// "46.086089, 10.335544" · "46,086089 10,335544" · 46°5'9" N 10°20'7" E
+function parseCoords(s){ s=String(s||"").trim(); if(!s) return null;
+  const dms=[...s.matchAll(/(\d+(?:[.,]\d+)?)\s*°\s*(?:(\d+(?:[.,]\d+)?)\s*['’′]\s*)?(?:(\d+(?:[.,]\d+)?)\s*(?:"|''|”|″)\s*)?([NSEWO])?/gi)];
+  if(dms.length>=2){ const f=m=>{ const x=a=>parseFloat(String(a||0).replace(",",".")); let d=x(m[1])+x(m[2])/60+x(m[3])/3600; if(/[SWO]/i.test(m[4]||"")) d=-d; return d; }; return {lat:f(dms[0]),lng:f(dms[1])}; }
+  const n=s.replace(/(\d),(\d)/g,"$1.$2").match(/-?\d+(?:\.\d+)?/g); if(n&&n.length>=2){ const a=+n[0], b=+n[1]; if(Math.abs(a)<=90&&Math.abs(b)<=180) return {lat:a,lng:b}; }
+  return null; }
+function llToKm(ll){ if(!S.rail||!S.rail.path||!S.rail.path.length) return null; const d=railProject(ll), km=dToKm(d); if(km==null) return null; const kp=kmPoint(km,0);
+  const off=kp?Math.round(L.latLng(ll[0],ll[1]).distanceTo(L.latLng(kp[0],kp[1]))):null; return {km,off,kp}; }
+function nearestByKm(km){ const out=[];
+  Object.entries(SEDE_KM).forEach(([n,k])=>out.push({tipo:"stazione",nome:n,km:k}));
+  for(const t of S.tratte) for(const b of t.boxes){ const pb=pdfBoxOf(t,b); const k=pb?pb.km:(b.lat!=null?(llToKm([b.lat,b.lng])||{}).km:null); if(k!=null) out.push({tipo:"box",nome:`BOX ${b.n} · ${t.nome}`,km:k,go:()=>openBox(t.id,b.id,null,true)}); }
+  (S.pl||[]).forEach(p=>{ if(p.km!=null) out.push({tipo:"PL",nome:p.nome,km:p.km,go:()=>openPL(p.id,true)}); });
+  (S.vasche||[]).forEach(v=>{ const k=vgKm(v); if(k!=null) out.push({tipo:"vasca",nome:v.nome,km:k,go:()=>openVG(v.id,true)}); });
+  return out.map(x=>({...x,dk:x.km-km})).sort((a,b)=>Math.abs(a.dk)-Math.abs(b.dk)); }
+let COORD_MK=null;
+function openCoordTool(pre,src){
+  modalForm("⌖ Km della linea da coordinate GPS",`<div style="max-width:760px">
+    <p class="dim" style="margin-top:0">Incolla le coordinate (anche dalla foto: <span class="mono">46.086089, 10.335544</span> oppure <span class="mono">46°5'9" N 10°20'7" E</span>) o scegli una foto JPEG con la posizione salvata dal telefono.</p>
+    <div class="row-flex"><input class="f mono" id="co-in" style="flex:1;min-width:260px" placeholder="lat, lng" value="${pre?esc(pre.lat+", "+pre.lng):""}"><button class="btn" id="co-go">Calcola</button><button class="btn" id="co-foto">📷 da foto</button></div>
+    ${src?`<div class="dim mono" style="font-size:11.5px;margin-top:4px">posizione letta da: ${esc(src)}</div>`:""}
+    <div id="co-out" style="margin-top:12px"></div></div>`);
+  const calc=()=>{ const c=parseCoords($("#co-in").value), o=$("#co-out"); if(!c){ o.innerHTML=`<span style="color:var(--err)">✘ coordinate non riconosciute</span>`; return; }
+    const r=llToKm([c.lat,c.lng]);
+    if(!r){ o.innerHTML=`<span style="color:var(--yellow)">Per calcolare la km serve il tracciato reale: apri la Mappa reale con internet attivo e premi "⟲ Allinea ferrovia" una volta.</span>`; return; }
+    const nb=nearestByKm(r.km).slice(0,6), far=r.off>150;
+    o.innerHTML=`<div class="kpis" style="margin:0"><div><span>Progressiva</span><b class="val big">${kmTxt(r.km)}</b></div><div><span>Distanza dal binario</span><b class="val big" style="${far?"color:var(--yellow)":""}">${r.off} m</b></div><div><span>Coordinate</span><b class="mono" style="font-size:13px">${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}</b></div></div>
+      ${far?`<p style="color:var(--yellow);font-size:12.5px">⚠ il punto è a ${r.off} m dal binario: la km è quella del punto della linea più vicino.</p>`:""}
+      <table class="t" style="margin-top:8px"><thead><tr><th>Più vicini lungo la linea</th><th></th><th class="r">km</th><th class="r">distanza</th></tr></thead><tbody>
+      ${nb.map((x,i)=>`<tr><td class="dim">${x.tipo}</td><td>${x.go?`<a class="lnk" href="#" data-conb="${i}">${esc(x.nome)}</a>`:esc(x.nome)}</td><td class="r mono">${kmTxt(x.km)}</td><td class="r mono">${x.dk>0?"+":""}${Math.round(x.dk*1000)} m</td></tr>`).join("")}</tbody></table>
+      <div class="row-flex" style="margin-top:10px"><button class="btn" id="co-show">◎ mostra sulla mappa</button><button class="btn" id="co-copy">⧉ copia km</button>${SRV&&SRV.role==="viewer"?"":`<button class="btn" id="co-vg">+ crea vasca qui</button><button class="btn" id="co-pl">+ crea PL qui</button>`}</div>`;
+    o.querySelectorAll("[data-conb]").forEach(a=>a.onclick=ev=>{ ev.preventDefault(); $("#modal").classList.remove("open"); nb[+a.dataset.conb].go(); });
+    $("#co-show").onclick=()=>{ $("#modal").classList.remove("open"); showView("mappa"); setMapMode("reale"); setTimeout(()=>{ if(COORD_MK) COORD_MK.remove(); COORD_MK=L.marker([c.lat,c.lng],{zIndexOffset:2000,icon:L.divIcon({className:"lm-wrap",iconSize:null,html:`<div class="cpin">⌖</div><div class="vgl" style="color:var(--cyan)">km ${kmTxt(r.km)}</div>`})}).addTo(LM).bindPopup(`<div class="mono">⌖ ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}<br>km <span class="val">${kmTxt(r.km)}</span> · ${r.off} m dal binario</div>`); LM.flyTo([c.lat,c.lng],17,{duration:.5}); },120); };
+    $("#co-copy").onclick=async()=>{ try{ await navigator.clipboard.writeText(kmTxt(r.km)); status("km copiata: "+kmTxt(r.km),"ok"); }catch(_){ prompt("km:",kmTxt(r.km)); } };
+    if($("#co-vg")) $("#co-vg").onclick=()=>{ S.vasche ||= []; const v={id:uid(),nome:"VG km "+kmTxt(r.km),progressiva:kmTxt(r.km),lat:c.lat,lng:c.lng,tratta:nearTratta([c.lat,c.lng]),tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"da realizzare",data:"",ditta:"",note:"",upd:now()}; S.vasche.push(v); $("#modal").classList.remove("open"); changed("vasca creata dalle coordinate"); openVG(v.id,true); };
+    if($("#co-pl")) $("#co-pl").onclick=()=>{ S.pl ||= []; const p={id:uid(),nome:"PL km "+kmTxt(r.km),km:r.km,lat:c.lat,lng:c.lng,fonte:"GPS",note:"",barriere:""}; S.pl.push(p); S.pl.sort((a,b)=>(a.km??999)-(b.km??999)); $("#modal").classList.remove("open"); changed("PL creato dalle coordinate"); openPL(p.id,true); };
+  };
+  $("#co-go").onclick=calc; $("#co-in").onkeydown=e=>{ if(e.key==="Enter") calc(); };
+  $("#co-foto").onclick=()=>{ const i=document.createElement("input"); i.type="file"; i.accept="image/jpeg,.jpg,.jpeg"; i.onchange=async()=>{ const f=i.files[0]; if(!f) return; const g=await exifGPS(f);
+      if(!g){ $("#co-out").innerHTML=`<span style="color:var(--yellow)">La foto "${esc(f.name)}" non contiene la posizione GPS (spesso WhatsApp e alcune app la tolgono). Se è scritta sulla foto, copiala nella casella qui sopra.</span>`; return; }
+      $("#co-in").value=g.lat+", "+g.lng; calc(); }; i.click(); };
+  if(pre) calc(); else setTimeout(()=>$("#co-in").focus(),50);
+}
+// dopo il caricamento di una foto con GPS: proposta di usare la posizione per l'elemento
+function photoPosAsk(tg,rec){
+  const r=llToKm([rec.lat,rec.lng]), kmt=r?` (km ${kmTxt(r.km)}, ${r.off} m dal binario)`:"";
+  let el=null, nome="", setPos=null;
+  if(tg.scope==="box"){ const [tid,bid]=tg.ref.split("|"); const t=S.tratte.find(x=>x.id===tid), b=t&&t.boxes.find(x=>x.id===bid); if(b){ el=b; nome="BOX "+b.n; setPos=()=>{ b.lat=rec.lat; b.lng=rec.lng; b.geoPdf=false; logEv(t,`BOX ${b.n} posizionato dalla foto ${rec.name}`); }; } }
+  if(tg.scope==="pl"){ const p=(S.pl||[]).find(x=>x.id===tg.ref); if(p){ el=p; nome=p.nome; setPos=()=>{ p.lat=rec.lat; p.lng=rec.lng; p.geoKm=false; if(r) p.km=r.km; p.fonte="GPS foto"; }; } }
+  if(tg.scope==="vasca"){ const v=(S.vasche||[]).find(x=>x.id===tg.ref); if(v){ el=v; nome="vasca "+v.nome; setPos=()=>{ v.lat=rec.lat; v.lng=rec.lng; if(r) v.progressiva=kmTxt(r.km); v.upd=now(); }; } }
+  if(!el||!setPos){ status(`📍 la foto ${rec.name} contiene la posizione GPS${kmt}`,"ok"); return; }
+  const dist=el.lat!=null?Math.round(L.latLng(el.lat,el.lng).distanceTo(L.latLng(rec.lat,rec.lng))):null;
+  if(dist!=null && dist<15){ status(`📍 foto ${rec.name}: posizione GPS coerente con ${nome} (${dist} m)`,"ok"); return; }
+  if(confirm(`La foto "${rec.name}" contiene la posizione GPS${kmt}.\n\n${el.lat!=null?`${nome} oggi è a ${dist>=1000?(dist/1000).toFixed(1)+" km":dist+" m"} da quel punto.${dist>2000?" ⚠ È molto lontano: controlla che la foto sia proprio di questo elemento.":""}\n\n`:""}Usarla come posizione di ${nome}?`)){ setPos(); changed(`${nome}: posizione presa dalla foto`); renderLeaf(); renderDrawer(); }
+}
+document.addEventListener("click",e=>{
+  if(e.target.closest("#b-coord")){ return openCoordTool(); }
+  const g=e.target.closest("[data-gpsdoc]"); if(g){ e.preventDefault(); const f=FILES.find(x=>x.id===g.dataset.gpsdoc); if(f) openCoordTool({lat:f.lat,lng:f.lng},f.name); }
+});
 
 /* ---------- drawer events ---------- */
 const dr=$("#drawer");
@@ -2606,7 +2679,7 @@ function dbMod(){
 function docList(scope,ref,docs){
   const canAll=!!DOC_ALL[scope];
   return `<div class="row-flex" style="margin-top:8px"><span class="info" style="font-size:12px">Documenti (${docs.length})</span><select class="f" data-doccat style="width:200px">${DOC_CAT.map(c=>`<option>${c}</option>`).join("")}</select><button class="btn sm" data-dba="adddoc" data-scope="${scope}" data-ref="${esc(ref)}">+ allega file</button></div>
-  ${docs.length?`<table class="t" style="margin-top:4px"><tbody>${docs.map(f=>`<tr><td><a class="lnk" href="#" data-opendoc="${f.id}">${esc(f.name)}</a></td><td class="dim">${esc(f.cat||"")}</td><td class="mono dim" style="font-size:11px">${fmtD(f.added)}</td><td class="r mono dim" style="font-size:11px">${(f.size/1024).toFixed(0)} kB</td>${canAll?`<td style="white-space:nowrap">${f.all&&f.ref!==ref?`<span class="mono" style="font-size:11px;color:var(--yellow)" title="documento comune: compare in ${DOC_ALL[scope]}">● comune</span> `:""}<label class="dim" style="font-size:11.5px" title="spunta se il documento è uguale per ${DOC_ALL[scope]}; lascia vuoto se vale solo per questo elemento"><input type="checkbox" data-docall="${f.id}" ${f.all?"checked":""}> per ${DOC_ALL[scope]}</label></td>`:""}<td class="r"><button class="btn sm danger" data-deldoc="${f.id}">✕</button></td></tr>`).join("")}</tbody></table>`:""}`;
+  ${docs.length?`<table class="t" style="margin-top:4px"><tbody>${docs.map(f=>`<tr><td><a class="lnk" href="#" data-opendoc="${f.id}">${esc(f.name)}</a>${f.lat!=null?` <a class="lnk mono" href="#" data-gpsdoc="${f.id}" title="la foto contiene la posizione GPS: apri il calcolo della km" style="font-size:11px">📍${(()=>{ const k=llToKm([f.lat,f.lng]); return k?" km "+kmTxt(k.km):" GPS"; })()}</a>`:""}</td><td class="dim">${esc(f.cat||"")}</td><td class="mono dim" style="font-size:11px">${fmtD(f.added)}</td><td class="r mono dim" style="font-size:11px">${(f.size/1024).toFixed(0)} kB</td>${canAll?`<td style="white-space:nowrap">${f.all&&f.ref!==ref?`<span class="mono" style="font-size:11px;color:var(--yellow)" title="documento comune: compare in ${DOC_ALL[scope]}">● comune</span> `:""}<label class="dim" style="font-size:11.5px" title="spunta se il documento è uguale per ${DOC_ALL[scope]}; lascia vuoto se vale solo per questo elemento"><input type="checkbox" data-docall="${f.id}" ${f.all?"checked":""}> per ${DOC_ALL[scope]}</label></td>`:""}<td class="r"><button class="btn sm danger" data-deldoc="${f.id}">✕</button></td></tr>`).join("")}</tbody></table>`:""}`;
 }
 function dbDocCommon(){
   return `<div class="card" style="border-color:var(--yellow)"><div class="ch"><span class="mono" style="color:var(--yellow)">● DOCUMENTI COMUNI</span><span class="grow dim">uguali per tutti gli elementi dello stesso tipo · quelli diversi si allegano al singolo box, PL o telecamera</span></div><div class="cb">
@@ -2675,7 +2748,11 @@ $("#v-db").addEventListener("click",async e=>{
 });
 $("#f-doc").addEventListener("change",async e=>{ const list=[...e.target.files]; e.target.value=""; await addDocs(list); });
 async function addDocs(list){ const tg=UI.docTarget; if(!tg||!list.length) return;
-  for(const f of list){ const rec={id:uid(),trattaId:"",scope:tg.scope,ref:tg.ref,cat:tg.cat,all:tg.ref==="__all__",name:f.name,type:f.type||"",size:f.size,added:now(),blob:f}; if(!(await DB.putFile(rec))){ if(SRV) continue; MEMFILES.push(rec); } FILES.push(rec); }
+  const withGps=[];
+  for(const f of list){ const rec={id:uid(),trattaId:"",scope:tg.scope,ref:tg.ref,cat:tg.cat,all:tg.ref==="__all__",name:f.name,type:f.type||"",size:f.size,added:now(),blob:f};
+    const g=/image\/jpe?g/i.test(f.type)||/\.jpe?g$/i.test(f.name)?await exifGPS(f):null; if(g){ rec.lat=g.lat; rec.lng=g.lng; withGps.push(rec); }
+    if(!(await DB.putFile(rec))){ if(SRV) continue; MEMFILES.push(rec); } FILES.push(rec); }
+  if(withGps.length && tg.ref!=="__all__") setTimeout(()=>photoPosAsk(tg,withGps[withGps.length-1]),50);
   if(tg.scope==="box"){ const [tid,bid]=tg.ref.split("|"); const t=S.tratte.find(x=>x.id===tid), b=t&&t.boxes.find(x=>x.id===bid); if(t&&b) logEv(t,`📎 BOX ${b.n}: ${list.length} documenti (${tg.cat})`); }
   if(tg.scope==="pl"){ const p=(S.pl||[]).find(x=>x.id===tg.ref); if(p) p.docs=docsOf("pl",p.id).length; }
   changed(`${list.length} documenti allegati`); if(UI.view==="db") renderDB(); if(UI.view==="mappa") renderDrawer(); if(UI.docModal && $("#modal").classList.contains("open")) renderDocModal(); renderLeaf();
@@ -3077,7 +3154,7 @@ if(SRV){
   DB.set=(k)=>{ if(k!=="state") return Promise.resolve(true); if(SRV.role==="viewer"||(FN_CLEAN&&!FN_PACK)) return Promise.resolve(false); SRV.dirty=true; setSync("☁ modifiche da salvare"); clearTimeout(timer); timer=setTimeout(save,1200); return Promise.resolve(true); };
   DB.allFiles=async()=>{ const j=await jfetch("files"); return j.ok?j.files:[]; };
   DB.putFile=async(rec)=>{ if(SRV.role==="viewer"){ status("sola lettura: non puoi caricare documenti","err"); return false; }
-    const fd=new FormData(); fd.append("file",rec.blob,rec.name); for(const k of ["id","type","added","trattaId","scope","ref","cat"]) fd.append(k,rec[k]||""); fd.append("all",rec.all?"1":"0");
+    const fd=new FormData(); fd.append("file",rec.blob,rec.name); for(const k of ["id","type","added","trattaId","scope","ref","cat"]) fd.append(k,rec[k]||""); if(rec.lat!=null){ fd.append("lat",rec.lat); fd.append("lng",rec.lng); } fd.append("all",rec.all?"1":"0");
     setSync("☁ caricamento "+rec.name+"…");
     const j=await jfetch("upload",{method:"POST",body:fd}); if(!j.ok){ alert(`"${rec.name}" non caricato:\n${j.error}`); setSync("☁ caricamento non riuscito","err"); return false; }
     Object.assign(rec,j.file); delete rec.blob; setSync("☁ documento caricato","ok"); return true; };

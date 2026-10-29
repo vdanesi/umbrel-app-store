@@ -95,6 +95,8 @@ case 'upload':
     $rec = ['id' => $id, 'name' => mb_substr($name, 0, 200), 'type' => mb_substr((string)($_POST['type'] ?? ''), 0, 100), 'size' => (int)$_FILES['file']['size'],
             'added' => (string)($_POST['added'] ?? date('c')), 'trattaId' => (string)($_POST['trattaId'] ?? ''), 'scope' => (string)($_POST['scope'] ?? ''),
             'ref' => (string)($_POST['ref'] ?? ''), 'cat' => (string)($_POST['cat'] ?? ''), 'all' => !empty($_POST['all']) && $_POST['all'] !== '0' && $_POST['all'] !== 'false', 'by' => $u['user']];
+    // posizione GPS letta dalla foto (facoltativa)
+    if (isset($_POST['lat'], $_POST['lng']) && is_numeric($_POST['lat']) && is_numeric($_POST['lng']) && abs((float)$_POST['lat']) <= 90 && abs((float)$_POST['lng']) <= 180) { $rec['lat'] = round((float)$_POST['lat'], 7); $rec['lng'] = round((float)$_POST['lng'], 7); }
     if (!move_uploaded_file($_FILES['file']['tmp_name'], FILES_DIR . '/' . $id . '.bin')) fail('impossibile salvare il file sul server', 500);
     with_lock(function () use ($rec) { $m = meta_all(); $m[$rec['id']] = $rec; jwrite('files.json', $m); });
     audit('upload ' . $rec['name']);
