@@ -252,6 +252,7 @@ input.f.bad{border-color:var(--err);color:var(--err)}
 .dbt td{white-space:nowrap}
 
 .vgk{position:absolute;transform:translate(-50%,-50%);width:15px;height:15px;border:2px solid #ff9f1c;background:#2a1d08;box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px #ff9f1c}
+.vgk.c16{border-color:var(--cyan);box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px var(--cyan)}.vgk.cboth{border-color:#ff9f1c;box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px var(--cyan)}
 .vgk.ok{border-color:var(--green);box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px var(--green)}.vgk.cur{outline:3px solid rgba(255,159,28,.45)}
 .vgl{position:absolute;left:11px;top:-7px;font:11px/14px var(--mono);color:#ff9f1c;background:rgba(20,20,20,.78);padding:0 3px;white-space:nowrap;pointer-events:none}
 #leaf.gl-off .vgl,#leaf.gl-big .vgl{display:none}
@@ -1577,7 +1578,7 @@ function plQuFields(p){ const q=plQ(p), self=`PL ${p.nome}`;
 /* ======================= VASCHE DI GIUNZIONE ======================= */
 const VG_STATI=["da realizzare","realizzata","cavi posati","giuntata","collaudata"];
 const VTABS=[["dati","Dati"],["doc","Documenti"],["note","Note"]];
-const VG_GROUPS=[["Identificazione",[["nome","Codice / n° vasca","es. VG 12"],["progressiva","Progressiva km","es. 40+540"],["tratta","Tratta",""]]],
+const VG_GROUPS=[["Identificazione",[["nome","Codice / n° vasca","es. VG 12"],["progressiva","Progressiva km","es. 40+540"],["linea","Linea","es. ISEO - PISOGNE"],["punto","Punto / ubicazione","es. pozzetto PL 17"],["tratta","Tratta (gallerie)",""]]],
   ["Manufatto",[["tipo","Tipo / dimensioni","es. pozzetto 125×80"],["chiusino","Chiusino","es. ghisa D400"],["profondita","Profondità","es. 1,20 m"]]],
   ["Fibra",[["cavi","Cavi presenti","es. 24 fo SM + 12 fo SM"],["muffola","Muffola / giunto","modello e n°"],["fibre","Fibre giuntate","es. 1-12 → 13-24"],["collegata","Collegata a","es. BOX 6, sede Marone"]]],
   ["Stato",[["stato","Stato",""],["data","Data giunzione","gg/mm/aaaa"],["ditta","Ditta / operatore",""]]]];
@@ -1590,6 +1591,8 @@ function openVG(id,center){ const v=(S.vasche||[]).find(x=>x.id===id); if(!v) re
 function vgPopup(v){ const t=S.tratte.find(x=>x.id===v.tratta);
   const rows=VG_GROUPS.flatMap(g=>g[1]).filter(([k])=>k!=="nome"&&k!=="tratta").map(([k,l])=>[l,v[k]]).filter(r=>r[1]);
   return `<div class="pp"><div class="mono" style="color:#ff9f1c">▣ ${esc(v.nome||"Vasca di giunzione")}</div><div class="h-yellow">(${t?esc(t.nome):"tratta non indicata"})</div>
+    ${(v.giunti||[]).length?`<table class="pt"><tr><th>Giunto</th><th>Cavo</th><th>N°</th></tr>${v.giunti.map(g=>`<tr><td class="mono">${esc(g.codice)}</td><td>${esc(g.cavi)}</td><td class="mono">${esc(g.nr??"")}</td></tr>`).join("")}</table>`:""}
+    ${v.offRail!=null?`<div class="mono" style="font-size:11px;margin-top:3px;${v.offRail>150?"color:var(--yellow)":"color:var(--dim)"}">${v.offRail} m dal binario${v.offRail>150?" · controlla le coordinate":""}</div>`:""}
     ${rows.length?`<table class="pt kv">${rows.map(([k,x])=>`<tr><th>${esc(k)}</th><td>${esc(x)}</td></tr>`).join("")}</table>`:`<div class="dim" style="font-size:11.5px">dati non ancora compilati</div>`}
     ${v.note?`<div style="font-size:11.5px;margin-top:4px"><span class="info">Note:</span> ${esc(v.note)}</div>`:""}
     <div class="row-flex" style="margin-top:6px">${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}${gLinks(v.lat,v.lng)}</div></div>`; }
@@ -1597,7 +1600,7 @@ function renderVGLayer(){
   if(!LM||!LG||S.showVG===false) return;
   for(const v of (S.vasche||[])){ if(v.lat==null) continue;
     const ok=v.stato==="giuntata"||v.stato==="collaudata";
-    const m=L.marker([v.lat,v.lng],{zIndexOffset:650,draggable:!!UI.edit,icon:L.divIcon({className:"lm-wrap",iconSize:null,html:`<div class="vgk ${ok?"ok":""} ${UI.vg===v.id?"cur":""}" title="${esc(v.nome)}"></div><div class="vgl">${esc(v.nome||"VG")}</div>`})});
+    const m=L.marker([v.lat,v.lng],{zIndexOffset:650,draggable:!!UI.edit,icon:L.divIcon({className:"lm-wrap",iconSize:null,html:`<div class="vgk ${ok?"ok":""} ${vgCls(v)} ${UI.vg===v.id?"cur":""}" title="${esc(v.nome)}${v.cavi?" · "+esc(v.cavi):""}"></div><div class="vgl">${esc(v.nome||"VG")}</div>`})});
     m.bindPopup(()=>vgPopup(v),{maxWidth:380,minWidth:240,autoPanPaddingTopLeft:[20,80]});
     m.on("click",()=>{ if(UI.place) return; UI.popVG=v.id; openVG(v.id,false); });
     if(UI.popVG===v.id){ UI.popVG=null; setTimeout(()=>m.openPopup(),0); }
@@ -1611,7 +1614,7 @@ function renderVGCard(v){
   dr.innerHTML=`<div data-vgid="${v.id}" style="display:flex;flex-direction:column;height:100%;min-height:0"><div class="dh"><div class="grow">
       ${navHead(`<span class="dim">Vasche di giunzione</span> › <span style="color:var(--fg)">${esc(v.nome||"VG")}</span>`,si,all.length)}
       <div class="row-flex" style="margin-top:4px;flex-wrap:nowrap"><span class="mono" style="color:#ff9f1c;font-size:16px;white-space:nowrap">▣ VG</span><input class="f mono" data-vf="nome" value="${esc(v.nome||"")}" placeholder="codice vasca" style="font-size:15px;flex:1"></div>
-      <div class="dim mono" style="font-size:11.5px;margin-top:4px">${v.progressiva?"km "+esc(v.progressiva):"progressiva non indicata"} · ${t?esc(t.nome):"tratta non indicata"} · ${esc(v.stato||"")} · dati ${fill}/${tot}</div>
+      <div class="dim mono" style="font-size:11.5px;margin-top:4px">${v.progressiva?"km "+esc(v.progressiva):"progressiva non indicata"}${v.offRail!=null?` · <span style="${v.offRail>150?"color:var(--yellow)":""}">${v.offRail} m dal binario</span>`:""} · ${esc(v.linea||(t?t.nome:"linea non indicata"))} · ${esc(v.cavi||"")}${v.stato?" · "+esc(v.stato):""} · dati ${fill}/${tot}</div>
       <div class="row-flex" style="margin-top:5px">${v.lat!=null?`<span class="mono dim" style="font-size:11px">${v.lat.toFixed(5)}, ${v.lng.toFixed(5)}</span>${gLinks(v.lat,v.lng)}`:`<span style="color:var(--yellow);font-size:12px">senza coordinate</span>`}<button class="btn sm" data-vga="place">📍 ${v.lat!=null?"sposta":"posiziona"}</button>${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}<span class="sp"></span><button class="btn sm danger" data-vga="del" title="Elimina la vasca">🗑 Elimina vasca</button></div>
     </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
     <div class="dtabs">${VTABS.map(([k,l])=>`<div class="tab ${UI.vtab===k?"active":""}" data-vt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="dati"?` <span class="dim">${fill}/${tot}</span>`:""}</div>`).join("")}</div>
@@ -1619,16 +1622,19 @@ function renderVGCard(v){
       ${v.upd?`<div class="dim mono" style="font-size:11px;margin-top:6px">ultimo aggiornamento ${fmtD(v.upd)}</div>`:""}`}</div></div>`;
 }
 function vgFields(v){
-  const inp=(k,ph)=>k==="stato"?`<select class="f" data-vf="stato">${VG_STATI.map(s=>`<option ${v.stato===s?"selected":""}>${s}</option>`).join("")}</select>`
-    :k==="tratta"?`<select class="f" data-vf="tratta"><option value="">—</option>${S.tratte.map(t=>`<option value="${t.id}" ${v.tratta===t.id?"selected":""}>${esc(t.nome)}</option>`).join("")}</select>`
+  const inp=(k,ph)=>k==="stato"?`<select class="f" data-vf="stato"><option value="" ${!v.stato?"selected":""}>—</option>${VG_STATI.map(s=>`<option ${v.stato===s?"selected":""}>${s}</option>`).join("")}</select>`
+    :k==="stato_"?"":k==="tratta"?`<select class="f" data-vf="tratta"><option value="">—</option>${S.tratte.map(t=>`<option value="${t.id}" ${v.tratta===t.id?"selected":""}>${esc(t.nome)}</option>`).join("")}</select>`
     :`<input class="f ${k==="progressiva"?"mono":""}" data-vf="${k}" value="${esc(v[k]||"")}" placeholder="${esc(ph)}">${k==="progressiva"?hintHTML("progressiva",v.progressiva,""):""}`;
-  return `<p class="dim" style="margin:0 0 6px;font-size:12px">I campi si salvano da soli.</p>`+VG_GROUPS.map(([g,fs])=>`<fieldset class="qg"><legend>${g}</legend><div class="grid2">${fs.map(([k,l,ph])=>`<label>${l}</label><div>${inp(k,ph)}</div>`).join("")}</div></fieldset>`).join("");
+  const gt=(v.giunti||[]).length?`<fieldset class="qg"><legend>Giunti nella vasca (${v.giunti.length})</legend><table class="t"><thead><tr><th>Giunto</th><th>Cavo</th><th>N°</th><th>Punto</th></tr></thead><tbody>${v.giunti.map(g=>`<tr><td class="mono">${esc(g.codice)}</td><td>${esc(g.cavi)}</td><td class="mono">${esc(g.nr??"")}</td><td class="dim">${esc(g.punto||"")}</td></tr>`).join("")}</tbody></table><div class="dim" style="font-size:11px;margin-top:4px">dal file ${esc(v.giunti[0].fonte||"giunti")}</div></fieldset>`:"";
+  return `<p class="dim" style="margin:0 0 6px;font-size:12px">I campi si salvano da soli.${v.kmAuto!==false&&v.lat!=null?" La progressiva è calcolata dal binario: se la scrivi a mano resta la tua.":""}</p>`+gt+VG_GROUPS.map(([g,fs])=>`<fieldset class="qg"><legend>${g}</legend><div class="grid2">${fs.map(([k,l,ph])=>`<label>${l}</label><div>${inp(k,ph)}</div>`).join("")}</div></fieldset>`).join("");
 }
 // salvataggio dei campi della vasca
 document.addEventListener("input",e=>{ const w=e.target.closest("[data-vgid]"); if(!w||!e.target.dataset.vf) return; const v=(S.vasche||[]).find(x=>x.id===w.dataset.vgid); if(!v) return;
-  const k=e.target.dataset.vf; v[k]=e.target.value; v.upd=now();
+  const k=e.target.dataset.vf; v[k]=e.target.value; v.upd=now(); if(k==="progressiva") v.kmAuto=false; if(k==="nome") v.nomeAuto=false;
   if(k==="progressiva"){ const h=e.target.parentElement.querySelector(".fh"); if(h){ const m=fieldCheck("progressiva",v.progressiva,""); h.textContent=m; h.className="fh "+(m?"warn":""); } }
   clearTimeout(saveT); saveT=setTimeout(()=>DB.set("state",JSON.stringify(S)),400); });
+document.addEventListener("input",e=>{ if(e.target.id!=="vgq") return; (UI.vgf ||= {}).q=e.target.value; clearTimeout(UI._vgt); UI._vgt=setTimeout(()=>{ const pos=e.target.selectionStart; renderDB(); const q=$("#vgq"); if(q){ q.focus(); q.setSelectionRange(pos,pos); } },250); });
+document.addEventListener("change",e=>{ if(["vgcavo","vglinea","vgfar"].includes(e.target.id)){ UI.vgf ||= {}; if(e.target.id==="vgcavo") UI.vgf.cavo=e.target.value; if(e.target.id==="vglinea") UI.vgf.linea=e.target.value; if(e.target.id==="vgfar") UI.vgf.far=e.target.checked; return renderDB(); } });
 document.addEventListener("change",e=>{ const w=e.target.closest("[data-vgid]"); if(!w||!e.target.dataset.vf) return; changed(); renderLeaf(); if(e.target.tagName==="SELECT") renderDrawer(); if(UI.view==="db") renderDB(); });
 document.addEventListener("click",e=>{
   if(e.target.id==="lh-addvg"){ return startPlace({vg:true}); }
@@ -1643,13 +1649,21 @@ document.addEventListener("click",e=>{
 });
 // scheda database: elenco delle vasche
 function dbVG(){
-  const vs=vgSorted(), cnt=s=>vs.filter(v=>v.stato===s).length;
-  return `<div class="welcome" style="max-width:none"><div class="h-green">• Vasche di giunzione •</div><div class="h-yellow">(una scheda per vasca: manufatto, cavi, muffola, fibre giuntate, documenti)</div>
-    <div class="kpis"><div><span>Vasche</span><b class="val big">${vs.length}</b></div>${VG_STATI.map(s=>`<div><span>${s}</span><b class="val big">${cnt(s)}</b></div>`).join("")}</div>
-    <div class="row-flex" style="margin-top:10px"><button class="btn" data-vga="add">+ Vasca (clic sulla mappa reale)</button><span class="dim" style="font-size:12px">oppure in modalità ✎ Modifica POI → "+ vasca"</span></div></div>
-  <table class="t"><thead><tr><th>Vasca</th><th>Progressiva</th><th>Tratta</th><th>Tipo</th><th>Cavi</th><th>Fibre giuntate</th><th>Stato</th><th>Doc</th><th></th></tr></thead><tbody>
-  ${vs.map(v=>{ const t=S.tratte.find(x=>x.id===v.tratta); return `<tr data-vgid="${v.id}"><td><a class="lnk mono" href="#" data-govg="${v.id}">${esc(v.nome||"VG")}</a></td><td class="mono">${esc(v.progressiva||"—")}</td><td class="dim">${t?esc(t.nome):"—"}</td><td>${esc(v.tipo||"")}</td><td>${esc(v.cavi||"")}</td><td class="mono">${esc(v.fibre||"")}</td>
-    <td>${esc(v.stato||"")}</td><td>${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}</td><td><button class="btn sm danger" data-vga="del">✕</button></td></tr>`; }).join("")||`<tr><td colspan="9" class="dim">nessuna vasca: aggiungine una con il pulsante qui sopra</td></tr>`}
+  const f=UI.vgf||{}, q=normN(f.q||"");
+  const all=vgSorted(), cnt=s=>all.filter(v=>v.stato===s).length, lines=[...new Set(all.map(v=>v.linea).filter(Boolean))];
+  const vs=all.filter(v=>(!f.cavo||String(v.cavi||"").replace(/\s/g,"").includes(f.cavo))&&(!f.linea||v.linea===f.linea)&&(!f.far||v.offRail>150)&&(!q||normN([v.nome,v.punto,v.linea,v.cavi,v.progressiva,(v.giunti||[]).map(g=>g.codice).join(" ")].join(" ")).includes(q)));
+  const ng=all.reduce((s,v)=>s+((v.giunti||[]).length||0),0), far=all.filter(v=>v.offRail>150).length, nokm=all.filter(v=>!v.progressiva).length;
+  return `<div class="welcome" style="max-width:none"><div class="h-green">• Vasche di giunzione •</div><div class="h-yellow">(una scheda per vasca: giunti, manufatto, cavi, muffola, fibre giuntate, documenti)</div>
+    <div class="kpis"><div><span>Vasche</span><b class="val big">${all.length}</b></div><div><span>Giunti</span><b class="val big">${ng}</b></div><div><span>Senza km</span><b class="val big" style="${nokm?"color:var(--yellow)":""}">${nokm}</b></div><div><span>Oltre 150 m dal binario</span><b class="val big" style="${far?"color:var(--yellow)":""}">${far}</b></div>${VG_STATI.filter(s=>cnt(s)).map(s=>`<div><span>${s}</span><b class="val big">${cnt(s)}</b></div>`).join("")}</div>
+    ${nokm&&!(S.rail&&S.rail.path)?`<p style="color:var(--yellow);font-size:12.5px">Le km si calcolano dal tracciato reale: apri la Mappa reale con internet attivo e premi "⟲ Allinea ferrovia".</p>`:""}
+    <div class="row-flex" style="margin-top:10px"><button class="btn" data-vga="add">+ Vasca (clic sulla mappa reale)</button><button class="btn" data-vga="imp" title="File Excel dei giunti (colonne Giunto, Tipo di cavo, Punto, Posizione GPS): aggiunge o aggiorna le vasche">⇩ Importa giunti da Excel</button>${S.rail&&S.rail.path?`<button class="btn" data-vga="km" title="Ricalcola dal binario le progressive non scritte a mano">↻ Ricalcola km</button>`:""}</div></div>
+  <div class="row-flex" style="margin-bottom:8px"><input class="f" id="vgq" placeholder="cerca giunto, punto, km…" style="max-width:260px" value="${esc(f.q||"")}">
+    <select class="f" id="vgcavo" style="width:130px"><option value="">tutti i cavi</option><option value="FO48" ${f.cavo==="FO48"?"selected":""}>FO 48</option><option value="FO16" ${f.cavo==="FO16"?"selected":""}>FO 16</option></select>
+    <select class="f" id="vglinea" style="width:190px"><option value="">tutte le linee</option>${lines.map(l=>`<option ${f.linea===l?"selected":""}>${esc(l)}</option>`).join("")}</select>
+    <label class="dim" style="font-size:12px"><input type="checkbox" id="vgfar" ${f.far?"checked":""}> solo oltre 150 m dal binario</label><span class="dim" style="font-size:12px">${vs.length} di ${all.length}</span></div>
+  <table class="t"><thead><tr><th>Vasca / giunti</th><th>Progressiva</th><th class="r">dal binario</th><th>Linea</th><th>Punto</th><th>Cavi</th><th>Stato</th><th>Doc</th><th></th></tr></thead><tbody>
+  ${vs.map(v=>`<tr data-vgid="${v.id}"><td><a class="lnk mono" href="#" data-govg="${v.id}">${esc(v.nome||"VG")}</a></td><td class="mono">${esc(v.progressiva||"—")}</td><td class="r mono" style="${v.offRail>150?"color:var(--yellow)":""}">${v.offRail!=null?v.offRail+" m":"—"}</td><td class="dim">${esc(v.linea||"")}</td><td>${esc(v.punto||"")}</td><td>${esc(v.cavi||"")}</td>
+    <td>${esc(v.stato||"")}</td><td>${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}</td><td><button class="btn sm danger" data-vga="del">✕</button></td></tr>`).join("")||`<tr><td colspan="9" class="dim">nessuna vasca</td></tr>`}
   </tbody></table>`;
 }
 
@@ -1724,6 +1738,50 @@ document.addEventListener("click",e=>{
   if(e.target.closest("#b-coord")){ return openCoordTool(); }
   const g=e.target.closest("[data-gpsdoc]"); if(g){ e.preventDefault(); const f=FILES.find(x=>x.id===g.dataset.gpsdoc); if(f) openCoordTool({lat:f.lat,lng:f.lng},f.name); }
 });
+
+/* ---------- giunti da Excel: una vasca per pozzetto (giunti a meno di 3 m nella stessa vasca) ---------- */
+const VG_SEED = (FN_PACK && Array.isArray(FN_PACK.giunti)) ? FN_PACK.giunti : [];
+const vgCls=v=>{ const c=String(v.cavi||"").replace(/\s/g,""); const a=/48/.test(c), b=/16/.test(c); return a&&b?"cboth":b?"c16":""; };
+function vgAuto(v){ const g=v.giunti||[]; if(!g.length) return;
+  if(v.nomeAuto!==false) v.nome=g.map(x=>x.nome||x.codice).join(" · ");
+  v.cavi=[...new Set(g.map(x=>x.cavi).filter(Boolean))].sort().reverse().join(" + ");
+  if(!v.punto) v.punto=g[0].punto||""; if(!v.linea) v.linea=g[0].linea||"";
+  v.muffola=v.muffola&&!v.muffolaAuto?v.muffola:g.map(x=>x.codice).join(" · "); v.muffolaAuto=true; }
+function mergeGiunti(rows,fonte){
+  S.vasche ||= []; const res={nuove:0,aggiunti:0,aggiornati:0,senzaGps:0};
+  const byKey=new Map(); for(const v of S.vasche) for(const g of (v.giunti||[])) byKey.set(g.key,v);
+  for(const r of rows){ if(r.lat==null||r.lng==null){ res.senzaGps++; continue; }
+    const g={key:r.key,codice:r.codice,nome:r.nome,cavi:r.cavi,nr:r.nr,punto:r.punto,linea:r.linea,lat:r.lat,lng:r.lng,fonte};
+    let v=byKey.get(r.key);
+    if(v){ const i=v.giunti.findIndex(x=>x.key===r.key); v.giunti[i]=g; if(v.posAuto!==false && v.giunti.length===1){ v.lat=r.lat; v.lng=r.lng; } res.aggiornati++; vgAuto(v); continue; }
+    v=S.vasche.find(x=>x.lat!=null && L.latLng(x.lat,x.lng).distanceTo(L.latLng(r.lat,r.lng))<3);
+    if(v){ (v.giunti ||= []).push(g); res.aggiunti++; }
+    else { v={id:r.id||uid(),nome:"",progressiva:"",lat:r.lat,lng:r.lng,tratta:"",linea:r.linea,punto:r.punto,tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"",data:"",ditta:"",note:"",giunti:[g],kmAuto:true,posAuto:true,upd:now()}; S.vasche.push(v); res.nuove++; }
+    byKey.set(r.key,v); vgAuto(v); }
+  vgAutoKm(); return res; }
+// progressiva dal binario reale (solo dove non è stata scritta a mano)
+function vgAutoKm(force){ if(!S.rail||!S.rail.path) return 0; let n=0;
+  for(const v of (S.vasche||[])){ if(v.lat==null) continue; const r=llToKm([v.lat,v.lng]); if(!r) continue; v.offRail=r.off; if(v.kmAuto!==false&&(force||!v.progressiva||v.kmAuto)){ v.progressiva=kmTxt(r.km); v.kmAuto=true; n++; }
+    if(!v.tratta){ const t=nearTratta([v.lat,v.lng]); const tt=S.tratte.find(x=>x.id===t); const ref=tt&&tt.boxes.find(b=>b.lat!=null); if(ref && L.latLng(ref.lat,ref.lng).distanceTo(L.latLng(v.lat,v.lng))<3000) v.tratta=t; } }
+  return n; }
+// lettura del file Excel dei giunti (stesso formato di Giunti_ISEO-EDOLO)
+function parseGiuntiWB(wb,fname){ const out=[], nn=s=>String(s??"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  for(const sn of wb.SheetNames){ const ws=wb.Sheets[sn]; const A=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false}); let h=null;
+    for(let r=0;r<Math.min(A.length,30);r++){ const row=A[r]||[]; const gi=row.findIndex(x=>nn(x).startsWith("giunto")), gp=row.findIndex(x=>/gps|posizione/.test(nn(x))); if(gi>=0&&gp>=0){ h={r,gi,gp,nr:row.findIndex(x=>nn(x).startsWith("nr")),cavo:row.findIndex(x=>nn(x).includes("cavo")),punto:row.findIndex(x=>nn(x).startsWith("punto"))}; break; } }
+    if(!h) continue; let linea=""; const seen={};
+    for(let r=h.r+1;r<A.length;r++){ const row=A[r]||[]; const lv=row[h.gi-2]; if(lv&&String(lv).trim()) linea=String(lv).trim();
+      const code=String(row[h.gi]??"").replace(/\s+/g," ").trim(), gps=String(row[h.gp]??""); if(!code&&!gps.trim()) continue;
+      const nums=(gps.match(/-?\d+\.\d+/g)||[]).map(Number); const mfo=code.match(/(\d+)\s*fo\b/i);
+      let cavo=String(h.cavo>=0?row[h.cavo]??"":"").toUpperCase().replace(/\s+/g,"").replace(/^(\d+)FO$/,"FO$1").replace(/^FO(\d+)$/,"FO $1"); if(!cavo&&mfo) cavo="FO "+mfo[1];
+      const k=nn(cavo)+"|"+nn(code); seen[k]=(seen[k]||0)+1;
+      out.push({key:k+(seen[k]>1?"#"+seen[k]:""),codice:code,nome:code.replace(/\s*\d+\s*fo\b/i,"").trim(),cavi:cavo,linea,punto:String(h.punto>=0?row[h.punto]??"":"").trim(),nr:h.nr>=0?row[h.nr]:null,lat:nums.length>=2?nums[0]:null,lng:nums.length>=2?nums[1]:null}); } }
+  return out; }
+document.addEventListener("click",async e=>{ const a=e.target.closest('[data-vga="imp"],[data-vga="km"]'); if(!a) return; e.preventDefault(); e.stopImmediatePropagation();
+  if(a.dataset.vga==="km"){ const n=vgAutoKm(true); changed(`km ricalcolate dal binario per ${n} vasche`); renderLeaf(); return renderDB(); }
+  const i=document.createElement("input"); i.type="file"; i.accept=".xlsx,.xls"; i.onchange=async()=>{ const f=i.files[0]; if(!f) return;
+    try{ const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}); const rows=parseGiuntiWB(wb,f.name); if(!rows.length){ alert("Nel file non ho trovato le colonne Giunto e Posizione GPS."); return; }
+      const r=mergeGiunti(rows,f.name); changed(`giunti importati da ${f.name}: ${r.nuove} vasche nuove, ${r.aggiunti} giunti aggiunti a vasche esistenti, ${r.aggiornati} aggiornati${r.senzaGps?`, ${r.senzaGps} senza coordinate`:""}`); renderLeaf(); renderDB();
+    }catch(err){ alert("File non leggibile: "+err.message); } }; i.click(); },true);
 
 /* ---------- drawer events ---------- */
 const dr=$("#drawer");
@@ -2013,8 +2071,8 @@ function exportXlsx(){
     const wdl=XLSX.utils.aoa_to_sheet(dl); wdl["!cols"]=[{wch:36},{wch:24},{wch:40},{wch:12},{wch:18}]; XLSX.utils.book_append_sheet(wb,wdl,"Documenti"); }
   const wq=XLSX.utils.aoa_to_sheet(q); for(let i=1;i<q.length;i++){ const a=XLSX.utils.encode_cell({r:i,c:3}); if(wq[a]) wq[a].z="0%"; } wq["!cols"]=q[0].map(()=>({wch:16}));
   XLSX.utils.book_append_sheet(wb,wq,"Config_quadri");
-  { const vg=[["Vasca","Progressiva","Tratta","Tipo / dimensioni","Chiusino","Profondità","Cavi presenti","Muffola / giunto","Fibre giuntate","Collegata a","Stato","Data giunzione","Ditta","Latitudine","Longitudine","Note"]];
-    vgSorted().forEach(v=>{ const t=S.tratte.find(x=>x.id===v.tratta); vg.push([v.nome,v.progressiva,t?t.nome:"",v.tipo,v.chiusino,v.profondita,v.cavi,v.muffola,v.fibre,v.collegata,v.stato,v.data,v.ditta,v.lat,v.lng,v.note]); });
+  { const vg=[["Vasca","Giunti","Progressiva","Distanza dal binario m","Linea","Punto","Tratta","Tipo / dimensioni","Chiusino","Profondità","Cavi presenti","Muffola / giunto","Fibre giuntate","Collegata a","Stato","Data giunzione","Ditta","Latitudine","Longitudine","Note"]];
+    vgSorted().forEach(v=>{ const t=S.tratte.find(x=>x.id===v.tratta); vg.push([v.nome,(v.giunti||[]).map(g=>g.codice).join(" · "),v.progressiva,v.offRail??"",v.linea||"",v.punto||"",t?t.nome:"",v.tipo,v.chiusino,v.profondita,v.cavi,v.muffola,v.fibre,v.collegata,v.stato,v.data,v.ditta,v.lat,v.lng,v.note]); });
     const wv=XLSX.utils.aoa_to_sheet(vg); wv["!cols"]=vg[0].map(()=>({wch:16})); XLSX.utils.book_append_sheet(wb,wv,"Vasche_giunzione"); }
   const wc=XLSX.utils.aoa_to_sheet(c); wc["!cols"]=c[0].map(()=>({wch:16})); XLSX.utils.book_append_sheet(wb,wc,"Telecamere");
   const g=[["Tratta","Galleria","Km inizio","Km fine","Lunghezza"]]; S.tratte.forEach(t=>t.gallerie.forEach(x=>g.push([t.nome,x.nome,x.kin,x.kout,x.len])));
@@ -2513,7 +2571,7 @@ async function alignRail(force){
   try{
     let pr=null;
     if(force || !S.rail || !(S.rail.ver>=2)){ status("scarico tracciato, PL e fermate da OpenStreetMap…"); const osm=await fetchOverpass(); S.rail=buildRailPath(osm); pr=importOsmPoi(osm); }
-    const r=alignGallerie(); applyPdfGeo(); ensurePL(); UI.railErr=""; S.rail.info={osm:r.osm,km:r.km,at:now()}; changed(); renderDrawer();
+    const r=alignGallerie(); applyPdfGeo(); ensurePL(); vgAutoKm(); UI.railErr=""; S.rail.info={osm:r.osm,km:r.km,at:now()}; changed(); renderDrawer();
     status(`tracciato OSM: ${Math.round(S.rail.path[S.rail.path.length-1][2]/100)/10} km di binario · ${r.osm} gallerie agganciate alle gallerie OSM, ${r.km} per progressiva km · ${(S.pl||[]).length} PL${pr?` (${pr.npl} nuovi)`:""}${pr&&pr.nf?` · ${pr.nf} fermate nuove`:""}${pr&&pr.ngeo?` · ${pr.ngeo} sedi georeferenziate`:""}`,"ok");
   }catch(e){ console.error(e); UI.railErr=e.message; status("allineamento non riuscito: "+e.message+" · serve la connessione internet","err"); updLeafHint(); }
   finally{ railBusy=false; if(btn) btn.disabled=false; updLeafHint(); }
@@ -3167,7 +3225,7 @@ if(SRV){
   setInterval(async()=>{ if(SRV.dirty||saving||document.hidden) return; try{ const v=await jfetch("ver"); if(v.ok && v.version>SRV.version){ await reloadFromServer(true); status(`dati aggiornati con le modifiche di ${v.savedBy||"un altro utente"}`,"ok"); } }catch(_){} },45000);
 }
 function applyServerState(st){
-  S=st; S.vasche ||= []; S.tratte.forEach(t=>{t.boxes=t.boxes.map(normBox); t.gallerie ||= []; t.log ||= [];});
+  S=st; S.vasche ||= []; vgAutoKm(); S.tratte.forEach(t=>{t.boxes=t.boxes.map(normBox); t.gallerie ||= []; t.log ||= [];});
   if(!S.sedi) mergeSedi(convertQF(QF_INIT), QF_INIT.exportedAt); qfInit(); qfRebuild(); S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); applySediVis();
 }
 // file dal server: URL diretto (il server controlla il login)
@@ -3275,7 +3333,7 @@ document.addEventListener("click",e=>{ const o=e.target.closest("[data-openbox]"
   FILES = ok? await DB.allFiles() : [];
   if(!S.sedi){ mergeSedi(convertQF(QF_INIT), QF_INIT.exportedAt); if(ok) DB.set("state",JSON.stringify(S)); }
   qfInit(); qfRebuild();
-  S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); $("#b-pl").classList.toggle("on",S.showPL!==false); S.vasche ||= []; $("#b-vg").classList.toggle("on",S.showVG!==false); applySediVis(); $("#b-cams").classList.toggle("on",S.showCams!==false); initMap(); renderSide(); setPath();
+  S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); $("#b-pl").classList.toggle("on",S.showPL!==false); S.vasche ||= []; if(VG_SEED.length && S.giuntiSeed!==VG_SEED.length+"|"+(VG_SEED[0]||{}).key){ mergeGiunti(VG_SEED,"Giunti_ISEO-EDOLO_OK.xlsx"); S.giuntiSeed=VG_SEED.length+"|"+(VG_SEED[0]||{}).key; if(ok) DB.set("state",JSON.stringify(S)); } else vgAutoKm(); $("#b-vg").classList.toggle("on",S.showVG!==false); applySediVis(); $("#b-cams").classList.toggle("on",S.showCams!==false); initMap(); renderSide(); setPath();
   let mm="schema"; try{ mm=localStorage.getItem("fn-mapmode")||"schema"; }catch(e){} setMapMode(mm);
   if(SRV) status(SRV.role==="viewer"?"connesso in sola lettura":"connesso al server · le modifiche si salvano da sole e sono visibili a tutti gli utenti","ok");
   else status(ok? "pronto · i dati restano nel browser, usa 💾 Salva per una copia su file" : "attenzione: archivio del browser non disponibile, salva spesso su file", ok?null:"err");
