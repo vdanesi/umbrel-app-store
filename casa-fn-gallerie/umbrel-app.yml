@@ -4,7 +4,7 @@ name: FN Avanzamento Gallerie
 tagline: Nuovi lavori TVCC nelle gallerie con avanzamento, quadri e fibra
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-fn-gallerie/icon.svg
 category: files
-version: "1.6.0"
+version: "1.6.1"
 port: 8742
 description: >-
   Mappa della linea Brescia–Iseo–Edolo con l'avanzamento dei nuovi lavori TVCC nelle gallerie.
@@ -31,11 +31,10 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Giunti delle fibre da Excel: "Importa giunti da Excel" nelle Vasche di giunzione crea una
-  vasca per pozzetto (i giunti nello stesso punto stanno nella stessa vasca) e calcola la
-  progressiva km dal binario reale, con la distanza dal binario. Colori per cavo sulla
-  mappa (FO 48, FO 16, entrambi), filtri per cavo e linea, ricerca, colonne nuove
-  nell'Excel. Il pacchetto dati aggiornato contiene già i giunti Iseo–Edolo.
+  "Allinea ferrovia" allinea anche le vasche di giunzione: si spostano sul binario (a 4 m,
+  dal lato del pozzetto) e la posizione GPS del file resta salvata. Le vasche con il GPS
+  oltre 300 m dal binario restano sul punto GPS da controllare. Nella scheda: "usa GPS"
+  oppure "allinea al binario" per la singola vasca.
 dependencies: []
 path: ""
 defaultUsername: ""

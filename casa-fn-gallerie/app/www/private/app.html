@@ -1604,7 +1604,7 @@ function renderVGLayer(){
     m.bindPopup(()=>vgPopup(v),{maxWidth:380,minWidth:240,autoPanPaddingTopLeft:[20,80]});
     m.on("click",()=>{ if(UI.place) return; UI.popVG=v.id; openVG(v.id,false); });
     if(UI.popVG===v.id){ UI.popVG=null; setTimeout(()=>m.openPopup(),0); }
-    m.on("dragend",()=>{ const ll=m.getLatLng(); v.lat=ll.lat; v.lng=ll.lng; v.upd=now(); changed("posizione vasca aggiornata"); if(UI.vg===v.id) renderDrawer(); });
+    m.on("dragend",()=>{ const ll=m.getLatLng(); v.lat=ll.lat; v.lng=ll.lng; v.gps={lat:ll.lat,lng:ll.lng}; v.posAuto=false; v.snapped=false; v.upd=now(); vgAutoKm(); changed("posizione vasca aggiornata"); if(UI.vg===v.id) renderDrawer(); });
     LG.addLayer(m); }
 }
 function renderVGCard(v){
@@ -1614,8 +1614,8 @@ function renderVGCard(v){
   dr.innerHTML=`<div data-vgid="${v.id}" style="display:flex;flex-direction:column;height:100%;min-height:0"><div class="dh"><div class="grow">
       ${navHead(`<span class="dim">Vasche di giunzione</span> › <span style="color:var(--fg)">${esc(v.nome||"VG")}</span>`,si,all.length)}
       <div class="row-flex" style="margin-top:4px;flex-wrap:nowrap"><span class="mono" style="color:#ff9f1c;font-size:16px;white-space:nowrap">▣ VG</span><input class="f mono" data-vf="nome" value="${esc(v.nome||"")}" placeholder="codice vasca" style="font-size:15px;flex:1"></div>
-      <div class="dim mono" style="font-size:11.5px;margin-top:4px">${v.progressiva?"km "+esc(v.progressiva):"progressiva non indicata"}${v.offRail!=null?` · <span style="${v.offRail>150?"color:var(--yellow)":""}">${v.offRail} m dal binario</span>`:""} · ${esc(v.linea||(t?t.nome:"linea non indicata"))} · ${esc(v.cavi||"")}${v.stato?" · "+esc(v.stato):""} · dati ${fill}/${tot}</div>
-      <div class="row-flex" style="margin-top:5px">${v.lat!=null?`<span class="mono dim" style="font-size:11px">${v.lat.toFixed(5)}, ${v.lng.toFixed(5)}</span>${gLinks(v.lat,v.lng)}`:`<span style="color:var(--yellow);font-size:12px">senza coordinate</span>`}<button class="btn sm" data-vga="place">📍 ${v.lat!=null?"sposta":"posiziona"}</button>${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}<span class="sp"></span><button class="btn sm danger" data-vga="del" title="Elimina la vasca">🗑 Elimina vasca</button></div>
+      <div class="dim mono" style="font-size:11.5px;margin-top:4px">${v.progressiva?"km "+esc(v.progressiva):"progressiva non indicata"}${v.offRail!=null?` · <span style="${v.offRail>150?"color:var(--yellow)":""}">GPS a ${v.offRail} m dal binario</span>`:""}${v.snapped?` · <span style="color:var(--ok)">allineata al binario</span>`:v.posAuto===false?" · posizione manuale":""} · ${esc(v.linea||(t?t.nome:"linea non indicata"))} · ${esc(v.cavi||"")}${v.stato?" · "+esc(v.stato):""} · dati ${fill}/${tot}</div>
+      <div class="row-flex" style="margin-top:5px">${v.lat!=null?`<span class="mono dim" style="font-size:11px">${v.lat.toFixed(5)}, ${v.lng.toFixed(5)}</span>${gLinks(v.lat,v.lng)}`:`<span style="color:var(--yellow);font-size:12px">senza coordinate</span>`}<button class="btn sm" data-vga="place">📍 ${v.lat!=null?"sposta":"posiziona"}</button>${v.gps?(v.posAuto!==false?`<button class="btn sm" data-vga="nosnap" title="Mostra la vasca nel punto GPS del file invece che sul binario">⌖ usa GPS</button>`:`<button class="btn sm" data-vga="snap" title="Riporta la vasca sul binario (come con Allinea ferrovia)">⇢ allinea al binario</button>`):""}${docBtn("vasca",v.id,"Vasca "+(v.nome||""))}<span class="sp"></span><button class="btn sm danger" data-vga="del" title="Elimina la vasca">🗑 Elimina vasca</button></div>
     </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
     <div class="dtabs">${VTABS.map(([k,l])=>`<div class="tab ${UI.vtab===k?"active":""}" data-vt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="dati"?` <span class="dim">${fill}/${tot}</span>`:""}</div>`).join("")}</div>
     <div class="db">${UI.vtab==="dati"?vgFields(v):UI.vtab==="doc"?docList("vasca",v.id,docsOf("vasca",v.id)):`<div class="info" style="font-size:12px">Note</div><textarea class="f" data-vf="note" style="min-height:140px">${esc(v.note||"")}</textarea>
@@ -1645,6 +1645,8 @@ document.addEventListener("click",e=>{
   if(a.dataset.vga==="add"){ showView("mappa"); return startPlace({vg:true}); }
   const id=a.closest("[data-vgid]")?.dataset.vgid; const v=(S.vasche||[]).find(x=>x.id===id); if(!v) return;
   if(a.dataset.vga==="place"){ return startPlace({vg:true,vid:v.id}); }
+  if(a.dataset.vga==="nosnap"){ v.posAuto=false; v.snapped=false; v.lat=v.gps.lat; v.lng=v.gps.lng; changed("vasca sul punto GPS"); renderLeaf(); return renderDrawer(); }
+  if(a.dataset.vga==="snap"){ if(v.offRail>VG_SNAP_MAX && !confirm(`Il punto GPS è a ${v.offRail} m dal binario: forse le coordinate sono sbagliate. Allineare comunque la vasca al binario?`)) return; v.posAuto=true; vgSnap(v,true); changed("vasca allineata al binario"); renderLeaf(); return renderDrawer(); }
   if(a.dataset.vga==="del"){ if(!confirm(`Eliminare la vasca ${v.nome||""} e i suoi dati?`)) return; S.vasche=S.vasche.filter(x=>x!==v); if(UI.vg===v.id) closeDrawer(); changed("vasca eliminata"); renderLeaf(); if(UI.view==="db") renderDB(); }
 });
 // scheda database: elenco delle vasche
@@ -1713,7 +1715,7 @@ function openCoordTool(pre,src){
     o.querySelectorAll("[data-conb]").forEach(a=>a.onclick=ev=>{ ev.preventDefault(); $("#modal").classList.remove("open"); nb[+a.dataset.conb].go(); });
     $("#co-show").onclick=()=>{ $("#modal").classList.remove("open"); showView("mappa"); setMapMode("reale"); setTimeout(()=>{ if(COORD_MK) COORD_MK.remove(); COORD_MK=L.marker([c.lat,c.lng],{zIndexOffset:2000,icon:L.divIcon({className:"lm-wrap",iconSize:null,html:`<div class="cpin">⌖</div><div class="vgl" style="color:var(--cyan)">km ${kmTxt(r.km)}</div>`})}).addTo(LM).bindPopup(`<div class="mono">⌖ ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}<br>km <span class="val">${kmTxt(r.km)}</span> · ${r.off} m dal binario</div>`); LM.flyTo([c.lat,c.lng],17,{duration:.5}); },120); };
     $("#co-copy").onclick=async()=>{ try{ await navigator.clipboard.writeText(kmTxt(r.km)); status("km copiata: "+kmTxt(r.km),"ok"); }catch(_){ prompt("km:",kmTxt(r.km)); } };
-    if($("#co-vg")) $("#co-vg").onclick=()=>{ S.vasche ||= []; const v={id:uid(),nome:"VG km "+kmTxt(r.km),progressiva:kmTxt(r.km),lat:c.lat,lng:c.lng,tratta:nearTratta([c.lat,c.lng]),tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"da realizzare",data:"",ditta:"",note:"",upd:now()}; S.vasche.push(v); $("#modal").classList.remove("open"); changed("vasca creata dalle coordinate"); openVG(v.id,true); };
+    if($("#co-vg")) $("#co-vg").onclick=()=>{ S.vasche ||= []; const v={id:uid(),nome:"VG km "+kmTxt(r.km),progressiva:kmTxt(r.km),lat:c.lat,lng:c.lng,tratta:nearTratta([c.lat,c.lng]),tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"da realizzare",data:"",ditta:"",note:"",posAuto:true,kmAuto:true,gps:{lat:c.lat,lng:c.lng},upd:now()}; S.vasche.push(v); vgAutoKm(); vgSnap(); $("#modal").classList.remove("open"); changed("vasca creata dalle coordinate"); openVG(v.id,true); };
     if($("#co-pl")) $("#co-pl").onclick=()=>{ S.pl ||= []; const p={id:uid(),nome:"PL km "+kmTxt(r.km),km:r.km,lat:c.lat,lng:c.lng,fonte:"GPS",note:"",barriere:""}; S.pl.push(p); S.pl.sort((a,b)=>(a.km??999)-(b.km??999)); $("#modal").classList.remove("open"); changed("PL creato dalle coordinate"); openPL(p.id,true); };
   };
   $("#co-go").onclick=calc; $("#co-in").onkeydown=e=>{ if(e.key==="Enter") calc(); };
@@ -1753,17 +1755,27 @@ function mergeGiunti(rows,fonte){
   for(const r of rows){ if(r.lat==null||r.lng==null){ res.senzaGps++; continue; }
     const g={key:r.key,codice:r.codice,nome:r.nome,cavi:r.cavi,nr:r.nr,punto:r.punto,linea:r.linea,lat:r.lat,lng:r.lng,fonte};
     let v=byKey.get(r.key);
-    if(v){ const i=v.giunti.findIndex(x=>x.key===r.key); v.giunti[i]=g; if(v.posAuto!==false && v.giunti.length===1){ v.lat=r.lat; v.lng=r.lng; } res.aggiornati++; vgAuto(v); continue; }
+    if(v){ const i=v.giunti.findIndex(x=>x.key===r.key); v.giunti[i]=g; if(v.posAuto!==false && v.giunti.length===1){ v.lat=r.lat; v.lng=r.lng; v.gps={lat:r.lat,lng:r.lng}; } res.aggiornati++; vgAuto(v); continue; }
     v=S.vasche.find(x=>x.lat!=null && L.latLng(x.lat,x.lng).distanceTo(L.latLng(r.lat,r.lng))<3);
     if(v){ (v.giunti ||= []).push(g); res.aggiunti++; }
-    else { v={id:r.id||uid(),nome:"",progressiva:"",lat:r.lat,lng:r.lng,tratta:"",linea:r.linea,punto:r.punto,tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"",data:"",ditta:"",note:"",giunti:[g],kmAuto:true,posAuto:true,upd:now()}; S.vasche.push(v); res.nuove++; }
+    else { v={id:r.id||uid(),nome:"",progressiva:"",lat:r.lat,lng:r.lng,tratta:"",linea:r.linea,punto:r.punto,tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"",data:"",ditta:"",note:"",giunti:[g],kmAuto:true,posAuto:true,gps:{lat:r.lat,lng:r.lng},upd:now()}; S.vasche.push(v); res.nuove++; }
     byKey.set(r.key,v); vgAuto(v); }
-  vgAutoKm(); return res; }
+  vgAutoKm(); const sn=vgSnap(); res.allineate=sn.ok; res.lontane=sn.lontane.length; return res; }
 // progressiva dal binario reale (solo dove non è stata scritta a mano)
 function vgAutoKm(force){ if(!S.rail||!S.rail.path) return 0; let n=0;
-  for(const v of (S.vasche||[])){ if(v.lat==null) continue; const r=llToKm([v.lat,v.lng]); if(!r) continue; v.offRail=r.off; if(v.kmAuto!==false&&(force||!v.progressiva||v.kmAuto)){ v.progressiva=kmTxt(r.km); v.kmAuto=true; n++; }
+  for(const v of (S.vasche||[])){ if(v.lat==null) continue; const o=v.gps||{lat:v.lat,lng:v.lng}; const r=llToKm([o.lat,o.lng]); if(!r) continue; v.offRail=r.off; if(v.kmAuto!==false&&(force||!v.progressiva||v.kmAuto)){ v.progressiva=kmTxt(r.km); v.kmAuto=true; n++; }
     if(!v.tratta){ const t=nearTratta([v.lat,v.lng]); const tt=S.tratte.find(x=>x.id===t); const ref=tt&&tt.boxes.find(b=>b.lat!=null); if(ref && L.latLng(ref.lat,ref.lng).distanceTo(L.latLng(v.lat,v.lng))<3000) v.tratta=t; } }
   return n; }
+
+// allinea le vasche al binario: si spostano sul binario (4 m dal lato del pozzetto); la posizione GPS resta salvata
+const VG_SNAP_MAX=300;
+function vgSnap(only,force){ if(!S.rail||!S.rail.path) return {ok:0,lontane:[]}; let ok=0; const lontane=[];
+  for(const v of (only?[only]:(S.vasche||[]))){ if(v.lat==null||v.posAuto===false) continue;
+    v.gps ||= {lat:v.lat,lng:v.lng}; const O=L.latLng(v.gps.lat,v.gps.lng), Pp=dToLL(railProject([v.gps.lat,v.gps.lng])); if(!Pp) continue;
+    const P=L.latLng(Pp[0],Pp[1]), dist=O.distanceTo(P);
+    if(dist>VG_SNAP_MAX && !force){ v.lat=v.gps.lat; v.lng=v.gps.lng; v.snapped=false; lontane.push(v); continue; }
+    const f=dist>0.5?Math.min(dist,4)/dist:0; v.lat=+(P.lat+(O.lat-P.lat)*f).toFixed(7); v.lng=+(P.lng+(O.lng-P.lng)*f).toFixed(7); v.snapped=true; ok++; }
+  return {ok,lontane}; }
 // lettura del file Excel dei giunti (stesso formato di Giunti_ISEO-EDOLO)
 function parseGiuntiWB(wb,fname){ const out=[], nn=s=>String(s??"").toLowerCase().replace(/[^a-z0-9]/g,"");
   for(const sn of wb.SheetNames){ const ws=wb.Sheets[sn]; const A=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false}); let h=null;
@@ -2179,8 +2191,8 @@ function initLeaf(){
   LM.on("moveend zoomend",()=>setTimeout(declutterGLab,0)); setGLabZoom();
   LM.on("click",e=>{
     if(UI.place && UI.place.vg){ const ll=[e.latlng.lat,e.latlng.lng], km=S.rail&&S.rail.path?dToKm(railProject(ll)):null; S.vasche ||= [];
-      if(UI.place.vid){ const v=S.vasche.find(x=>x.id===UI.place.vid); if(v){ v.lat=ll[0]; v.lng=ll[1]; if(km!=null&&!v.progressiva) v.progressiva=kmTxt(km); v.upd=now(); } endPlace(); changed("vasca spostata"); if(v) openVG(v.id,false); return; }
-      const v={id:uid(),nome:"VG"+(km!=null?" km "+kmTxt(km):""),progressiva:km!=null?kmTxt(km):"",lat:ll[0],lng:ll[1],tratta:nearTratta(ll),tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"da realizzare",data:"",ditta:"",note:"",upd:now()};
+      if(UI.place.vid){ const v=S.vasche.find(x=>x.id===UI.place.vid); if(v){ v.lat=ll[0]; v.lng=ll[1]; v.gps={lat:ll[0],lng:ll[1]}; v.posAuto=false; v.snapped=false; if(km!=null&&v.kmAuto!==false) v.progressiva=kmTxt(km); v.upd=now(); vgAutoKm(); } endPlace(); changed("vasca spostata"); if(v) openVG(v.id,false); return; }
+      const v={id:uid(),nome:"VG"+(km!=null?" km "+kmTxt(km):""),progressiva:km!=null?kmTxt(km):"",lat:ll[0],lng:ll[1],tratta:nearTratta(ll),tipo:"",chiusino:"",profondita:"",cavi:"",muffola:"",fibre:"",collegata:"",stato:"da realizzare",data:"",ditta:"",note:"",posAuto:false,gps:{lat:ll[0],lng:ll[1]},upd:now()};
       S.vasche.push(v); endPlace(); changed("vasca di giunzione aggiunta"); openVG(v.id,false); return; }
     if(UI.place && UI.place.pl){ const ll=[e.latlng.lat,e.latlng.lng], km=S.rail&&S.rail.path?dToKm(railProject(ll)):null; S.pl ||= [];
       S.pl.push({id:uid(),nome:"PL"+(km!=null?" km "+kmTxt(km):""),km,lat:ll[0],lng:ll[1],fonte:"manuale",note:"",barriere:""}); S.pl.sort((a,b)=>(a.km??999)-(b.km??999)); endPlace(); changed("PL aggiunto"); return; }
@@ -2571,8 +2583,8 @@ async function alignRail(force){
   try{
     let pr=null;
     if(force || !S.rail || !(S.rail.ver>=2)){ status("scarico tracciato, PL e fermate da OpenStreetMap…"); const osm=await fetchOverpass(); S.rail=buildRailPath(osm); pr=importOsmPoi(osm); }
-    const r=alignGallerie(); applyPdfGeo(); ensurePL(); vgAutoKm(); UI.railErr=""; S.rail.info={osm:r.osm,km:r.km,at:now()}; changed(); renderDrawer();
-    status(`tracciato OSM: ${Math.round(S.rail.path[S.rail.path.length-1][2]/100)/10} km di binario · ${r.osm} gallerie agganciate alle gallerie OSM, ${r.km} per progressiva km · ${(S.pl||[]).length} PL${pr?` (${pr.npl} nuovi)`:""}${pr&&pr.nf?` · ${pr.nf} fermate nuove`:""}${pr&&pr.ngeo?` · ${pr.ngeo} sedi georeferenziate`:""}`,"ok");
+    const r=alignGallerie(); applyPdfGeo(); ensurePL(); vgAutoKm(); const vs=vgSnap(); UI.railErr=""; S.rail.info={osm:r.osm,km:r.km,at:now()}; changed(); renderDrawer();
+    status(`tracciato OSM: ${Math.round(S.rail.path[S.rail.path.length-1][2]/100)/10} km di binario · ${r.osm} gallerie agganciate alle gallerie OSM, ${r.km} per progressiva km · ${(S.pl||[]).length} PL${pr?` (${pr.npl} nuovi)`:""}${pr&&pr.nf?` · ${pr.nf} fermate nuove`:""}${pr&&pr.ngeo?` · ${pr.ngeo} sedi georeferenziate`:""}${(S.vasche||[]).length?` · ${vs.ok} vasche allineate al binario${vs.lontane.length?`, ${vs.lontane.length} oltre ${VG_SNAP_MAX} m lasciate sulla posizione GPS (controlla: Database → Vasche → filtro "oltre 150 m")`:""}`:""}`,"ok");
   }catch(e){ console.error(e); UI.railErr=e.message; status("allineamento non riuscito: "+e.message+" · serve la connessione internet","err"); updLeafHint(); }
   finally{ railBusy=false; if(btn) btn.disabled=false; updLeafHint(); }
 }
