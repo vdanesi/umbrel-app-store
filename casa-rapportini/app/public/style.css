@@ -405,3 +405,14 @@ details.sez-0319[open] > summary { margin-bottom: 10px; }
 .migrazione textarea { font: 12px/17px var(--mono); }
 @media (max-width: 900px) { .mg-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { .mg-grid { grid-template-columns: 1fr; } }
+
+/* ---------- firma personale ---------- */
+.firma-box { border: 1px solid var(--bg-tab-new); padding: 12px; margin: 10px 0; }
+.firma-head { margin-bottom: 8px; }
+.firma-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.firma-preview { width: 280px; height: 96px; background: var(--brand-paper); border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center; padding: 8px; color: #777; font: 12px var(--ui); }
+.firma-preview img { max-width: 100%; max-height: 100%; }
+.firma-preview.vuota { background: var(--bg-tabbar); border: 1px dashed var(--border-tab); color: var(--fg-muted); }
+.firma-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.opz-stampa { display: flex; flex-direction: column; gap: 6px; }

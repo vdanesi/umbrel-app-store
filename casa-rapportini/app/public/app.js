@@ -74,7 +74,7 @@
       await Pratiche.route(h);
       if ((m = /^r\/(\d{4}-\d\d-\d\d)\/stampa$/.exec(h))) { await openReport(m[1]); openPreview(); }
       else if ((m = /^r\/(\d{4}-\d\d-\d\d)$/.exec(h))) { await openReport(m[1]); show('editView'); }
-      else if (h === 'impostazioni') { await flushSave(); fillSettings(); show('settingsView'); Pratiche.renderModelliSettings(); Account.render(); }
+      else if (h === 'impostazioni') { await flushSave(); fillSettings(); show('settingsView'); Pratiche.renderModelliSettings(); Account.render(); Firma.mostra(); }
       else { await flushSave(); rep = null; show('homeView'); loadMonth(); }
     } catch (e) { toast(e.message, true); }
   }
@@ -438,7 +438,9 @@
         if (!data.testata[k]) data.testata[k] = st[sk] || '';
       }
       const nome = opts?.soloCopertina ? 'Mod.0444 copertina.pdf' : `Mod.0444 rapporto ${rep.data}.pdf`;
-      await Pratiche.pdfDaModulo('0444', data, opts, download, nome);
+      const o = { ...(opts || {}) };
+      if (!o.soloCopertina && settings?.firmaRapporto !== false) o.firma = await Firma.get();
+      await Pratiche.pdfDaModulo('0444', data, o, download, nome);
     };
     $('btnPdf0444').onclick = () => pdf0444(false);
     $('btnPdf0444Dl').onclick = () => pdf0444(true);
@@ -569,6 +571,7 @@
     Pratiche.init();
     Account.init();
     Migrazione.init();
+    Firma.init();
     try { settings = await api('impostazioni'); }
     catch (e) { toast('Server non raggiungibile: ' + e.message, true); return; }
     Account.header();

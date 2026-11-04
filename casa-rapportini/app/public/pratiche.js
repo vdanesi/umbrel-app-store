@@ -61,7 +61,8 @@
     const s = A().getSettings();
     const data = { ...cur, tipoAuto: cur.tipoAuto || s.tipoAuto, euroKm: cur.euroKm || s.euroKm };
     if (data.tipo === 'trasferta' && data.autoPropria !== false && !data.viaggi.some(v => v.itinerario || v.km)) data.viaggi = viaggiDaGiornate();
-    const bytes = await ModuliPdf.fill(code, await res.arrayBuffer(), data, { appiattisci: cur.pdfModificabile === false });
+    const firma = cur.conFirma !== false ? await Firma.get() : null;
+    const bytes = await ModuliPdf.fill(code, await res.arrayBuffer(), data, { appiattisci: cur.pdfModificabile === false, firma });
     return new Blob([bytes], { type: 'application/pdf' });
   }
   function fileName(code) {
@@ -313,11 +314,19 @@
 
   /** Scelta: PDF con i campi ancora compilabili, oppure testo fisso nella pagina. */
   function modificabile() {
+    const box = document.createElement('div'); box.className = 'opz-stampa';
     const l = document.createElement('label'); l.className = 'check';
     const c = document.createElement('input'); c.type = 'checkbox'; c.checked = cur.pdfModificabile !== false;
     c.onchange = () => { cur.pdfModificabile = c.checked; schedule(); };
     l.append(c, ' PDF con i campi ancora compilabili (modificabile dopo con un lettore PDF)');
-    return l;
+    const f = document.createElement('label'); f.className = 'check';
+    const fc = document.createElement('input'); fc.type = 'checkbox'; fc.checked = cur.conFirma !== false;
+    fc.onchange = () => { cur.conFirma = fc.checked; schedule(); };
+    const nota = document.createElement('span'); nota.className = 'muted small';
+    f.append(fc, ' Metti la mia firma', nota);
+    Firma.presente().then(ok => { if (!ok) { nota.textContent = ' — non hai ancora caricato una firma (Impostazioni → Account)'; } });
+    box.append(l, f);
+    return box;
   }
 
   // ---- trasferta ----

@@ -32,6 +32,22 @@
   const WIN_EXTRA = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
   const safe = s => String(s ?? '').replace(/[\r\n\t]+/g, ' ').split('').filter(c => c.charCodeAt(0) < 256 || WIN_EXTRA.includes(c)).join('');
 
+  // ---------- firma del richiedente / agente: riquadro in punti PDF (origine in basso a sinistra) ----------
+  const FIRME = {
+    '0444': { pagina: 1, x: 126, y: 59, w: 100, h: 24 },   // riga "L'agente" (pagina del rapporto)
+    '0319': { pagina: 0, x: 192, y: 609, w: 96, h: 31 },  // riga "IL RICHIEDENTE" della domanda
+    '0692': { pagina: 0, x: 68, y: 443, w: 150, h: 28 },   // "Il richiedente" in fondo alla lettera
+    '0693': { pagina: 0, x: 46, y: 198, w: 128, h: 29 }    // casella "FIRMA RICHIEDENTE"
+  };
+  async function disegnaFirma(doc, code, png) {
+    const b = FIRME[code]; if (!b || !png) return;
+    const img = await doc.embedPng(png);
+    const k = Math.min(b.w / img.width, b.h / img.height);
+    const w = img.width * k, h = img.height * k;
+    // centrata in orizzontale, appoggiata sulla riga
+    doc.getPages()[b.pagina].drawImage(img, { x: b.x + (b.w - w) / 2, y: b.y, width: w, height: h });
+  }
+
   // ---------- Mod. 0319: tutti i campi del modulo ----------
   const dmyDash = iso => { const p = parts(iso); return p ? `${p.d}-${p.m}-${p.y}` : ''; };
   const ggmm = iso => { const p = parts(iso); return p ? `${p.d}-${p.m}-` : ''; };
@@ -242,6 +258,7 @@
     }
 
     form.updateFieldAppearances(font);
+    if (opts.firma) { try { await disegnaFirma(doc, code, opts.firma); } catch (e) { console.warn('Firma non inserita', e); } }
     // il testo diventa parte della pagina: si vede nero e uguale in ogni visualizzatore e in stampa
     if (opts.appiattisci !== false) { try { form.flatten(); } catch (e) { console.warn('Appiattimento non riuscito', e); } }
     // Mod. 0444: di solito serve solo la pagina del rapporto; la copertina del blocchetto è facoltativa

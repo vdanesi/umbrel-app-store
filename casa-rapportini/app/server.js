@@ -38,7 +38,7 @@ const DEFAULT_SETTINGS = {
   turnoDalle: '', turnoAlle: '',     // orario del turno: il lavoro fuori da questa fascia è straordinario
   codiceModulo3: '',
   struttura: '', assunto: '', luogo: '', recapito: '',   // per i moduli 0319 / 0692 / 0693
-  tipoAuto: '', euroKm: '',                 // terza colonna dei moduli emessi (la prima è 0229, la seconda 0452)
+  tipoAuto: '', euroKm: '', firmaRapporto: true,                 // terza colonna dei moduli emessi (la prima è 0229, la seconda 0452)
   stampa: { offsetX: 0, offsetY: 0, scala: 100 }  // calibrazione per il modulo prestampato
 };
 
@@ -52,7 +52,7 @@ const validDate = d => typeof d === 'string' && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|
 /** Cartelle dell'utente (U). */
 function userCtx(uid) {
   const dir = path.join(USERS_DIR, uid);
-  return { uid, dir, repDir: path.join(dir, 'rapporti'), pratDir: path.join(dir, 'pratiche'), settingsFile: path.join(dir, 'impostazioni.json') };
+  return { uid, dir, repDir: path.join(dir, 'rapporti'), pratDir: path.join(dir, 'pratiche'), settingsFile: path.join(dir, 'impostazioni.json'), firmaFile: path.join(dir, 'firma.png') };
 }
 const repFile = (U, d) => path.join(U.repDir, `${d}.json`);
 
@@ -82,6 +82,7 @@ function sanitizeSettings(s = {}) {
     struttura: str(s.struttura, 120), assunto: validDate(s.assunto) ? s.assunto : '',
     luogo: str(s.luogo, 60), recapito: str(s.recapito, 120),
     tipoAuto: str(s.tipoAuto, 120), euroKm: str(s.euroKm, 12),
+    firmaRapporto: s.firmaRapporto !== false,
     stampa: {
       offsetX: Math.max(-30, Math.min(30, num(st.offsetX))),
       offsetY: Math.max(-30, Math.min(30, num(st.offsetY))),
@@ -681,6 +682,25 @@ async function api(req, res, url) {
     catch (e) { return fail(res, e.status || 502, e.message); }
   }
 
+  // ---- firma personale (immagine PNG, visibile solo al suo utente) ----
+  if (p === '/api/firma') {
+    if (m === 'GET') {
+      try { return send(res, 200, await fs.readFile(U.firmaFile), 'image/png'); }
+      catch { return fail(res, 404, 'Nessuna firma caricata'); }
+    }
+    if (m === 'PUT') {
+      const b = await readRaw(req, 3 * 1024 * 1024);
+      if (b.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') return fail(res, 400, "La firma deve essere un'immagine PNG");
+      await fs.mkdir(U.dir, { recursive: true });
+      await fs.writeFile(U.firmaFile + '.tmp', b); await fs.rename(U.firmaFile + '.tmp', U.firmaFile);
+      return send(res, 200, { ok: true, byte: b.length });
+    }
+    if (m === 'DELETE') {
+      try { await fs.unlink(U.firmaFile); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+      return send(res, 200, { ok: true });
+    }
+  }
+
   if (p.startsWith('/api/migrazione')) { const r = await migrApi(req, res, url, me, U); if (r !== null) return r; }
 
   // ---- modelli PDF ----
@@ -716,7 +736,8 @@ async function api(req, res, url) {
 
   if (p === '/api/backup' && m === 'GET') {
     const body = JSON.stringify({ app: 'rapportini', versione: VERSION, esportato: new Date().toISOString(),
-      impostazioni: await loadSettings(), rapporti: await listReports(U), pratiche: await listPratiche(U),
+      impostazioni: await loadSettings(U), rapporti: await listReports(U), pratiche: await listPratiche(U),
+      firma: await fs.readFile(U.firmaFile).then(b => b.toString('base64')).catch(() => null),
       modelli: Object.fromEntries(await Promise.all(MODELLI.map(async c => {
         try { return [c, (await fs.readFile(path.join(MOD_DIR, c + '.pdf'))).toString('base64')]; } catch { return [c, null]; }
       }))) }, null, 2);
@@ -747,6 +768,11 @@ async function api(req, res, url) {
         if (exists && !sovrascrivi) continue;
         await writeJsonAtomic(pratFile(U, x.id), { ...sanitizePratica(x, x.id, exists || { creato: x.creato }), aggiornato: str(x.aggiornato, 40) || new Date().toISOString() });
       }
+    }
+    if (typeof b.firma === 'string') {
+      const fb = Buffer.from(b.firma, 'base64');
+      let has = true; try { await fs.stat(U.firmaFile); } catch { has = false; }
+      if (fb.subarray(0, 8).toString('hex') === '89504e470d0a1a0a' && (!has || sovrascrivi)) { await fs.mkdir(U.dir, { recursive: true }); await fs.writeFile(U.firmaFile, fb); }
     }
     if (me.admin && b.modelli && typeof b.modelli === 'object') {
       await fs.mkdir(MOD_DIR, { recursive: true });

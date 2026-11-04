@@ -4,7 +4,7 @@ name: Rapportini
 tagline: Rapporto giornaliero dell'agente (Mod. 0444) compilato in automatico
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-rapportini/app/public/img/icon-512.png
 category: files
-version: "2.3.0"
+version: "2.4.0"
 port: 3444
 description: >-
   Rapportini tiene traccia delle attività lavorative in ambito ferroviario e compila
@@ -41,10 +41,11 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Nuova scheda "Migrazione PL": genera la configurazione Cisco ed Extreme e mostra la
-  checklist MikroTik partendo da porta, loopback, IP PTP e tag della tratta, con copia,
-  download TXT e storico personale. La chiave OSPF la inserisce l'amministratore e resta
-  solo sull'Umbrel; l'amministratore può anche modificare i modelli.
+  Firma personale: ogni utente carica la foto o la scansione della sua firma in
+  Impostazioni → Account (sfondo bianco reso trasparente e bordi ritagliati) e l'app la
+  inserisce sulla sua riga di firma nei Mod. 0444, 0319, 0692 e 0693, con la scelta
+  pratica per pratica. La firma è visibile solo al suo utente ed è inclusa nel backup.
+  Corretto lo scaricamento del backup.
 dependencies: []
 path: ""
 defaultUsername: ""
