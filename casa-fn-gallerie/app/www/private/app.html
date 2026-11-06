@@ -252,6 +252,7 @@ input.f.bad{border-color:var(--err);color:var(--err)}
 .dbt td{white-space:nowrap}
 
 .vgk{position:absolute;transform:translate(-50%,-50%);width:15px;height:15px;border:2px solid #ff9f1c;background:#2a1d08;box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px #ff9f1c}
+tr.dimrow input{color:var(--dim)}
 .vgk.c16{border-color:var(--cyan);box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px var(--cyan)}.vgk.cboth{border-color:#ff9f1c;box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px var(--cyan)}
 .vgk.ok{border-color:var(--green);box-shadow:inset 0 0 0 2px #2a1d08,inset 0 0 0 5px var(--green)}.vgk.cur{outline:3px solid rgba(255,159,28,.45)}
 .vgl{position:absolute;left:11px;top:-7px;font:11px/14px var(--mono);color:#ff9f1c;background:rgba(20,20,20,.78);padding:0 3px;white-space:nowrap;pointer-events:none}
@@ -1453,7 +1454,7 @@ function dSt(t){
 
 /* ======================= SCHEDA DELL'OGGETTO SELEZIONATO (box / PL) ======================= */
 const BTABS=[["lav","Lavori"],["qu","Quadro"],["cam","Telecamere"],["doc","Documenti"],["note","Note e storico"]];
-const PTABS=[["qu","Quadro"],["doc","Documenti"],["note","Note"]];
+const PTABS=[["qu","Quadro"],["rete","Rete e apparati"],["doc","Documenti"],["note","Note"]];
 const Q_GROUPS=[["Identificazione",[["codice","Codice quadro","es. PL25ACC"],["progressiva","Progressiva km","es. 40+540"],["imbocco","Galleria / imbocco",""]]],
   ["Alimentazione",[["alimFonte","Alimentazione da","es. FV Vello, casa cantoniera, PL 28"],["alimPotenza","Fornitura","es. Enel 220 V 6 kW"]]],
   ["Rete",[["switchModello","Switch modello",""],["switchIP","IP switch","192.168.x.x"],["subnet","Subnet mask","255.255.255.0"],["gateway","Gateway","192.168.x.1"],["vlan","VLAN",""]]],
@@ -1562,11 +1563,11 @@ function renderPLCard(p){
   dr.innerHTML=`<div data-plid="${p.id}" data-plq="${p.id}" style="display:flex;flex-direction:column;height:100%;min-height:0"><div class="dh"><div class="grow">
       ${navHead(`<span class="dim">Passaggi a livello</span> › <span style="color:var(--fg)">${esc(p.nome||"PL")}</span>`,si,all.length)}
       <div class="row-flex" style="margin-top:4px;flex-wrap:nowrap"><span class="mono" style="color:var(--p-path);font-size:16px;white-space:nowrap">✕ PL</span><input class="f mono" data-pf="nome" value="${esc(p.nome||"")}" placeholder="n° PL" style="font-size:15px;flex:1"></div>
-      <div class="dim mono" style="font-size:11.5px;margin-top:4px">${p.ramo?esc(p.ramo):p.km!=null?"km "+kmTxt(p.km):"progressiva non nota"} · fonte ${esc(p.fonte||"")}${p.geoKm?" · posizione stimata":""}${p.barriere?" · barriere "+esc(p.barriere):""}${p.luci?" · luci":""} · quadro ${qFill(q)}/${Q_KEYS.length}</div>
+      <div class="dim mono" style="font-size:11.5px;margin-top:4px">${p.linea?esc(p.linea)+" · ":""}${p.ramo?esc(p.ramo)+(p.kmRamo!=null?" km "+kmTxt(p.kmRamo):""):p.km!=null?"km "+kmTxt(p.km):"progressiva non nota"}${p.rete?" · "+esc(p.rete.switch):""} · fonte ${esc(p.fonte||"")}${p.geoKm?" · posizione stimata":""}${p.barriere?" · barriere "+esc(p.barriere):""}${p.luci?" · luci":""} · quadro ${qFill(q)}/${Q_KEYS.length}</div>
       <div class="row-flex" style="margin-top:5px">${p.lat!=null?`<span class="mono dim" style="font-size:11px">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span>${gLinks(p.lat,p.lng)}<span class="dim" style="font-size:11.5px">· per spostarlo trascina il ✕ in modalità Modifica POI</span>`:`<span style="color:var(--yellow);font-size:12px">senza coordinate</span>`}<span class="sp"></span><button class="btn sm danger" data-pla="del" title="Elimina il PL">🗑 Elimina PL</button></div>
     </div><button class="btn sm" id="d-close" title="Chiudi">✕</button></div>
-    <div class="dtabs">${PTABS.map(([k,l])=>`<div class="tab ${UI.ptab===k?"active":""}" data-pt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="qu"?` <span class="dim">${qFill(q)}/${Q_KEYS.length}</span>`:""}</div>`).join("")}</div>
-    <div class="db">${UI.ptab==="qu"?plQuFields(p):UI.ptab==="doc"?docList("pl",p.id,docsOf("pl",p.id)):`<div class="info" style="font-size:12px">Note</div><textarea class="f" data-pf="note" style="min-height:120px">${esc(p.note||"")}</textarea>
+    <div class="dtabs">${PTABS.map(([k,l])=>`<div class="tab ${UI.ptab===k?"active":""}" data-pt="${k}" tabindex="0">${l}${k==="doc"?` <span class="dim">(${nd})</span>`:k==="qu"?` <span class="dim">${qFill(q)}/${Q_KEYS.length}</span>`:k==="rete"&&p.rete?` <span class="dim">${esc(p.rete.net)}</span>`:""}</div>`).join("")}</div>
+    <div class="db">${UI.ptab==="qu"?plQuFields(p):UI.ptab==="rete"?plNetTab(p):UI.ptab==="doc"?docList("pl",p.id,docsOf("pl",p.id)):`<div class="info" style="font-size:12px">Note</div><textarea class="f" data-pf="note" style="min-height:120px">${esc(p.note||"")}</textarea>
       <div class="row-flex" style="margin-top:16px"><span class="sp"></span><button class="btn sm danger" data-pla="del">✕ Elimina ${esc(p.nome||"PL")}</button></div>`}</div></div>`;
 }
 function plQuFields(p){ const q=plQ(p), self=`PL ${p.nome}`;
@@ -1793,6 +1794,83 @@ document.addEventListener("click",async e=>{ const a=e.target.closest('[data-vga
   const i=document.createElement("input"); i.type="file"; i.accept=".xlsx,.xls"; i.onchange=async()=>{ const f=i.files[0]; if(!f) return;
     try{ const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}); const rows=parseGiuntiWB(wb,f.name); if(!rows.length){ alert("Nel file non ho trovato le colonne Giunto e Posizione GPS."); return; }
       const r=mergeGiunti(rows,f.name); changed(`giunti importati da ${f.name}: ${r.nuove} vasche nuove, ${r.aggiunti} giunti aggiunti a vasche esistenti, ${r.aggiornati} aggiornati${r.senzaGps?`, ${r.senzaGps} senza coordinate`:""}`); renderLeaf(); renderDB();
+    }catch(err){ alert("File non leggibile: "+err.message); } }; i.click(); },true);
+
+/* ======================= RETE DEI PL (switch, apparati, IP) da Excel dati_pl ======================= */
+const PLNET_SEED = (FN_PACK && Array.isArray(FN_PACK.plnet)) ? FN_PACK.plnet : [];
+const MASK_OCT=["255","254","252","248","240","224","192","128","0"];
+function maskTxt(v){ let s=String(v??"").trim(); if(!s||/\./.test(s)) return s; const o=[]; while(s&&o.length<4){ const m=MASK_OCT.find(x=>s.startsWith(x)); if(!m) return String(v); o.push(m); s=s.slice(m.length); } return o.length===4&&!s?o.join("."):String(v); }
+const maskBits=m=>String(m||"").split(".").reduce((s,x)=>s+(((+x)>>>0).toString(2).match(/1/g)||[]).length,0);
+// legge il foglio: righe "SW-PLnn-km" seguite dagli apparati (Gateway, ADAM, HP, Tromba, Telecamera, Libero, Broadcast)
+function parsePLNet(A){ const nn=s=>String(s??"").toLowerCase().replace(/[^a-z0-9]/g,""); let h=-1, c={};
+  for(let r=0;r<Math.min(A.length,20);r++){ const row=A[r]||[]; const ia=row.findIndex(x=>nn(x)==="apparato"), ip=row.findIndex(x=>nn(x)==="address"); if(ia>=0&&ip>=0){ h=r; row.forEach((x,i)=>c[nn(x)]=i); break; } }
+  if(h<0) return [];
+  const out=[]; let cur=null;
+  for(let r=h+1;r<A.length;r++){ const row=A[r]||[]; const app=String(row[c.apparato]??"").trim(); if(!app) continue;
+    const m=app.match(/^SW-?(PL\s*([0-9]+[A-Z]?|[A-Z]+))-+(\d+)[.,](\d{1,3})/i);
+    if(m){ cur={switch:app,num:m[2].toUpperCase(),km:(+m[3])+(+m[4].padEnd(3,"0"))/1000,app:[],row:r}; out.push(cur); continue; }
+    if(!cur) continue;
+    const g=k=>{ const i=c[k]; return i==null?"":String(row[i]??"").trim(); };
+    const d={n:app,porta:/^n\.?a\.?$/i.test(g("portaswitch"))?"":g("portaswitch"),ip:g("address")};
+    if(!cur.mask){ cur.mask=maskTxt(row[c.subnetmask]); cur.net=g("network"); cur.dns1=g("dns1"); cur.dns2=g("dns2"); cur.ntp=g("ntp"); }
+    if(/^gateway$/i.test(app)) cur.gw=d.ip; else if(/^broadcast$/i.test(app)) cur.bc=d.ip; else cur.app.push(d);
+    if(g("note")) cur.note=(cur.note?cur.note+" · ":"")+g("note"); }
+  // linea: Brescia–Iseo / Iseo–Edolo sulla linea principale, Bornato–Rovato per il gruppo che riparte da km 0 dopo la prima serie
+  let prev=null, inBranch=false;
+  for(let i=0;i<out.length;i++){ const x=out[i];
+    if(prev && x.km<1 && prev.km>3) inBranch=true; else if(inBranch && (x.km>7 || (prev && x.km-prev.km>3))) inBranch=false;
+    x.linea=inBranch?"Bornato–Rovato":(x.km<=SEDE_KM.ISEO?"Brescia–Iseo":"Iseo–Edolo"); prev=x; }
+  // km fuori sequenza sulla linea principale (probabile errore di battitura)
+  const main=out.filter(x=>x.linea!=="Bornato–Rovato");
+  for(let i=1;i<main.length-1;i++){ const a=main[i-1], x=main[i], b=main[i+1]; if(a.km<b.km && (x.km<a.km-0.05 || x.km>b.km+0.05)) x.warn=`km ${kmTxt(x.km)} fuori sequenza tra ${a.switch} e ${b.switch}`; }
+  return out; }
+function branchKmToLL(km){ const B=S.rail&&S.rail.branch; if(!B||B.length<2) return null; let d=0; const m=km*1000;
+  for(let i=1;i<B.length;i++){ const a=L.latLng(B[i-1][0],B[i-1][1]), b=L.latLng(B[i][0],B[i][1]), s=a.distanceTo(b); if(d+s>=m){ const f=(m-d)/s; return [a.lat+(b.lat-a.lat)*f, a.lng+(b.lng-a.lng)*f]; } d+=s; }
+  return [B[B.length-1][0],B[B.length-1][1]]; }
+function branchKmOf(ll){ const B=S.rail&&S.rail.branch; if(!B||B.length<2) return null; let d=0,best=1e18,bk=null; const k=Math.cos(ll[0]*Math.PI/180);
+  for(let i=1;i<B.length;i++){ const a=B[i-1], b=B[i], ax=(a[1]-ll[1])*k, ay=a[0]-ll[0], bx=(b[1]-ll[1])*k, by=b[0]-ll[0], dx=bx-ax, dy=by-ay, q=dx*dx+dy*dy; let f=q?-(ax*dx+ay*dy)/q:0; f=Math.max(0,Math.min(1,f));
+    const dd=(ax+f*dx)**2+(ay+f*dy)**2, s=L.latLng(a[0],a[1]).distanceTo(L.latLng(b[0],b[1])); if(dd<best){ best=dd; bk=(d+f*s)/1000; } d+=s; } return bk; }
+function plNetName(x){ return "PL "+x.num.replace(/^0+(?=\d)/,""); }
+function mergePLNet(list,fonte){ S.pl ||= []; const res={agg:0,nuovi:0,warn:[]};
+  for(const x of list){
+    const br=x.linea==="Bornato–Rovato", nome=plNetName(x);
+    let p=S.pl.find(q=>q.rete&&q.rete.switch===x.switch);
+    if(!p && !br) p=S.pl.find(q=>!q.ramo && !q.rete && q.km!=null && Math.abs(q.km-x.km)<0.15);
+    if(!p && br) p=S.pl.find(q=>q.ramo && !q.rete && q.lat!=null && (()=>{ const k=branchKmOf([q.lat,q.lng]); return k!=null&&Math.abs(k-x.km)<0.15; })());
+    if(!p){ p={id:uid(),nome,km:br?null:x.km,lat:null,lng:null,fonte:fonte||"Excel rete PL",note:"",barriere:""}; if(br){ p.ramo="Rovato–Bornato"; p.kmRamo=x.km; } S.pl.push(p); res.nuovi++; } else res.agg++;
+    if(!p.nome || /^PL( km|$)/i.test(p.nome)) p.nome=nome;
+    p.linea=x.linea; if(br){ p.kmRamo=x.km; } else if(p.fonte!=="PDF" && !x.warn) p.km=x.km;
+    p.rete={switch:x.switch,km:x.km,net:x.net||"",mask:x.mask||"",gw:x.gw||"",bc:x.bc||"",dns1:x.dns1||"",dns2:x.dns2||"",ntp:x.ntp||"",note:x.note||"",app:(p.rete&&p.rete.switch===x.switch&&p.rete.edited)?p.rete.app:x.app.map(a=>({...a})),warn:x.warn||"",edited:p.rete&&p.rete.edited};
+    const q=plQ(p); if(!q.subnet) q.subnet=p.rete.mask; if(!q.gateway) q.gateway=p.rete.gw;
+    if(x.warn) res.warn.push(x.switch+": "+x.warn); }
+  S.pl.sort((a,b)=>(a.km??a.kmRamo??999)-(b.km??b.kmRamo??999)); plNetGeo(); return res; }
+// posizione dei PL senza coordinate: dalla km sul binario (linea principale) o sul ramo Bornato–Rovato
+function plNetGeo(){ for(const p of (S.pl||[])){ if(p.lat!=null) continue; let ll=null;
+    if(p.ramo && p.kmRamo!=null) ll=branchKmToLL(p.kmRamo); else if(p.km!=null && !(p.rete&&p.rete.warn)) ll=kmToLL(p.km);
+    if(ll){ p.lat=ll[0]; p.lng=ll[1]; p.geoKm=true; } } }
+function plNetTab(p){ const r=p.rete;
+  if(!r) return `<p class="dim">Nessun dato di rete per questo PL. Si importano dal file Excel dei PL (Database → PL e fermate → "⇩ Importa rete PL").</p>`;
+  const cidr=r.mask?"/"+maskBits(r.mask):"", self=`${p.nome}${p.linea?" ("+p.linea+")":""}`;
+  return `${r.warn?`<p style="color:var(--yellow);font-size:12.5px">⚠ ${esc(r.warn)}: controlla la progressiva nel file.</p>`:""}
+    <fieldset class="qg"><legend>Switch e rete</legend><div class="grid2">
+      <label>Switch</label><div class="mono val">${esc(r.switch)}</div><label>Linea</label><div>${esc(p.linea||"")}</div>
+      <label>Rete</label><div class="mono">${esc(r.net)}${cidr} <span class="dim">(${esc(r.mask)})</span></div><label>Gateway</label><div class="mono">${esc(r.gw)}</div>
+      <label>Broadcast</label><div class="mono">${esc(r.bc)}</div><label>DNS</label><div class="mono">${esc(r.dns1)}${r.dns2?" · "+esc(r.dns2):""}</div><label>NTP</label><div class="mono">${esc(r.ntp)}</div>
+      ${r.note?`<label>Note</label><div>${esc(r.note)}</div>`:""}</div></fieldset>
+    <fieldset class="qg"><legend>Apparati (${r.app.filter(a=>!/^libero$/i.test(a.n)).length} collegati · ${r.app.filter(a=>/^libero$/i.test(a.n)).length} indirizzi liberi)</legend>
+    <table class="t"><thead><tr><th>Apparato</th><th>Porta switch</th><th>Indirizzo IP</th></tr></thead><tbody>
+    ${r.app.map((a,i)=>`<tr data-pln="${i}" class="${/^libero$/i.test(a.n)?"dimrow":""}"><td><input class="f" data-plnk="n" value="${esc(a.n)}" style="min-width:120px"></td><td><input class="f mono" data-plnk="porta" value="${esc(a.porta)}" style="width:80px"></td>
+      <td><input class="f mono" data-plnk="ip" value="${esc(a.ip)}" style="min-width:120px">${/^libero$/i.test(a.n)?"":hintHTML("ip",a.ip,self+" · "+a.n)}</td></tr>`).join("")}</tbody></table>
+    <div class="dim" style="font-size:11.5px;margin-top:4px">Scrivi il nome dell'apparato su una riga "Libero" per assegnare quell'indirizzo.</div></fieldset>`; }
+document.addEventListener("input",e=>{ const tr=e.target.closest("[data-pln]"); if(!tr||!e.target.dataset.plnk) return; const w=e.target.closest("[data-plid]"); const p=w&&(S.pl||[]).find(x=>x.id===w.dataset.plid); if(!p||!p.rete) return;
+  p.rete.app[+tr.dataset.pln][e.target.dataset.plnk]=e.target.value; p.rete.edited=true; p.upd=now();
+  if(e.target.dataset.plnk==="ip"){ const h=e.target.parentElement.querySelector(".fh"); if(h){ const m=fieldCheck("ip",e.target.value,`${p.nome}${p.linea?" ("+p.linea+")":""} · ${p.rete.app[+tr.dataset.pln].n}`); h.textContent=m; h.className="fh "+(m.startsWith("✘")?"err":m?"warn":""); } }
+  clearTimeout(saveT); saveT=setTimeout(()=>changed(),600); });
+document.addEventListener("click",e=>{ const a=e.target.closest('[data-pla="impnet"]'); if(!a) return; e.preventDefault(); e.stopImmediatePropagation();
+  const i=document.createElement("input"); i.type="file"; i.accept=".xlsx,.xls"; i.onchange=async()=>{ const f=i.files[0]; if(!f) return;
+    try{ const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}); const A=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null,raw:true}); const list=parsePLNet(A);
+      if(!list.length){ alert("Nel file non ho trovato le colonne Apparato e Address con le righe SW-PL…"); return; }
+      const r=mergePLNet(list,"Excel rete PL"); changed(`rete PL da ${f.name}: ${r.agg} PL aggiornati, ${r.nuovi} nuovi${r.warn.length?` · ${r.warn.length} con km da controllare`:""}`); if(r.warn.length) alert("Da controllare:\n"+r.warn.join("\n")); renderLeaf(); renderDB();
     }catch(err){ alert("File non leggibile: "+err.message); } }; i.click(); },true);
 
 /* ---------- drawer events ---------- */
@@ -2083,6 +2161,9 @@ function exportXlsx(){
     const wdl=XLSX.utils.aoa_to_sheet(dl); wdl["!cols"]=[{wch:36},{wch:24},{wch:40},{wch:12},{wch:18}]; XLSX.utils.book_append_sheet(wb,wdl,"Documenti"); }
   const wq=XLSX.utils.aoa_to_sheet(q); for(let i=1;i<q.length;i++){ const a=XLSX.utils.encode_cell({r:i,c:3}); if(wq[a]) wq[a].z="0%"; } wq["!cols"]=q[0].map(()=>({wch:16}));
   XLSX.utils.book_append_sheet(wb,wq,"Config_quadri");
+  { const rp=[["PL","Linea","Progressiva","Switch","Apparato","Porta switch","Indirizzo IP","Subnet mask","Rete","Gateway","Broadcast","DNS1","DNS2","NTP"]];
+    for(const p of (S.pl||[])) if(p.rete){ const r=p.rete; for(const a of r.app) rp.push([p.nome,p.linea||"",kmTxt(r.km),r.switch,a.n,a.porta,a.ip,r.mask,r.net,r.gw,r.bc,r.dns1,r.dns2,r.ntp]); }
+    if(rp.length>1){ const wr=XLSX.utils.aoa_to_sheet(rp); wr["!cols"]=rp[0].map(()=>({wch:15})); XLSX.utils.book_append_sheet(wb,wr,"Rete_PL"); } }
   { const vg=[["Vasca","Giunti","Progressiva","Distanza dal binario m","Linea","Punto","Tratta","Tipo / dimensioni","Chiusino","Profondità","Cavi presenti","Muffola / giunto","Fibre giuntate","Collegata a","Stato","Data giunzione","Ditta","Latitudine","Longitudine","Note"]];
     vgSorted().forEach(v=>{ const t=S.tratte.find(x=>x.id===v.tratta); vg.push([v.nome,(v.giunti||[]).map(g=>g.codice).join(" · "),v.progressiva,v.offRail??"",v.linea||"",v.punto||"",t?t.nome:"",v.tipo,v.chiusino,v.profondita,v.cavi,v.muffola,v.fibre,v.collegata,v.stato,v.data,v.ditta,v.lat,v.lng,v.note]); });
     const wv=XLSX.utils.aoa_to_sheet(vg); wv["!cols"]=vg[0].map(()=>({wch:16})); XLSX.utils.book_append_sheet(wb,wv,"Vasche_giunzione"); }
@@ -2583,7 +2664,7 @@ async function alignRail(force){
   try{
     let pr=null;
     if(force || !S.rail || !(S.rail.ver>=2)){ status("scarico tracciato, PL e fermate da OpenStreetMap…"); const osm=await fetchOverpass(); S.rail=buildRailPath(osm); pr=importOsmPoi(osm); }
-    const r=alignGallerie(); applyPdfGeo(); ensurePL(); vgAutoKm(); const vs=vgSnap(); UI.railErr=""; S.rail.info={osm:r.osm,km:r.km,at:now()}; changed(); renderDrawer();
+    const r=alignGallerie(); applyPdfGeo(); ensurePL(); plNetGeo(); vgAutoKm(); const vs=vgSnap(); UI.railErr=""; S.rail.info={osm:r.osm,km:r.km,at:now()}; changed(); renderDrawer();
     status(`tracciato OSM: ${Math.round(S.rail.path[S.rail.path.length-1][2]/100)/10} km di binario · ${r.osm} gallerie agganciate alle gallerie OSM, ${r.km} per progressiva km · ${(S.pl||[]).length} PL${pr?` (${pr.npl} nuovi)`:""}${pr&&pr.nf?` · ${pr.nf} fermate nuove`:""}${pr&&pr.ngeo?` · ${pr.ngeo} sedi georeferenziate`:""}${(S.vasche||[]).length?` · ${vs.ok} vasche allineate al binario${vs.lontane.length?`, ${vs.lontane.length} oltre ${VG_SNAP_MAX} m lasciate sulla posizione GPS (controlla: Database → Vasche → filtro "oltre 150 m")`:""}`:""}`,"ok");
   }catch(e){ console.error(e); UI.railErr=e.message; status("allineamento non riuscito: "+e.message+" · serve la connessione internet","err"); updLeafHint(); }
   finally{ railBusy=false; if(btn) btn.disabled=false; updLeafHint(); }
@@ -2675,6 +2756,7 @@ function ipIndex(){ // tutti gli IP noti (telecamere + switch + gateway) per tro
   const m=new Map(), add=(ip,who)=>{ ip=(ip||"").trim(); if(!ip) return; if(!m.has(ip)) m.set(ip,[]); m.get(ip).push(who); };
   allCams().forEach(r=>add(r.c.ip,{tipo:"telecamera",dove:`${r.t.nome} · BOX ${r.b.n} · ${r.cod}`,ref:r}));
   for(const t of S.tratte) for(const b of t.boxes){ add(b.quadro.switchIP,{tipo:"switch",dove:`${t.nome} · BOX ${b.n}`}); }
+  for(const p of (S.pl||[])){ const who=`${p.nome}${p.linea?" ("+p.linea+")":""}`; if(p.rete){ add(p.rete.gw,{tipo:"gateway",dove:who}); for(const a of p.rete.app) if(!/^libero$/i.test(a.n)) add(a.ip,{tipo:a.n,dove:who+" · "+a.n}); } else if(p.quadro&&p.quadro.switchIP) add(p.quadro.switchIP,{tipo:"switch",dove:who}); }
   return m;
 }
 const modName=id=>{ const m=(S.modelli||[]).find(x=>x.id===id); return m? `${m.marca} ${m.modello}`.trim() : ""; };
@@ -2858,9 +2940,10 @@ function importOsmPoi(osm){
     if(tg.railway==="level_crossing"||tg.railway==="crossing"){
       const dm=distToLine(ll,main), db=br.length>1?distToLine(ll,br):1e9; if(Math.min(dm,db)>25) continue;
       const km = dm<=db ? dToKm(railProject(ll)) : null, ref=tg.ref||tg.name||"";
-      let p=S.pl.find(x=>x.osmId===e.id) || S.pl.find(x=>x.km!=null && km!=null && Math.abs(x.km-km)<0.15 && !x.osmId);
+      let p=S.pl.find(x=>x.osmId===e.id) || S.pl.find(x=>!x.ramo && x.km!=null && km!=null && Math.abs(x.km-km)<0.15 && !x.osmId);
+      if(!p && dm>db){ const bk=branchKmOf(ll); if(bk!=null) p=S.pl.find(x=>x.ramo && x.kmRamo!=null && !x.osmId && Math.abs(x.kmRamo-bk)<0.15); }
       if(!p){ p={id:uid(),nome:ref?(/^PL/i.test(ref)?ref:"PL "+ref):"",km,fonte:"OSM",note:"",barriere:""}; S.pl.push(p); npl++; }
-      p.osmId=e.id; p.lat=e.lat; p.lng=e.lon; p.geoKm=false; if(km!=null && p.fonte!=="PDF") p.km=km; if(dm>db) p.ramo="Rovato–Bornato";
+      p.osmId=e.id; p.lat=e.lat; p.lng=e.lon; p.geoKm=false; if(km!=null && p.fonte!=="PDF" && !(p.rete&&!p.rete.warn)) p.km=km; if(dm>db) p.ramo="Rovato–Bornato";
       p.barriere = tg["crossing:barrier"] ? ({yes:"sì",no:"no",full:"complete",half:"semibarriere",double_half:"doppie semibarriere"}[tg["crossing:barrier"]]||tg["crossing:barrier"]) : (p.barriere||"");
       if(tg["crossing:light"]==="yes") p.luci="sì"; if(!p.nome) p.nome = "PL"+(p.km!=null?" km "+kmTxt(p.km):"");
       continue; }
@@ -2891,7 +2974,7 @@ function parseKmTxt(s){ const m=String(s||"").trim().match(/^(\d+)\s*\+\s*(\d{1,
 function plQ(p){ p.quadro ||= emptyQuadro(); p.quadro.extra ||= []; const q=p.quadro;
   if(!q.codice&&p.nome) q.codice=p.nome; if(!q.progressiva&&(p.ramo||p.km!=null)) q.progressiva=p.ramo||kmTxt(p.km); return q; }
 function plQuForm(p){ const q=plQ(p), F=(k,l,ph="")=>`<label>${l}</label><input class="f" data-plqf="${k}" value="${esc(q[k]||"")}" placeholder="${esc(ph)}">`;
-  return `<tr data-plq="${p.id}" class="plq"><td colspan="9"><div class="card" style="margin:4px 0"><div class="ch"><span class="h-green mono">CONFIG. QUADRO · ${esc(p.nome||"PL")}</span><span class="grow"></span><button class="btn sm" data-pltog="${p.id}">chiudi</button></div><div class="cb">
+  return `<tr data-plq="${p.id}" class="plq"><td colspan="11"><div class="card" style="margin:4px 0"><div class="ch"><span class="h-green mono">CONFIG. QUADRO · ${esc(p.nome||"PL")}</span><span class="grow"></span><button class="btn sm" data-pltog="${p.id}">chiudi</button></div><div class="cb">
     <div class="grid2">${F("codice","Codice quadro / n° PL","es. PL 25")}${F("progressiva","Progressiva km","es. 40+540")}${F("imbocco","Galleria / località")}
     ${F("alimFonte","Alimentazione da","es. Enel, cabina PL")}${F("alimPotenza","Fornitura","es. Enel 220 V 6 kW")}${F("switchModello","Switch modello")}${F("switchIP","IP switch","192.168.x.x")}${F("subnet","Subnet mask","255.255.255.0")}
     ${F("gateway","Gateway")}${F("vlan","VLAN")}${F("cavoFO","Cavo F.O.","es. 24 fo SM")}${F("fibre","Fibre giuntate","es. 1-2 / 3-4")}${F("porte","Porte usate")}</div>
@@ -2899,6 +2982,7 @@ function plQuForm(p){ const q=plQ(p), F=(k,l,ph="")=>`<label>${l}</label><input 
     ${(q.extra||[]).map((x,xi)=>`<div class="kv" data-plx="${xi}"><input class="f" data-plxk="k" value="${esc(x.k)}" placeholder="campo"><input class="f" data-plxk="v" value="${esc(x.v)}" placeholder="valore"><button class="btn sm danger" data-pla="delx">✕</button></div>`).join("")}
     <button class="btn sm" data-pla="addx" style="margin-top:4px">+ campo</button>
     <div class="dim" style="font-size:11.5px;margin-top:6px">Esportati nel foglio <span class="val">Config_quadri</span> dell'Excel (tratta "PL").</div></div></div></td></tr>`; }
+document.addEventListener("click",e=>{ const r=e.target.closest("[data-plrete]"); if(!r) return; e.preventDefault(); UI.ptab="rete"; openPL(r.dataset.plrete,true); });
 document.addEventListener("click",e=>{ const g=e.target.closest("[data-pltog]"); if(!g) return; e.preventDefault(); UI.plOpen=UI.plOpen===g.dataset.pltog?null:g.dataset.pltog; renderDB(); });
 document.addEventListener("input",e=>{ const tr=e.target.closest("[data-plq]"); if(!tr) return; const p=(S.pl||[]).find(x=>x.id===tr.dataset.plq); if(!p) return; p.quadro ||= emptyQuadro();
   if(e.target.dataset.plqf){ const k=e.target.dataset.plqf, v=e.target.value; p.quadro[k]=v;
@@ -2911,10 +2995,10 @@ function dbPL(){
   const pl=S.pl||[], fer=(S.sedi||[]).slice().sort((a,b)=>(a.lat??0)-(b.lat??0));
   return `<div class="welcome" style="max-width:none"><div class="h-green">• Passaggi a livello e fermate •</div><div class="h-yellow">(dallo schema PDF, da Quadri & Fibra e da OpenStreetMap con "⟲ Allinea ferrovia" sulla mappa reale)</div>
     <div class="kpis"><div><span>Passaggi a livello</span><b class="val big">${pl.length}</b></div><div><span>Da OSM</span><b class="val big">${pl.filter(p=>p.osmId).length}</b></div><div><span>Fermate / sedi</span><b class="val big">${fer.length}</b></div><div><span>Senza coordinate</span><b class="val big">${fer.filter(s=>s.lat==null).length+pl.filter(p=>p.lat==null).length}</b></div></div>
-    <div class="row-flex" style="margin-top:10px"><button class="btn" data-pla="add">+ PL a mano (clic sulla mappa reale)</button>${S.rail&&S.rail.ver>=2?`<span class="dim" style="font-size:12px">dati OSM del ${fmtD(S.rail.at)}</span>`:`<span style="color:var(--yellow);font-size:12px">PL e fermate OSM non ancora scaricati: apri la mappa reale con internet attivo</span>`}</div></div>
+    <div class="row-flex" style="margin-top:10px"><button class="btn" data-pla="add">+ PL a mano (clic sulla mappa reale)</button><button class="btn" data-pla="impnet" title="File Excel dati_pl: switch, apparati e IP di ogni PL">⇩ Importa rete PL (Excel)</button>${S.rail&&S.rail.ver>=2?`<span class="dim" style="font-size:12px">dati OSM del ${fmtD(S.rail.at)}</span>`:`<span style="color:var(--yellow);font-size:12px">PL e fermate OSM non ancora scaricati: apri la mappa reale con internet attivo</span>`}</div></div>
   <div class="h-green" style="margin:6px 0">• Passaggi a livello •</div>
-  <table class="t"><thead><tr><th>PL</th><th>Progressiva</th><th>Barriere</th><th>Fonte</th><th>Coordinate</th><th>Note</th><th>Config. quadro</th><th>Doc</th><th></th></tr></thead><tbody>
-  ${pl.map(p=>`<tr data-plid="${p.id}"><td><input class="f mono" data-pf="nome" value="${esc(p.nome)}" style="width:120px"></td><td class="mono">${p.ramo?esc(p.ramo):p.km!=null?kmTxt(p.km):"—"}</td><td>${esc(p.barriere||"—")}${p.luci?" · luci":""}</td><td class="dim">${esc(p.fonte)}${p.geoKm?" (stima)":""}</td>
+  <table class="t"><thead><tr><th>PL</th><th>Linea</th><th>Progressiva</th><th>Rete</th><th>Barriere</th><th>Fonte</th><th>Coordinate</th><th>Note</th><th>Config. quadro</th><th>Doc</th><th></th></tr></thead><tbody>
+  ${pl.map(p=>`<tr data-plid="${p.id}"><td><input class="f mono" data-pf="nome" value="${esc(p.nome)}" style="width:120px"></td><td class="dim">${esc(p.linea||(p.ramo?"Bornato–Rovato":""))}</td><td class="mono">${p.ramo?(p.kmRamo!=null?kmTxt(p.kmRamo):"ramo"):p.km!=null?kmTxt(p.km):"—"}${p.rete&&p.rete.warn?` <span title="${esc(p.rete.warn)}" style="color:var(--yellow)">⚠</span>`:""}</td><td class="mono">${p.rete?`<a class="lnk" href="#" data-plrete="${p.id}">${esc(p.rete.net)}/${maskBits(p.rete.mask)}</a>`:"—"}</td><td>${esc(p.barriere||"—")}${p.luci?" · luci":""}</td><td class="dim">${esc(p.fonte)}${p.geoKm?" (stima)":""}</td>
     <td>${p.lat!=null?`<a class="lnk" href="#" data-gopl="${p.id}">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</a>`:`<span style="color:var(--yellow)">—</span>`}</td><td><input class="f" data-pf="note" value="${esc(p.note||"")}" style="min-width:220px"></td><td><button class="btn sm ${UI.plOpen===p.id?"on":""}" data-pltog="${p.id}" title="dati di configurazione del quadro del PL">⚙ ${p.quadro&&(p.quadro.switchIP||p.quadro.switchModello||p.quadro.alimFonte)?"config. ✔":"config."}</button></td><td>${docBtn("pl",p.id,p.nome||"Passaggio a livello")}</td><td><button class="btn sm danger" data-pla="del">✕</button></td></tr>${UI.plOpen===p.id?plQuForm(p):""}`).join("")||`<tr><td colspan="8" class="dim">nessun PL</td></tr>`}
   </tbody></table>
   <div class="h-green" style="margin:20px 0 6px">• Stazioni e fermate •</div>
@@ -3308,6 +3392,7 @@ function quadroKV(q,over={}){ q=q||{}; const rows=Q_LBL.map(([k,l])=>[l,over[k]!
   return rows.length?`<table class="pt kv">${rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${/IP|Subnet|Gateway|VLAN|Progressiva|Porte|Fibre/.test(k)?`<span class="val mono">${esc(v)}</span>`:esc(v)}</td></tr>`).join("")}</table>`:`<div class="dim" style="font-size:11.5px;margin-top:4px">configurazione del quadro non ancora compilata</div>`; }
 function plPopup(p){
   return `<div class="pp"><div class="h-green mono">${esc(p.nome||"Passaggio a livello")}</div><div class="h-yellow">(${p.ramo?esc(p.ramo):p.km!=null?"km "+kmTxt(p.km):"progressiva non nota"} · fonte ${esc(p.fonte)}${p.geoKm?" · posizione stimata da km":""})</div>${p.barriere?`<div>barriere: ${esc(p.barriere)}${p.luci?" · segnali luminosi":""}</div>`:""}
+    ${p.rete?`<div class="info" style="font-size:11.5px;margin-top:5px">Rete · ${esc(p.rete.switch)}</div><table class="pt kv"><tr><th>Rete</th><td><span class="val mono">${esc(p.rete.net)}/${maskBits(p.rete.mask)}</span></td></tr><tr><th>Gateway</th><td class="mono">${esc(p.rete.gw)}</td></tr>${p.rete.app.filter(a=>!/^libero$/i.test(a.n)).map(a=>`<tr><th>${esc(a.n)}${a.porta?` <span class="dim">${esc(a.porta)}</span>`:""}</th><td><span class="val mono">${esc(a.ip)}</span></td></tr>`).join("")}</table>`:""}
     <div class="info" style="font-size:11.5px;margin-top:5px">Config. quadro</div>${quadroKV(plQ(p))}
     ${p.note?`<div style="font-size:11.5px;margin-top:4px"><span class="info">Note:</span> ${esc(p.note)}</div>`:""}
     <div class="row-flex" style="margin-top:6px">${docBtn("pl",p.id,p.nome||"Passaggio a livello")}${gLinks(p.lat,p.lng)}</div></div>`; }
@@ -3345,7 +3430,8 @@ document.addEventListener("click",e=>{ const o=e.target.closest("[data-openbox]"
   FILES = ok? await DB.allFiles() : [];
   if(!S.sedi){ mergeSedi(convertQF(QF_INIT), QF_INIT.exportedAt); if(ok) DB.set("state",JSON.stringify(S)); }
   qfInit(); qfRebuild();
-  S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); $("#b-pl").classList.toggle("on",S.showPL!==false); S.vasche ||= []; if(VG_SEED.length && S.giuntiSeed!==VG_SEED.length+"|"+(VG_SEED[0]||{}).key){ mergeGiunti(VG_SEED,"Giunti_ISEO-EDOLO_OK.xlsx"); S.giuntiSeed=VG_SEED.length+"|"+(VG_SEED[0]||{}).key; if(ok) DB.set("state",JSON.stringify(S)); } else vgAutoKm(); $("#b-vg").classList.toggle("on",S.showVG!==false); applySediVis(); $("#b-cams").classList.toggle("on",S.showCams!==false); initMap(); renderSide(); setPath();
+  S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); $("#b-pl").classList.toggle("on",S.showPL!==false); if(PLNET_SEED.length && S.plNetSeed!==PLNET_SEED.length+"|"+JSON.stringify(PLNET_SEED[2]||"")){ mergePLNet(parsePLNet(PLNET_SEED),"Excel rete PL"); S.plNetSeed=PLNET_SEED.length+"|"+JSON.stringify(PLNET_SEED[2]||""); if(ok) DB.set("state",JSON.stringify(S)); } else plNetGeo();
+  S.vasche ||= []; if(VG_SEED.length && S.giuntiSeed!==VG_SEED.length+"|"+(VG_SEED[0]||{}).key){ mergeGiunti(VG_SEED,"Giunti_ISEO-EDOLO_OK.xlsx"); S.giuntiSeed=VG_SEED.length+"|"+(VG_SEED[0]||{}).key; if(ok) DB.set("state",JSON.stringify(S)); } else vgAutoKm(); $("#b-vg").classList.toggle("on",S.showVG!==false); applySediVis(); $("#b-cams").classList.toggle("on",S.showCams!==false); initMap(); renderSide(); setPath();
   let mm="schema"; try{ mm=localStorage.getItem("fn-mapmode")||"schema"; }catch(e){} setMapMode(mm);
   if(SRV) status(SRV.role==="viewer"?"connesso in sola lettura":"connesso al server · le modifiche si salvano da sole e sono visibili a tutti gli utenti","ok");
   else status(ok? "pronto · i dati restano nel browser, usa 💾 Salva per una copia su file" : "attenzione: archivio del browser non disponibile, salva spesso su file", ok?null:"err");
