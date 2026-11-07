@@ -87,3 +87,9 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - Owner/gruppo: `dvls:dvls`; permessi directory `drwxrwx---` (770).
 - Volume candidato: `${APP_DATA_DIR}/data/dvls:/opt/devolutions/dvls/App_Data`.
 - Prima del deploy verificare UID/GID, eventuali file iniziali nella directory e gestione ownership del bind mount.
+
+## App_Data ownership and initial files (utente, 7 novembre 2026)
+- `id dvls`: `uid=1000(dvls) gid=100(users) groups=100(users),1000(dvls)`.
+- `App_Data`: owner `dvls:dvls` = 1000:1000, permissions 770.
+- Bundled files: `DVLSConsolePrerequisites.config` (122 bytes), `DiffPlex.htm` (282 bytes).
+- A bind mount hides bundled files; seed persistent directory from image before first start and ensure owner 1000:1000. Do not overwrite existing persistent files on subsequent starts.
