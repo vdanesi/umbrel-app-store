@@ -81,3 +81,9 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - `DVLS_DATABASE_UPGRADE_ON_STARTUP=true`, `DVLS_DATABASE_UPGRADE_LOCK_TIMEOUT=300`.
 - `SCHEDULER_EMBEDDED=true`; `DVLS_EXECUTABLE_PATH=/opt/devolutions/dvls/Devolutions.Server`.
 - ExposedPorts `5000/tcp`; image-declared Volumes null. Persistenza e configurazione applicativa da verificare esplicitamente.
+
+## Ispezione filesystem DVLS (utente, 7 novembre 2026)
+- Directory presente: `/opt/devolutions/dvls/App_Data`.
+- Owner/gruppo: `dvls:dvls`; permessi directory `drwxrwx---` (770).
+- Volume candidato: `${APP_DATA_DIR}/data/dvls:/opt/devolutions/dvls/App_Data`.
+- Prima del deploy verificare UID/GID, eventuali file iniziali nella directory e gestione ownership del bind mount.
