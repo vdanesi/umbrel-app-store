@@ -1,0 +1,13 @@
+# BOZZA NON INSTALLABILE: configurazione DVLS 2026.3/PostgreSQL incompleta.
+# NON fare deploy finché inizializzazione e segreti non sono configurati.
+# Esclusa intenzionalmente l'esposizione di porte e l'avvio dei servizi.
+services:
+  # TODO: aggiungere dopo verifica ufficiale
+  # - Postgres 17 con volume persistente e credenziali NON nel repository
+  # - inizializzazione una tantum con SUPERUSER temporaneo, poi NOSUPERUSER
+  # - DVLS con App_Data persistente, certificato TLS e secret
+  # - backup pg_dump e copia protetta di encryption.config
+  placeholder:
+    image: alpine:3.21
+    command: ["/bin/sh", "-c", "echo 'BOZZA: non avvia Devolutions Server'; exit 1"]
+    restart: "no"
