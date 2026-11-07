@@ -52,3 +52,9 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - IP host Umbrel: `192.168.3.110`.
 - Verificare la raggiungibilità dal container cloudflared e il certificato TLS (IP SAN oppure originServerName/CA adeguati).
 - Non considerare attivo il servizio prima del deploy e della verifica della protezione Cloudflare Access.
+
+## Cloudflare Access (screenshot utente, 7 novembre 2026)
+- Applicazione self-hosted `devolutions`, destinazione `devolutions.dvso.net`.
+- Policy visibile `Allow emails: 14/09/2026`; **presenza confermata, contenuto e precedenza non verificati**.
+- Prima del deploy verificare la policy Include/Exclude/Require e testare con sessione privata, utente autorizzato e non autorizzato.
+- Non assumere che una policy Access per browser sia compatibile con i client Remote Desktop Manager; verificare il flusso API prima di utilizzarlo in produzione.
