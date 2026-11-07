@@ -46,3 +46,9 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - Cloudflare: usare un hostname di origine raggiungibile dal container cloudflared; `localhost` non identifica Umbrel dall'interno del container.
 - Non impostare `No TLS Verify` in modo permanente. Definire certificato origine e trust, e verificare l'interoperabilità Cloudflare Access / Remote Desktop Manager.
 - Non attivare pubblicamente il tunnel prima del bootstrap amministratore, del controllo accessi e del test backup.
+
+## Origine Cloudflare confermata dall'utente
+- URL configurato nel tunnel: `https://192.168.3.110:5000`.
+- IP host Umbrel: `192.168.3.110`.
+- Verificare la raggiungibilità dal container cloudflared e il certificato TLS (IP SAN oppure originServerName/CA adeguati).
+- Non considerare attivo il servizio prima del deploy e della verifica della protezione Cloudflare Access.
