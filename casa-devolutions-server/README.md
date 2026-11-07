@@ -74,3 +74,10 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - Digest: `sha256:12c05097f4ad5a3e0ffe1d00c0b4855e24369b7e33becaab5a0072e49024a4a3`.
 - `docker image inspect ... --format '{{.Os}}/{{.Architecture}}'`: `linux/amd64`.
 - Non sono ancora stati testati avvio, schema PostgreSQL, certificato e accesso applicativo.
+
+## Docker image inspect DVLS (utente, 7 novembre 2026)
+- Entrypoint: `["sh","-c","exec \"${DVLS_EXECUTABLE_PATH}\" --container-entrypoint \"$@\"","--"]`; Cmd: null.
+- `ASPNETCORE_URLS=https://0.0.0.0:5000`; `ASPNETCORE_ENVIRONMENT=Production`.
+- `DVLS_DATABASE_UPGRADE_ON_STARTUP=true`, `DVLS_DATABASE_UPGRADE_LOCK_TIMEOUT=300`.
+- `SCHEDULER_EMBEDDED=true`; `DVLS_EXECUTABLE_PATH=/opt/devolutions/dvls/Devolutions.Server`.
+- ExposedPorts `5000/tcp`; image-declared Volumes null. Persistenza e configurazione applicativa da verificare esplicitamente.
