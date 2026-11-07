@@ -68,3 +68,9 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - Digest riportato: `sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dffe9b4087be98292cdd3b4f`.
 - `docker image inspect postgres:17 --format '{{.Os}}/{{.Architecture}}'`: `linux/amd64`.
 - La verifica prova disponibilità e architettura dell'immagine, non ancora l'avvio né l'inizializzazione di DVLS.
+
+## Verifica immagine DVLS su Umbrel (utente, 7 novembre 2026)
+- `docker pull devolutions/devolutions-server:release-2026.3`: completato.
+- Digest: `sha256:12c05097f4ad5a3e0ffe1d00c0b4855e24369b7e33becaab5a0072e49024a4a3`.
+- `docker image inspect ... --format '{{.Os}}/{{.Architecture}}'`: `linux/amd64`.
+- Non sono ancora stati testati avvio, schema PostgreSQL, certificato e accesso applicativo.
