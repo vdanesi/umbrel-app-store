@@ -58,3 +58,7 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - Policy visibile `Allow emails: 14/09/2026`; **presenza confermata, contenuto e precedenza non verificati**.
 - Prima del deploy verificare la policy Include/Exclude/Require e testare con sessione privata, utente autorizzato e non autorizzato.
 - Non assumere che una policy Access per browser sia compatibile con i client Remote Desktop Manager; verificare il flusso API prima di utilizzarlo in produzione.
+
+## Controllo porta host (utente)
+- `sudo ss -lntp | grep ':5000 '` su Umbrel non ha prodotto output: nessun listener TCP 5000 al momento del controllo.
+- Ricontrollare prima del deploy; non equivale a test del container o dell'accesso HTTPS.
