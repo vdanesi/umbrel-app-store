@@ -62,3 +62,9 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 ## Controllo porta host (utente)
 - `sudo ss -lntp | grep ':5000 '` su Umbrel non ha prodotto output: nessun listener TCP 5000 al momento del controllo.
 - Ricontrollare prima del deploy; non equivale a test del container o dell'accesso HTTPS.
+
+## Verifica immagine PostgreSQL su Umbrel (utente, 7 novembre 2026)
+- `docker pull postgres:17`: completato con successo.
+- Digest riportato: `sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dffe9b4087be98292cdd3b4f`.
+- `docker image inspect postgres:17 --format '{{.Os}}/{{.Architecture}}'`: `linux/amd64`.
+- La verifica prova disponibilità e architettura dell'immagine, non ancora l'avvio né l'inizializzazione di DVLS.
