@@ -93,3 +93,10 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - `App_Data`: owner `dvls:dvls` = 1000:1000, permissions 770.
 - Bundled files: `DVLSConsolePrerequisites.config` (122 bytes), `DiffPlex.htm` (282 bytes).
 - A bind mount hides bundled files; seed persistent directory from image before first start and ensure owner 1000:1000. Do not overwrite existing persistent files on subsequent starts.
+
+## PostgreSQL test verified (7 Nov 2026)
+- `dvls-test-postgres` healthy, PostgreSQL 17.11, database `dvls` accessible.
+- Docker internal port `5432/tcp`, no host port published.
+- Bootstrap role `dvls_user`: SUPERUSER=true CREATEDB=true (created by POSTGRES_USER).
+- Dedicated login `dvls_app`: SUPERUSER=false CREATEDB=false LOGIN=true.
+- Next: assign database/schema ownership to dvls_app; check authentication using its saved secret without exposing it. Do not deploy DVLS until configuration is confirmed.
