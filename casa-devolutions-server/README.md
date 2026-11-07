@@ -100,3 +100,9 @@ non operativo** e non deve essere pubblicato sul ramo `main`.
 - Bootstrap role `dvls_user`: SUPERUSER=true CREATEDB=true (created by POSTGRES_USER).
 - Dedicated login `dvls_app`: SUPERUSER=false CREATEDB=false LOGIN=true.
 - Next: assign database/schema ownership to dvls_app; check authentication using its saved secret without exposing it. Do not deploy DVLS until configuration is confirmed.
+
+## Database ownership confirmed (7 Nov 2026)
+- `ALTER DATABASE dvls OWNER TO dvls_app`: successful.
+- `ALTER SCHEMA public OWNER TO dvls_app`: successful.
+- Queries confirm database `dvls` and schema `public` both owned by `dvls_app`.
+- Next verify actual password authentication across Docker network, then configure DVLS using documented 2026.3 settings; avoid claiming running service prematurely.
