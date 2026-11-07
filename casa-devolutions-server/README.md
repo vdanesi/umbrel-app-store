@@ -37,3 +37,12 @@ perché `umbrel-app-store.yml` identifica lo store con `id: casa`.
 ## Stato
 Fase preparatoria: il `docker-compose.yml` è deliberatamente un **placeholder
 non operativo** e non deve essere pubblicato sul ramo `main`.
+
+## Accesso concordato (7 novembre 2026)
+- Nome pubblico Cloudflare Tunnel: `devolutions.dvso.net` (route creata dall'utente, non ancora collaudata).
+- Porta interna HTTPS DVLS: `5000/tcp` (confermata dall'immagine).
+- Porta host proposta: `5000`, soggetta a nuova verifica conflitti prima del deploy.
+- LAN: HTTPS su IP/hostname Umbrel, con certificato valido per il nome utilizzato.
+- Cloudflare: usare un hostname di origine raggiungibile dal container cloudflared; `localhost` non identifica Umbrel dall'interno del container.
+- Non impostare `No TLS Verify` in modo permanente. Definire certificato origine e trust, e verificare l'interoperabilità Cloudflare Access / Remote Desktop Manager.
+- Non attivare pubblicamente il tunnel prima del bootstrap amministratore, del controllo accessi e del test backup.
