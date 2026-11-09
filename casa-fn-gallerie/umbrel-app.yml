@@ -4,7 +4,7 @@ name: FN Avanzamento Gallerie
 tagline: Nuovi lavori TVCC nelle gallerie con avanzamento, quadri e fibra
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-fn-gallerie/icon.svg
 category: files
-version: "1.8.0"
+version: "1.8.1"
 port: 8742
 description: >-
   Mappa della linea Brescia–Iseo–Edolo con l'avanzamento dei nuovi lavori TVCC nelle gallerie.
@@ -31,11 +31,11 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Configurazione degli switch dei PL: lo stesso "Importa rete PL" legge anche il file degli
-  switch (uplink G1/1 e G1/2 con provenienza e destinazione, VLAN di servizio, loopback,
-  DNS, PDF di configurazione). Nella scheda "Rete e apparati" del PL compaiono
-  configurazione e uplink con collegamento agli switch vicini, i controlli di coerenza
-  tra i due file, loopback e uplink nel piano IP e il nuovo foglio Switch_PL nell'Excel.
+  Dati senza doppioni: nella scheda del PL ogni dato di rete compare una sola volta
+  (gateway e VLAN insieme, DNS e maschera dal file dei PL), il quadro non ripete i campi di
+  rete, PL ripetuti uniti in uno solo, giunto G59B ripetuto tolto, fogli Excel senza
+  colonne ripetute. Corretti gli indirizzi degli uplink scritti come numeri nel file degli
+  switch. Nuovo pulsante "Togli doppioni" nel Database PL.
 dependencies: []
 path: ""
 defaultUsername: ""

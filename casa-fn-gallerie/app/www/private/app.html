@@ -1570,9 +1570,9 @@ function renderPLCard(p){
     <div class="db">${UI.ptab==="qu"?plQuFields(p):UI.ptab==="rete"?plNetTab(p):UI.ptab==="doc"?docList("pl",p.id,docsOf("pl",p.id)):`<div class="info" style="font-size:12px">Note</div><textarea class="f" data-pf="note" style="min-height:120px">${esc(p.note||"")}</textarea>
       <div class="row-flex" style="margin-top:16px"><span class="sp"></span><button class="btn sm danger" data-pla="del">✕ Elimina ${esc(p.nome||"PL")}</button></div>`}</div></div>`;
 }
-function plQuFields(p){ const q=plQ(p), self=`PL ${p.nome}`;
-  return `<p class="dim" style="margin:0 0 6px;font-size:12px">Il n° PL e la progressiva sono il codice e la km del quadro. I campi si salvano da soli.</p>
-    ${Q_GROUPS.map(([g,fs])=>`<fieldset class="qg"><legend>${g}</legend><div class="grid2">${fs.map(([k,l,ph])=>`<label>${k==="codice"?"Codice quadro / n° PL":k==="imbocco"?"Galleria / località":l}</label><div><input class="f ${/IP|gateway|subnet|vlan|progressiva/i.test(k)?"mono":""}" data-plqf="${k}" value="${esc(q[k]||"")}" placeholder="${esc(ph)}">${hintHTML(k,q[k],self)}</div>`).join("")}</div></fieldset>`).join("")}
+function plQuFields(p){ const q=plQ(p), self=`PL ${p.nome}`, hasNet=!!p.rete;
+  return `<p class="dim" style="margin:0 0 6px;font-size:12px">Il n° PL e la progressiva sono il codice e la km del quadro. I campi si salvano da soli.${hasNet?` Switch, IP, subnet, gateway e VLAN sono nella scheda <a class="lnk" href="#" data-pt="rete">Rete e apparati</a>.`:""}</p>
+    ${Q_GROUPS.filter(([g])=>!(hasNet&&g==="Rete")).map(([g,fs])=>`<fieldset class="qg"><legend>${g}</legend><div class="grid2">${fs.map(([k,l,ph])=>`<label>${k==="codice"?"Codice quadro / n° PL":k==="imbocco"?"Galleria / località":l}</label><div><input class="f ${/IP|gateway|subnet|vlan|progressiva/i.test(k)?"mono":""}" data-plqf="${k}" value="${esc(q[k]||"")}" placeholder="${esc(ph)}">${hintHTML(k,q[k],self)}</div>`).join("")}</div></fieldset>`).join("")}
     <fieldset class="qg"><legend>Campi aggiuntivi</legend>${(q.extra||[]).map((x,xi)=>`<div class="kv" data-plx="${xi}"><input class="f" data-plxk="k" value="${esc(x.k)}" placeholder="campo"><input class="f" data-plxk="v" value="${esc(x.v)}" placeholder="valore"><button class="btn sm danger" data-pla="delx">✕</button></div>`).join("")||`<div class="dim" style="font-size:12px">nessuno</div>`}
     <button class="btn sm" data-pla="addx" style="margin-top:4px">+ campo</button></fieldset>`; }
 
@@ -1753,7 +1753,8 @@ function vgAuto(v){ const g=v.giunti||[]; if(!g.length) return;
 function mergeGiunti(rows,fonte){
   S.vasche ||= []; const res={nuove:0,aggiunti:0,aggiornati:0,senzaGps:0};
   const byKey=new Map(); for(const v of S.vasche) for(const g of (v.giunti||[])) byKey.set(g.key,v);
-  for(const r of rows){ if(r.lat==null||r.lng==null){ res.senzaGps++; continue; }
+  for(const r of rows){ if(/#\d+$/.test(r.key)){ res.doppi=(res.doppi||0)+1; continue; } // stesso giunto ripetuto nel file: si tiene il primo
+    if(r.lat==null||r.lng==null){ res.senzaGps++; continue; }
     const g={key:r.key,codice:r.codice,nome:r.nome,cavi:r.cavi,nr:r.nr,punto:r.punto,linea:r.linea,lat:r.lat,lng:r.lng,fonte};
     let v=byKey.get(r.key);
     if(v){ const i=v.giunti.findIndex(x=>x.key===r.key); v.giunti[i]=g; if(v.posAuto!==false && v.giunti.length===1){ v.lat=r.lat; v.lng=r.lng; v.gps={lat:r.lat,lng:r.lng}; } res.aggiornati++; vgAuto(v); continue; }
@@ -1811,7 +1812,7 @@ function parsePLNet(A){ const nn=s=>String(s??"").toLowerCase().replace(/[^a-z0-
     if(m){ cur={switch:app,num:m[2].toUpperCase(),km:(+m[3])+(+m[4].padEnd(3,"0"))/1000,app:[],row:r}; out.push(cur); continue; }
     if(!cur) continue;
     const g=k=>{ const i=c[k]; return i==null?"":String(row[i]??"").trim(); };
-    const d={n:app,porta:/^n\.?a\.?$/i.test(g("portaswitch"))?"":g("portaswitch"),ip:g("address")};
+    const d={n:app,porta:/^n\.?a\.?$/i.test(g("portaswitch"))?"":g("portaswitch"),ip:ipFix(g("address"))};
     if(!cur.mask){ cur.mask=maskTxt(row[c.subnetmask]); cur.net=g("network"); cur.dns1=g("dns1"); cur.dns2=g("dns2"); cur.ntp=g("ntp"); }
     if(/^gateway$/i.test(app)) cur.gw=d.ip; else if(/^broadcast$/i.test(app)) cur.bc=d.ip; else cur.app.push(d);
     if(g("note")) cur.note=(cur.note?cur.note+" · ":"")+g("note"); }
@@ -1841,7 +1842,7 @@ function mergePLNet(list,fonte){ S.pl ||= []; const res={agg:0,nuovi:0,warn:[]};
     if(!p.nome || /^PL( km|$)/i.test(p.nome)) p.nome=nome;
     p.linea=x.linea; if(br){ p.kmRamo=x.km; } else if(p.fonte!=="PDF" && !x.warn) p.km=x.km;
     p.rete={switch:x.switch,km:x.km,net:x.net||"",mask:x.mask||"",gw:x.gw||"",bc:x.bc||"",dns1:x.dns1||"",dns2:x.dns2||"",ntp:x.ntp||"",note:x.note||"",app:(p.rete&&p.rete.switch===x.switch&&p.rete.edited)?p.rete.app:x.app.map(a=>({...a})),warn:x.warn||"",edited:p.rete&&p.rete.edited};
-    const q=plQ(p); if(!q.subnet) q.subnet=p.rete.mask; if(!q.gateway) q.gateway=p.rete.gw;
+    plQ(p);
     if(x.warn) res.warn.push(x.switch+": "+x.warn); }
   S.pl.sort((a,b)=>(a.km??a.kmRamo??999)-(b.km??b.kmRamo??999)); plNetGeo(); return res; }
 // posizione dei PL senza coordinate: dalla km sul binario (linea principale) o sul ramo Bornato–Rovato
@@ -1851,15 +1852,17 @@ function plNetGeo(){ for(const p of (S.pl||[])){ if(p.lat!=null) continue; let l
 
 /* ---------- configurazione degli switch dei PL (uplink, VLAN di servizio, loopback) da Excel dati_switch_pl ---------- */
 const SWPL_SEED = (FN_PACK && Array.isArray(FN_PACK.swpl)) ? FN_PACK.swpl : [];
+// IP salvati in Excel come numero con i punti delle migliaia (192168241101 → 192.168.241.101)
+function ipFix(v){ const s=String(v??"").trim(); if(/^\d{10,12}$/.test(s)){ const g=[]; for(let i=s.length;i>0;i-=3) g.unshift(+s.slice(Math.max(0,i-3),i)); if(g.length===4&&g.every(x=>x<=255)) return g.join("."); } return s; }
 function parseSwPL(A){ const nn=s=>String(s??"").toLowerCase().replace(/[^a-z0-9]/g,""); let h=-1, H=[];
   for(let r=0;r<Math.min(A.length,20);r++){ const row=(A[r]||[]).map(nn); if(row.includes("loopback")&&row.includes("nome")){ h=r; H=row; break; } }
   if(h<0) return []; const ix=k=>H.indexOf(k), ifs=H.map((x,i)=>x==="interfaccia"?i:-1).filter(i=>i>=0);
   const out=[];
   for(let r=h+1;r<A.length;r++){ const row=A[r]||[]; const g=i=>i<0?"":String(row[i]??"").trim(); const nome=g(ix("nome")); if(!/^SW-?PL/i.test(nome)) continue;
-    const up=k=>({if:g(ifs[k]),ip:g(ix("addressg"+(k+1))),mask:maskTxt(row[ix("subnetmaskg"+(k+1))]),net:g(ix("networkg"+(k+1))),wild:g(ix("networkmaskg"+(k+1)))});
+    const ip=i=>ipFix(g(i)); const up=k=>({if:g(ifs[k]),ip:ip(ix("addressg"+(k+1))),mask:maskTxt(row[ix("subnetmaskg"+(k+1))]),net:ip(ix("networkg"+(k+1))),wild:g(ix("networkmaskg"+(k+1)))});
     out.push({switch:nome,location:g(ix("location")),prov:g(ix("provenienza")),dest:g(ix("destinazione")),up:[up(0),up(1)],
-      vlan:g(ix("vlanservizio")),svi:g(ix("addressvlan")),sviMask:maskTxt(row[ix("subnetmaskvlan")]),sviNet:g(ix("networkvlan")),sviWild:g(ix("networkmaskvlan")),
-      loopback:g(ix("loopback")),lbMask:maskTxt(row[ix("mask")]),dns1:g(ix("dns1")),dns2:g(ix("dns2")),exadd:g(ix("exadd")),pdf:g(ix("pdfconfigurazione")),note:g(ix("note"))}); }
+      vlan:g(ix("vlanservizio")),svi:ip(ix("addressvlan")),sviMask:maskTxt(row[ix("subnetmaskvlan")]),sviNet:ip(ix("networkvlan")),sviWild:g(ix("networkmaskvlan")),
+      loopback:ip(ix("loopback")),lbMask:maskTxt(row[ix("mask")]),dns1:ip(ix("dns1")),dns2:ip(ix("dns2")),exadd:ip(ix("exadd")),pdf:g(ix("pdfconfigurazione")),note:g(ix("note"))}); }
   return out; }
 const wildBits=w=>32-String(w||"").split(".").reduce((s,x)=>s+(((+x)>>>0).toString(2).match(/1/g)||[]).length,0);
 const swKey=s=>String(s||"").toUpperCase().replace(/\s/g,"").replace(/\+/g,".").replace(/-+/g,"-");
@@ -1874,38 +1877,62 @@ function mergeSwPL(list){ S.pl ||= []; const res={agg:0,nuovi:0,warn:[]};
     const w=[];
     if(x.prov&&x.prov===x.dest) w.push(`provenienza e destinazione uguali (${x.prov})`);
     if(swKey(x.dest)===swKey(x.location)||swKey(x.dest)===swKey(x.switch)) w.push("la destinazione è lo switch stesso");
-    if(x.sviMask&&x.sviWild&&maskBits(x.sviMask)!==wildBits(x.sviWild)) w.push(`maschera VLAN ${x.sviMask} diversa dalla rete ${x.sviNet}/${wildBits(x.sviWild)}`);
-    if(p.rete.gw&&x.svi&&p.rete.gw!==x.svi) w.push(`indirizzo VLAN ${x.svi} diverso dal gateway ${p.rete.gw} del file dei PL`);
+    if(p.rete.gw&&x.svi&&p.rete.gw!==x.svi) w.push(`nel file degli switch l'indirizzo VLAN è ${x.svi}: tenuto il gateway ${p.rete.gw} del file dei PL`);
     p.rete.sw={...x,warn:w}; if(w.length) res.warn.push(x.switch+": "+w.join("; "));
-    const q=plQ(p); if(!q.switchIP&&x.loopback) q.switchIP=x.loopback; if(!q.vlan&&x.vlan) q.vlan=x.vlan; }
+    plQ(p); }
   // continuità degli uplink: la rete G1/2 di uno switch deve essere la rete G1/1 dello switch successivo
   const by=new Map((S.pl||[]).filter(p=>p.rete&&p.rete.sw).map(p=>[swKey(p.rete.sw.location||p.rete.switch),p]));
   for(const p of (S.pl||[])){ const s=p.rete&&p.rete.sw; if(!s) continue; const d=by.get(swKey(s.dest)); if(d&&d!==p&&d.rete.sw.up[0].net&&s.up[1].net&&d.rete.sw.up[0].net!==s.up[1].net){ const m=`uplink verso ${s.dest}: rete ${s.up[1].net} diversa da ${d.rete.sw.up[0].net}`; s.warn.push(m); res.warn.push(s.switch+": "+m); } }
   return res; }
 function swLink(name){ const p=(S.pl||[]).find(q=>q.rete&&(swKey(q.rete.switch)===swKey(name)||(q.rete.sw&&swKey(q.rete.sw.location)===swKey(name))));
   return p?`<a class="lnk mono" href="#" data-plrete="${p.id}">${esc(name)}</a>`:`<span class="mono">${esc(name)}</span>`; }
-function swCfgHTML(p){ const s=p.rete&&p.rete.sw; if(!s) return `<p class="dim" style="font-size:12px">Configurazione dello switch non importata (file dati_switch_pl).</p>`;
-  const doc=FILES.find(f=>f.scope==="pl"&&f.ref===p.id&&f.name.toLowerCase()===String(s.pdf).toLowerCase());
-  const row=(l,v)=>`<label>${l}</label><div class="mono">${v}</div>`;
-  return `${s.warn&&s.warn.length?`<p style="color:var(--yellow);font-size:12.5px">⚠ ${s.warn.map(esc).join("<br>⚠ ")}</p>`:""}
-  <fieldset class="qg"><legend>Configurazione switch</legend><div class="grid2">
-    ${row("Location",esc(s.location))}${row("Loopback",`<span class="val">${esc(s.loopback)}</span>/${maskBits(s.lbMask)}`)}
-    ${row("VLAN di servizio",`<span class="val">${esc(s.vlan)}</span> · ${esc(s.svi)} <span class="dim">(${esc(s.sviMask)})</span> · rete ${esc(s.sviNet)}/${wildBits(s.sviWild)}`)}
-    ${row("DNS",`${esc(s.dns1)}${s.dns2?" · "+esc(s.dns2):""}`)}${s.exadd?row("ExAdd",esc(s.exadd)):""}
-    <label>PDF configurazione</label><div>${doc?`<a class="lnk" href="#" data-opendoc="${doc.id}">${esc(s.pdf)}</a>`:`<span class="mono">${esc(s.pdf||"—")}</span>${s.pdf?` <span class="dim" style="font-size:11.5px">(caricalo in Documenti con questo nome per aprirlo da qui)</span>`:""}`}</div>
-    ${s.note?row("Note",esc(s.note)):""}</div></fieldset>
-  <fieldset class="qg"><legend>Uplink</legend><table class="t"><thead><tr><th>Porta</th><th>Verso</th><th>Indirizzo</th><th>Rete</th></tr></thead><tbody>
-    ${s.up.map((u,i)=>`<tr><td class="mono">${esc(u.if)}</td><td>${i===0?"⬅ "+swLink(s.prov):"➡ "+swLink(s.dest)}</td><td class="mono val">${esc(u.ip)}/${maskBits(u.mask)}</td><td class="mono dim">${esc(u.net)}</td></tr>`).join("")}</tbody></table></fieldset>`; }
+// rete e switch del PL: ogni dato una sola volta (rete, maschera, gateway = indirizzo VLAN, DNS dal file dei PL; il resto dal file degli switch)
+function plNetBlock(p){ const r=p.rete, s=r.sw, cidr=r.mask?"/"+maskBits(r.mask):"";
+  const doc=s&&FILES.find(f=>f.scope==="pl"&&f.ref===p.id&&f.name.toLowerCase()===String(s.pdf).toLowerCase());
+  const row=(l,v)=>`<label>${l}</label><div class="mono">${v}</div>`, warn=[...(s&&s.warn||[])];
+  return `${warn.length?`<p style="color:var(--yellow);font-size:12.5px">⚠ ${warn.map(esc).join("<br>⚠ ")}</p>`:""}
+  <fieldset class="qg"><legend>Rete e switch</legend><div class="grid2">
+    ${row("Switch",`<span class="val">${esc(r.switch)}</span>`)}${row("Linea",esc(p.linea||""))}
+    ${row("Rete",`${esc(r.net)}${cidr} <span class="dim">(${esc(r.mask)})</span>`)}
+    ${row(s?`Gateway · VLAN ${esc(s.vlan)}`:"Gateway",`<span class="val">${esc(r.gw)}</span>`)}
+    ${row("Broadcast",esc(r.bc))}${row("DNS",`${esc(r.dns1)}${r.dns2?" · "+esc(r.dns2):""}`)}${row("NTP",esc(r.ntp))}
+    ${s?row("Loopback",`<span class="val">${esc(s.loopback)}</span>/${maskBits(s.lbMask)}`):""}${s&&s.exadd?row("ExAdd",esc(s.exadd)):""}
+    ${s?`<label>PDF configurazione</label><div>${doc?`<a class="lnk" href="#" data-opendoc="${doc.id}">${esc(s.pdf)}</a>`:`<span class="mono">${esc(s.pdf||"—")}</span>${s.pdf?` <span class="dim" style="font-size:11.5px">(caricalo in Documenti con questo nome per aprirlo da qui)</span>`:""}`}</div>`:""}
+    ${r.note||s&&s.note?row("Note",esc([r.note,s&&s.note].filter(Boolean).join(" · "))):""}</div></fieldset>
+  ${s?`<fieldset class="qg"><legend>Uplink</legend><table class="t"><thead><tr><th>Porta</th><th>Verso</th><th>Indirizzo</th><th>Rete</th></tr></thead><tbody>
+    ${s.up.map((u,i)=>`<tr><td class="mono">${esc(u.if)}</td><td>${i===0?"⬅ "+swLink(s.prov):"➡ "+swLink(s.dest)}</td><td class="mono val">${esc(u.ip)}/${maskBits(u.mask)}</td><td class="mono dim">${esc(u.net)}</td></tr>`).join("")}</tbody></table></fieldset>`
+    :`<p class="dim" style="font-size:12px">Configurazione dello switch non importata (file dati_switch_pl).</p>`}`; }
+
+
+// toglie i dati doppi: campi del quadro uguali a quelli della rete, PL ripetuti (stesso switch o stesso punto)
+function dedupData(){ const res={campi:0,pl:0,ip:0};
+  for(const p of (S.pl||[])){ const q=p.quadro, r=p.rete; if(!q||!r) continue;
+    for(const [k,v] of [["subnet",r.mask],["gateway",r.gw],["switchIP",r.sw&&r.sw.loopback],["vlan",r.sw&&r.sw.vlan]]) if(q[k]&&v&&String(q[k]).trim()===String(v).trim()){ delete q[k]; res.campi++; }
+    if(q.progressiva && p.km!=null && q.progressiva===kmTxt(p.km)){ delete q.progressiva; res.campi++; } }
+  const keep=[], gone=new Set();
+  const key=p=>p.rete?"sw:"+swKey(p.rete.switch):null;
+  for(const p of (S.pl||[])){ if(gone.has(p)) continue;
+    const dup=(S.pl||[]).filter(o=>o!==p&&!gone.has(o)&&((key(p)&&key(p)===key(o))||(p.lat!=null&&o.lat!=null&&!(p.rete&&o.rete)&&!!p.ramo===!!o.ramo&&L.latLng(p.lat,p.lng).distanceTo(L.latLng(o.lat,o.lng))<40)));
+    for(const o of dup){ // tiene il PL con la rete; prende posizione OSM, barriere, note, quadro e documenti dall'altro
+      const main=p.rete||!o.rete?p:o, other=main===p?o:p; if(main!==p){ gone.add(p); } else gone.add(o);
+      if(other.osmId&&!main.osmId){ main.osmId=other.osmId; main.lat=other.lat; main.lng=other.lng; main.geoKm=false; }
+      for(const k of ["barriere","luci"]) if(!main[k]&&other[k]) main[k]=other[k];
+      if(other.note&&other.note!==main.note) main.note=[main.note,other.note].filter(Boolean).join(" · ");
+      const mq=plQ(main), oq=other.quadro||{}; for(const k of Object.keys(oq)) if(k!=="extra"&&!mq[k]&&oq[k]) mq[k]=oq[k]; if((oq.extra||[]).length) mq.extra=(mq.extra||[]).concat(oq.extra);
+      FILES.forEach(f=>{ if(f.scope==="pl"&&f.ref===other.id){ f.ref=main.id; if(SRV) SRV.jfetch("filemeta",{method:"POST",json:{id:f.id,ref:main.id}}).catch(()=>{}); else DB.putFile(f); } });
+      res.pl++; if(main!==p) break; } }
+  if(res.pl){ S.pl=S.pl.filter(p=>!gone.has(p)); if(UI.pl&&!S.pl.some(p=>p.id===UI.pl)) UI.pl=null; }
+  // giunti ripetuti (stesso cavo e codice): si tiene il primo
+  res.giunti=0; const vuote=new Set();
+  for(const v of (S.vasche||[])){ if(!v.giunti) continue; const n=v.giunti.length; v.giunti=v.giunti.filter(g=>!/#\d+$/.test(g.key)); if(v.giunti.length===n) continue;
+    res.giunti+=n-v.giunti.length; if(v.giunti.length){ v.muffola=""; vgAuto(v); } else vuote.add(v); }
+  if(vuote.size){ S.vasche=S.vasche.filter(v=>!vuote.has(v)); if(UI.vg&&!S.vasche.some(v=>v.id===UI.vg)) UI.vg=null; }
+  res.ip=[...ipIndex()].filter(([k,v])=>v.length>1).length; return res; }
 function plNetTab(p){ const r=p.rete;
   if(!r) return `<p class="dim">Nessun dato di rete per questo PL. Si importano dal file Excel dei PL (Database → PL e fermate → "⇩ Importa rete PL").</p>`;
   const cidr=r.mask?"/"+maskBits(r.mask):"", self=`${p.nome}${p.linea?" ("+p.linea+")":""}`;
   return `${r.warn?`<p style="color:var(--yellow);font-size:12.5px">⚠ ${esc(r.warn)}: controlla la progressiva nel file.</p>`:""}
-    <fieldset class="qg"><legend>Switch e rete</legend><div class="grid2">
-      <label>Switch</label><div class="mono val">${esc(r.switch)}</div><label>Linea</label><div>${esc(p.linea||"")}</div>
-      <label>Rete</label><div class="mono">${esc(r.net)}${cidr} <span class="dim">(${esc(r.mask)})</span></div><label>Gateway</label><div class="mono">${esc(r.gw)}</div>
-      <label>Broadcast</label><div class="mono">${esc(r.bc)}</div><label>DNS</label><div class="mono">${esc(r.dns1)}${r.dns2?" · "+esc(r.dns2):""}</div><label>NTP</label><div class="mono">${esc(r.ntp)}</div>
-      ${r.note?`<label>Note</label><div>${esc(r.note)}</div>`:""}</div></fieldset>
-    ${swCfgHTML(p)}
+    ${plNetBlock(p)}
     <fieldset class="qg"><legend>Apparati (${r.app.filter(a=>!/^libero$/i.test(a.n)).length} collegati · ${r.app.filter(a=>/^libero$/i.test(a.n)).length} indirizzi liberi)</legend>
     <table class="t"><thead><tr><th>Apparato</th><th>Porta switch</th><th>Indirizzo IP</th></tr></thead><tbody>
     ${r.app.map((a,i)=>`<tr data-pln="${i}" class="${/^libero$/i.test(a.n)?"dimrow":""}"><td><input class="f" data-plnk="n" value="${esc(a.n)}" style="min-width:120px"></td><td><input class="f mono" data-plnk="porta" value="${esc(a.porta)}" style="width:80px"></td>
@@ -1915,13 +1942,14 @@ document.addEventListener("input",e=>{ const tr=e.target.closest("[data-pln]"); 
   p.rete.app[+tr.dataset.pln][e.target.dataset.plnk]=e.target.value; p.rete.edited=true; p.upd=now();
   if(e.target.dataset.plnk==="ip"){ const h=e.target.parentElement.querySelector(".fh"); if(h){ const m=fieldCheck("ip",e.target.value,`${p.nome}${p.linea?" ("+p.linea+")":""} · ${p.rete.app[+tr.dataset.pln].n}`); h.textContent=m; h.className="fh "+(m.startsWith("✘")?"err":m?"warn":""); } }
   clearTimeout(saveT); saveT=setTimeout(()=>changed(),600); });
+document.addEventListener("click",e=>{ const a=e.target.closest('[data-pla="dedup"]'); if(!a) return; e.preventDefault(); e.stopImmediatePropagation(); const r=dedupData(); changed(`doppioni: ${r.pl} PL uniti, ${r.giunti} giunti ripetuti tolti, ${r.campi} campi ripetuti tolti${r.ip?`, restano ${r.ip} IP usati due volte (vedi Indirizzi IP)`:", nessun IP doppio"}`); renderLeaf(); renderDB(); },true);
 document.addEventListener("click",e=>{ const a=e.target.closest('[data-pla="impnet"]'); if(!a) return; e.preventDefault(); e.stopImmediatePropagation();
   const i=document.createElement("input"); i.type="file"; i.accept=".xlsx,.xls"; i.onchange=async()=>{ const f=i.files[0]; if(!f) return;
     try{ const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}); const A=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null,raw:true});
-      const sw=parseSwPL(A); if(sw.length){ const r=mergeSwPL(sw); changed(`configurazione switch da ${f.name}: ${r.agg} PL aggiornati, ${r.nuovi} nuovi${r.warn.length?` · ${r.warn.length} avvisi`:""}`); if(r.warn.length) alert("Da controllare:\n"+r.warn.join("\n")); renderLeaf(); renderDB(); return; }
+      const sw=parseSwPL(A); if(sw.length){ const r=mergeSwPL(sw); dedupData(); changed(`configurazione switch da ${f.name}: ${r.agg} PL aggiornati, ${r.nuovi} nuovi${r.warn.length?` · ${r.warn.length} avvisi`:""}`); if(r.warn.length) alert("Da controllare:\n"+r.warn.join("\n")); renderLeaf(); renderDB(); return; }
       const list=parsePLNet(A);
       if(!list.length){ alert("Formato non riconosciuto: servono le colonne Apparato/Address (dati_pl) oppure Nome/Loopback (dati_switch_pl)."); return; }
-      const r=mergePLNet(list,"Excel rete PL"); changed(`rete PL da ${f.name}: ${r.agg} PL aggiornati, ${r.nuovi} nuovi${r.warn.length?` · ${r.warn.length} con km da controllare`:""}`); if(r.warn.length) alert("Da controllare:\n"+r.warn.join("\n")); renderLeaf(); renderDB();
+      const r=mergePLNet(list,"Excel rete PL"); dedupData(); changed(`rete PL da ${f.name}: ${r.agg} PL aggiornati, ${r.nuovi} nuovi${r.warn.length?` · ${r.warn.length} con km da controllare`:""}`); if(r.warn.length) alert("Da controllare:\n"+r.warn.join("\n")); renderLeaf(); renderDB();
     }catch(err){ alert("File non leggibile: "+err.message); } }; i.click(); },true);
 
 /* ---------- drawer events ---------- */
@@ -2212,10 +2240,10 @@ function exportXlsx(){
     const wdl=XLSX.utils.aoa_to_sheet(dl); wdl["!cols"]=[{wch:36},{wch:24},{wch:40},{wch:12},{wch:18}]; XLSX.utils.book_append_sheet(wb,wdl,"Documenti"); }
   const wq=XLSX.utils.aoa_to_sheet(q); for(let i=1;i<q.length;i++){ const a=XLSX.utils.encode_cell({r:i,c:3}); if(wq[a]) wq[a].z="0%"; } wq["!cols"]=q[0].map(()=>({wch:16}));
   XLSX.utils.book_append_sheet(wb,wq,"Config_quadri");
-  { const rp=[["PL","Linea","Progressiva","Switch","Apparato","Porta switch","Indirizzo IP","Subnet mask","Rete","Gateway","Broadcast","DNS1","DNS2","NTP"]];
-    for(const p of (S.pl||[])) if(p.rete){ const r=p.rete; for(const a of r.app) rp.push([p.nome,p.linea||"",kmTxt(r.km),r.switch,a.n,a.porta,a.ip,r.mask,r.net,r.gw,r.bc,r.dns1,r.dns2,r.ntp]); }
-    const sp=[["PL","Switch","Location","Provenienza","Destinazione","Porta 1","Indirizzo 1","Maschera 1","Rete 1","Porta 2","Indirizzo 2","Maschera 2","Rete 2","VLAN servizio","Indirizzo VLAN","Maschera VLAN","Rete VLAN","Loopback","DNS1","DNS2","ExAdd","PDF configurazione","Avvisi"]];
-    for(const p of (S.pl||[])){ const s=p.rete&&p.rete.sw; if(s) sp.push([p.nome,s.switch,s.location,s.prov,s.dest,s.up[0].if,s.up[0].ip,s.up[0].mask,s.up[0].net,s.up[1].if,s.up[1].ip,s.up[1].mask,s.up[1].net,s.vlan,s.svi,s.sviMask,s.sviNet,s.loopback,s.dns1,s.dns2,s.exadd,s.pdf,(s.warn||[]).join("; ")]); }
+  { const rp=[["PL","Linea","Progressiva","Switch","Rete","Subnet mask","Gateway / VLAN","Broadcast","DNS1","DNS2","NTP","Apparato","Porta switch","Indirizzo IP"]];
+    for(const p of (S.pl||[])) if(p.rete){ const r=p.rete; r.app.forEach((a,i)=>rp.push(i?["","","","","","","","","","","",a.n,a.porta,a.ip]:[p.nome,p.linea||"",kmTxt(r.km),r.switch,r.net+"/"+maskBits(r.mask),r.mask,r.gw,r.bc,r.dns1,r.dns2,r.ntp,a.n,a.porta,a.ip])); }
+    const sp=[["PL","Switch","Provenienza","Destinazione","Porta 1","Indirizzo 1","Rete 1","Porta 2","Indirizzo 2","Rete 2","VLAN servizio","Loopback","ExAdd","PDF configurazione","Avvisi"]];
+    for(const p of (S.pl||[])){ const s=p.rete&&p.rete.sw; if(s) sp.push([p.nome,s.switch,s.prov,s.dest,s.up[0].if,s.up[0].ip+"/"+maskBits(s.up[0].mask),s.up[0].net,s.up[1].if,s.up[1].ip+"/"+maskBits(s.up[1].mask),s.up[1].net,s.vlan,s.loopback,s.exadd,s.pdf,(s.warn||[]).join("; ")]); }
     if(sp.length>1){ const ws2=XLSX.utils.aoa_to_sheet(sp); ws2["!cols"]=sp[0].map(()=>({wch:15})); XLSX.utils.book_append_sheet(wb,ws2,"Switch_PL"); }
     if(rp.length>1){ const wr=XLSX.utils.aoa_to_sheet(rp); wr["!cols"]=rp[0].map(()=>({wch:15})); XLSX.utils.book_append_sheet(wb,wr,"Rete_PL"); } }
   { const vg=[["Vasca","Giunti","Progressiva","Distanza dal binario m","Linea","Punto","Tratta","Tipo / dimensioni","Chiusino","Profondità","Cavi presenti","Muffola / giunto","Fibre giuntate","Collegata a","Stato","Data giunzione","Ditta","Latitudine","Longitudine","Note"]];
@@ -2718,7 +2746,7 @@ async function alignRail(force){
   try{
     let pr=null;
     if(force || !S.rail || !(S.rail.ver>=2)){ status("scarico tracciato, PL e fermate da OpenStreetMap…"); const osm=await fetchOverpass(); S.rail=buildRailPath(osm); pr=importOsmPoi(osm); }
-    const r=alignGallerie(); applyPdfGeo(); ensurePL(); plNetGeo(); vgAutoKm(); const vs=vgSnap(); UI.railErr=""; S.rail.info={osm:r.osm,km:r.km,at:now()}; changed(); renderDrawer();
+    const r=alignGallerie(); applyPdfGeo(); ensurePL(); plNetGeo(); dedupData(); vgAutoKm(); const vs=vgSnap(); UI.railErr=""; S.rail.info={osm:r.osm,km:r.km,at:now()}; changed(); renderDrawer();
     status(`tracciato OSM: ${Math.round(S.rail.path[S.rail.path.length-1][2]/100)/10} km di binario · ${r.osm} gallerie agganciate alle gallerie OSM, ${r.km} per progressiva km · ${(S.pl||[]).length} PL${pr?` (${pr.npl} nuovi)`:""}${pr&&pr.nf?` · ${pr.nf} fermate nuove`:""}${pr&&pr.ngeo?` · ${pr.ngeo} sedi georeferenziate`:""}${(S.vasche||[]).length?` · ${vs.ok} vasche allineate al binario${vs.lontane.length?`, ${vs.lontane.length} oltre ${VG_SNAP_MAX} m lasciate sulla posizione GPS (controlla: Database → Vasche → filtro "oltre 150 m")`:""}`:""}`,"ok");
   }catch(e){ console.error(e); UI.railErr=e.message; status("allineamento non riuscito: "+e.message+" · serve la connessione internet","err"); updLeafHint(); }
   finally{ railBusy=false; if(btn) btn.disabled=false; updLeafHint(); }
@@ -2811,7 +2839,7 @@ function ipIndex(){ // tutti gli IP noti (telecamere + switch + gateway) per tro
   allCams().forEach(r=>add(r.c.ip,{tipo:"telecamera",dove:`${r.t.nome} · BOX ${r.b.n} · ${r.cod}`,ref:r}));
   for(const t of S.tratte) for(const b of t.boxes){ add(b.quadro.switchIP,{tipo:"switch",dove:`${t.nome} · BOX ${b.n}`}); }
   for(const p of (S.pl||[])){ const who=`${p.nome}${p.linea?" ("+p.linea+")":""}`; if(p.rete){ add(p.rete.gw,{tipo:"gateway",dove:who}); for(const a of p.rete.app) if(!/^libero$/i.test(a.n)) add(a.ip,{tipo:a.n,dove:who+" · "+a.n});
-      const s=p.rete.sw; if(s){ add(s.loopback,{tipo:"loopback",dove:who+" · switch"}); s.up.forEach(u=>add(u.ip,{tipo:"uplink "+u.if,dove:who+" · "+u.if})); if(s.svi&&s.svi!==p.rete.gw) add(s.svi,{tipo:"VLAN "+s.vlan,dove:who}); } } else if(p.quadro&&p.quadro.switchIP) add(p.quadro.switchIP,{tipo:"switch",dove:who}); }
+      const s=p.rete.sw; if(s){ add(s.loopback,{tipo:"loopback",dove:who+" · switch"}); s.up.forEach(u=>add(u.ip,{tipo:"uplink "+u.if,dove:who+" · "+u.if})); } } else if(p.quadro&&p.quadro.switchIP) add(p.quadro.switchIP,{tipo:"switch",dove:who}); }
   return m;
 }
 const modName=id=>{ const m=(S.modelli||[]).find(x=>x.id===id); return m? `${m.marca} ${m.modello}`.trim() : ""; };
@@ -3050,7 +3078,7 @@ function dbPL(){
   const pl=S.pl||[], fer=(S.sedi||[]).slice().sort((a,b)=>(a.lat??0)-(b.lat??0));
   return `<div class="welcome" style="max-width:none"><div class="h-green">• Passaggi a livello e fermate •</div><div class="h-yellow">(dallo schema PDF, da Quadri & Fibra e da OpenStreetMap con "⟲ Allinea ferrovia" sulla mappa reale)</div>
     <div class="kpis"><div><span>Passaggi a livello</span><b class="val big">${pl.length}</b></div><div><span>Da OSM</span><b class="val big">${pl.filter(p=>p.osmId).length}</b></div><div><span>Fermate / sedi</span><b class="val big">${fer.length}</b></div><div><span>Senza coordinate</span><b class="val big">${fer.filter(s=>s.lat==null).length+pl.filter(p=>p.lat==null).length}</b></div></div>
-    <div class="row-flex" style="margin-top:10px"><button class="btn" data-pla="add">+ PL a mano (clic sulla mappa reale)</button><button class="btn" data-pla="impnet" title="File Excel dati_pl (apparati e IP) oppure dati_switch_pl (uplink, VLAN, loopback)">⇩ Importa rete PL (Excel)</button>${S.rail&&S.rail.ver>=2?`<span class="dim" style="font-size:12px">dati OSM del ${fmtD(S.rail.at)}</span>`:`<span style="color:var(--yellow);font-size:12px">PL e fermate OSM non ancora scaricati: apri la mappa reale con internet attivo</span>`}</div></div>
+    <div class="row-flex" style="margin-top:10px"><button class="btn" data-pla="add">+ PL a mano (clic sulla mappa reale)</button><button class="btn" data-pla="impnet" title="File Excel dati_pl (apparati e IP) oppure dati_switch_pl (uplink, VLAN, loopback)">⇩ Importa rete PL (Excel)</button><button class="btn" data-pla="dedup" title="Unisce i PL ripetuti e toglie i dati di rete ripetuti nel quadro">⊜ Togli doppioni</button>${S.rail&&S.rail.ver>=2?`<span class="dim" style="font-size:12px">dati OSM del ${fmtD(S.rail.at)}</span>`:`<span style="color:var(--yellow);font-size:12px">PL e fermate OSM non ancora scaricati: apri la mappa reale con internet attivo</span>`}</div></div>
   <div class="h-green" style="margin:6px 0">• Passaggi a livello •</div>
   <table class="t"><thead><tr><th>PL</th><th>Linea</th><th>Progressiva</th><th>Rete</th><th>Barriere</th><th>Fonte</th><th>Coordinate</th><th>Note</th><th>Config. quadro</th><th>Doc</th><th></th></tr></thead><tbody>
   ${pl.map(p=>`<tr data-plid="${p.id}"><td><input class="f mono" data-pf="nome" value="${esc(p.nome)}" style="width:120px"></td><td class="dim">${esc(p.linea||(p.ramo?"Bornato–Rovato":""))}</td><td class="mono">${p.ramo?(p.kmRamo!=null?kmTxt(p.kmRamo):"ramo"):p.km!=null?kmTxt(p.km):"—"}${p.rete&&p.rete.warn?` <span title="${esc(p.rete.warn)}" style="color:var(--yellow)">⚠</span>`:""}</td><td class="mono">${p.rete?`<a class="lnk" href="#" data-plrete="${p.id}">${esc(p.rete.net)}/${maskBits(p.rete.mask)}</a>`:"—"}</td><td>${esc(p.barriere||"—")}${p.luci?" · luci":""}</td><td class="dim">${esc(p.fonte)}${p.geoKm?" (stima)":""}</td>
@@ -3448,7 +3476,7 @@ function quadroKV(q,over={}){ q=q||{}; const rows=Q_LBL.map(([k,l])=>[l,over[k]!
 function plPopup(p){
   return `<div class="pp"><div class="h-green mono">${esc(p.nome||"Passaggio a livello")}</div><div class="h-yellow">(${p.ramo?esc(p.ramo):p.km!=null?"km "+kmTxt(p.km):"progressiva non nota"} · fonte ${esc(p.fonte)}${p.geoKm?" · posizione stimata da km":""})</div>${p.barriere?`<div>barriere: ${esc(p.barriere)}${p.luci?" · segnali luminosi":""}</div>`:""}
     ${p.rete?`<div class="info" style="font-size:11.5px;margin-top:5px">Rete · ${esc(p.rete.switch)}</div><table class="pt kv"><tr><th>Rete</th><td><span class="val mono">${esc(p.rete.net)}/${maskBits(p.rete.mask)}</span>${p.rete.sw?` · VLAN ${esc(p.rete.sw.vlan)}`:""}</td></tr>${p.rete.sw?`<tr><th>Loopback</th><td><span class="val mono">${esc(p.rete.sw.loopback)}</span></td></tr>`:""}<tr><th>Gateway</th><td class="mono">${esc(p.rete.gw)}</td></tr>${p.rete.app.filter(a=>!/^libero$/i.test(a.n)).map(a=>`<tr><th>${esc(a.n)}${a.porta?` <span class="dim">${esc(a.porta)}</span>`:""}</th><td><span class="val mono">${esc(a.ip)}</span></td></tr>`).join("")}</table>`:""}
-    <div class="info" style="font-size:11.5px;margin-top:5px">Config. quadro</div>${quadroKV(plQ(p))}
+    <div class="info" style="font-size:11.5px;margin-top:5px">Config. quadro</div>${quadroKV(p.rete?Object.fromEntries(Object.entries(plQ(p)).filter(([k])=>!["subnet","gateway","switchIP","vlan"].includes(k))):plQ(p))}
     ${p.note?`<div style="font-size:11.5px;margin-top:4px"><span class="info">Note:</span> ${esc(p.note)}</div>`:""}
     <div class="row-flex" style="margin-top:6px">${docBtn("pl",p.id,p.nome||"Passaggio a livello")}${gLinks(p.lat,p.lng)}</div></div>`; }
 document.addEventListener("click",e=>{ const o=e.target.closest("[data-openpl]"); if(!o) return; e.preventDefault(); if(LM) LM.closePopup(); openPL(o.dataset.openpl,false); if(false){
@@ -3485,9 +3513,10 @@ document.addEventListener("click",e=>{ const o=e.target.closest("[data-openbox]"
   FILES = ok? await DB.allFiles() : [];
   if(!S.sedi){ mergeSedi(convertQF(QF_INIT), QF_INIT.exportedAt); if(ok) DB.set("state",JSON.stringify(S)); }
   qfInit(); qfRebuild();
-  S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); $("#b-pl").classList.toggle("on",S.showPL!==false); const swSeedK=SWPL_SEED.length+"|"+JSON.stringify(SWPL_SEED[1]||"");
+  S.tratte.forEach(ensureGeo); applyPdfGeo(); ensurePL(); $("#b-pl").classList.toggle("on",S.showPL!==false); const swSeedK="v2|"+SWPL_SEED.length+"|"+JSON.stringify(SWPL_SEED[1]||"");
   if(PLNET_SEED.length && S.plNetSeed!==PLNET_SEED.length+"|"+JSON.stringify(PLNET_SEED[2]||"")){ mergePLNet(parsePLNet(PLNET_SEED),"Excel rete PL"); S.plNetSeed=PLNET_SEED.length+"|"+JSON.stringify(PLNET_SEED[2]||""); if(ok) DB.set("state",JSON.stringify(S)); } else plNetGeo();
   if(SWPL_SEED.length && S.swSeed!==swSeedK){ mergeSwPL(parseSwPL(SWPL_SEED)); S.swSeed=swSeedK; if(ok) DB.set("state",JSON.stringify(S)); }
+  { const d=dedupData(); if((d.campi||d.pl)&&ok) DB.set("state",JSON.stringify(S)); }
   S.vasche ||= []; if(VG_SEED.length && S.giuntiSeed!==VG_SEED.length+"|"+(VG_SEED[0]||{}).key){ mergeGiunti(VG_SEED,"Giunti_ISEO-EDOLO_OK.xlsx"); S.giuntiSeed=VG_SEED.length+"|"+(VG_SEED[0]||{}).key; if(ok) DB.set("state",JSON.stringify(S)); } else vgAutoKm(); $("#b-vg").classList.toggle("on",S.showVG!==false); applySediVis(); $("#b-cams").classList.toggle("on",S.showCams!==false); initMap(); renderSide(); setPath();
   let mm="schema"; try{ mm=localStorage.getItem("fn-mapmode")||"schema"; }catch(e){} setMapMode(mm);
   if(SRV) status(SRV.role==="viewer"?"connesso in sola lettura":"connesso al server · le modifiche si salvano da sole e sono visibili a tutti gli utenti","ok");
