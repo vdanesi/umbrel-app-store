@@ -4,7 +4,7 @@ name: FN Avanzamento Gallerie
 tagline: Nuovi lavori TVCC nelle gallerie con avanzamento, quadri e fibra
 icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-fn-gallerie/icon.svg
 category: files
-version: "1.7.0"
+version: "1.8.0"
 port: 8742
 description: >-
   Mappa della linea Brescia–Iseo–Edolo con l'avanzamento dei nuovi lavori TVCC nelle gallerie.
@@ -31,11 +31,11 @@ repo: https://github.com/vdanesi/umbrel-app-store
 support: https://github.com/vdanesi/umbrel-app-store/issues
 gallery: []
 releaseNotes: >-
-  Rete dei PL: "Importa rete PL" nel Database legge il file Excel con switch, apparati
-  (ADAM, HP, tromba, telecamera), porte e indirizzi IP di ogni PL, lo unisce ai PL già
-  presenti per progressiva km e crea quelli mancanti sul binario (anche sul ramo
-  Bornato–Rovato). Nuova scheda "Rete e apparati" nel PL, IP dei PL nel controllo dei
-  doppioni e nuovo foglio Rete_PL nell'Excel.
+  Configurazione degli switch dei PL: lo stesso "Importa rete PL" legge anche il file degli
+  switch (uplink G1/1 e G1/2 con provenienza e destinazione, VLAN di servizio, loopback,
+  DNS, PDF di configurazione). Nella scheda "Rete e apparati" del PL compaiono
+  configurazione e uplink con collegamento agli switch vicini, i controlli di coerenza
+  tra i due file, loopback e uplink nel piano IP e il nuovo foglio Switch_PL nell'Excel.
 dependencies: []
 path: ""
 defaultUsername: ""
