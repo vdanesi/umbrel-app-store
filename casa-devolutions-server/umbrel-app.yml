@@ -1,0 +1,24 @@
+manifestVersion: 1
+id: casa-devolutions-server
+name: Devolutions Server
+tagline: Gestione centralizzata di connessioni, credenziali e accessi
+icon: https://raw.githubusercontent.com/vdanesi/umbrel-app-store/main/casa-devolutions-server/icon.svg
+category: networking
+version: "2026.3"
+port: 5000
+description: >-
+  Devolutions Server per l'accesso centralizzato da Remote Desktop Manager.
+  Richiede configurazione iniziale del database, chiavi di cifratura,
+  TLS attendibile e backup verificato prima dell'uso con credenziali reali.
+developer: Devolutions
+website: https://devolutions.net/server/
+submitter: DVsolutions
+submission: https://github.com/vdanesi/umbrel-app-store
+repo: https://github.com/vdanesi/umbrel-app-store
+support: https://forum.devolutions.net/
+gallery: []
+releaseNotes: "Bozza 2026.3: verifica preliminare dei requisiti. Non pubblicare prima dei test."
+dependencies: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
